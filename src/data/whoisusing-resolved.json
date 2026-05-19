@@ -1,0 +1,1063 @@
+[
+  {
+    "name": "365tel",
+    "website": "http://365tel.com",
+    "logo": null,
+    "slug": "365tel",
+    "error": "Fetch failed: This operation was aborted"
+  },
+  {
+    "name": "Ada Voice SRL",
+    "website": "http://www.rovoice.com",
+    "slug": "ada-voice-srl",
+    "logo": "/logos/whoisusing/ada-voice-srl.jpg",
+    "logoUrl": "https://www.rovoice.com/avatar.jpg",
+    "attr": "og:image",
+    "score": -25,
+    "error": null
+  },
+  {
+    "name": "Advancefone",
+    "website": "http://www.advancefone.com",
+    "slug": "advancefone",
+    "logo": "/logos/whoisusing/advancefone.svg",
+    "logoUrl": "http://www.advancefone.com/images/logo.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "AfriCallShop",
+    "website": "https://www.africallshop.com/",
+    "slug": "africallshop",
+    "logo": "/logos/whoisusing/africallshop.png",
+    "logoUrl": "https://i0.wp.com/www.africallshop.com/wp-content/uploads/2016/06/logo.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "AG Projects",
+    "website": "http://ag-projects.com",
+    "slug": "ag-projects",
+    "logo": "/logos/whoisusing/ag-projects.svg",
+    "logoUrl": "https://ag-projects.com/images/aglogo.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "Alida Srl",
+    "website": "http://www.alida.it",
+    "slug": "alida-srl",
+    "logo": "/logos/whoisusing/alida-srl.png",
+    "logoUrl": "https://www.alida.it/images/cisco_partner_logo.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "Amtel",
+    "website": "http://www.amtelnet.com",
+    "slug": "amtel",
+    "logo": "/logos/whoisusing/amtel.png",
+    "logoUrl": "https://netplus-group.com/wp-content/uploads/2023/10/NetPlus-Group-Logo-01.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "Anura SA",
+    "website": "http://www.anura.com.ar",
+    "slug": "anura-sa",
+    "logo": "/logos/whoisusing/anura-sa.png",
+    "logoUrl": "https://www.anura.com.ar/wp-content/uploads/2025/10/cropped-Logo-medio-scaled-1-192x192.png",
+    "attr": "icon",
+    "score": 54.2,
+    "error": null
+  },
+  {
+    "name": "Aruna Communications",
+    "website": "http://www.arunacom.com",
+    "logo": null,
+    "slug": "aruna-communications",
+    "error": "No logo candidates found"
+  },
+  {
+    "name": "ASUSTeK COMPUTER INC",
+    "website": "http://www.asus.com",
+    "slug": "asustek-computer-inc",
+    "logo": "/logos/whoisusing/asustek-computer-inc.png",
+    "logoUrl": "https://www.asus.com/new_asus_ico_256x256.png",
+    "attr": "icon",
+    "score": 20,
+    "error": null
+  },
+  {
+    "name": "AVyS Telecom",
+    "website": "http://www.avystele.com",
+    "logo": null,
+    "slug": "avys-telecom",
+    "error": "Fetch failed: fetch failed"
+  },
+  {
+    "name": "Axeos",
+    "website": "http://www.axeos.com",
+    "logo": null,
+    "slug": "axeos",
+    "error": "All candidates failed to download"
+  },
+  {
+    "name": "Be IP",
+    "website": "http://www.beip.be",
+    "slug": "be-ip",
+    "logo": "/logos/whoisusing/be-ip.png",
+    "logoUrl": "https://sp-ao.shortpixel.ai/client/to_auto,q_glossy,ret_img,w_192,h_192/https://www.beip.be/wp-content/uploads/2020/03/cropped-favicon-192x192.png",
+    "attr": "icon",
+    "score": -20.8,
+    "error": null
+  },
+  {
+    "name": "BetterVoice",
+    "website": "https://www.bettervoice.com",
+    "slug": "bettervoice",
+    "logo": "/logos/whoisusing/bettervoice.png",
+    "logoUrl": "https://www.bettervoice.com/static/images/bvlogogrey.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "Bhosle",
+    "website": "http://www.firststeptechnology.com",
+    "logo": null,
+    "slug": "bhosle",
+    "error": "Fetch failed: fetch failed"
+  },
+  {
+    "name": "BMI telecom",
+    "website": "http://bmi-telecom.com",
+    "slug": "bmi-telecom",
+    "logo": "/logos/whoisusing/bmi-telecom.png",
+    "logoUrl": "https://bmi.io/images/logo.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "BudgetPhone",
+    "website": "http://www.budgetphone.nl/",
+    "logo": null,
+    "slug": "budgetphone",
+    "error": "Fetch failed: fetch failed"
+  },
+  {
+    "name": "BusinesSuites",
+    "website": "http://www.businessuites.com",
+    "slug": "businessuites",
+    "logo": "/logos/whoisusing/businessuites.svg",
+    "logoUrl": "https://www.mothercare.co.id/static/version1741963345/frontend/Codilar/mothercare/id_ID/images/Whatsapp_Logo.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "CAMSCAPE",
+    "website": "http://www.camscape.ro",
+    "slug": "camscape",
+    "logo": "/logos/whoisusing/camscape.png",
+    "logoUrl": "https://www.camscape.ro/images/logo-site-25-tm-optim.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "ClaroCOM",
+    "website": "http://www.clarocom.com/",
+    "slug": "clarocom",
+    "logo": "/logos/whoisusing/clarocom.png",
+    "logoUrl": "https://ovni.com/wp-content/uploads/2021/09/OVNICOM_LOGO_RGB_FC-01.png",
+    "attr": "icon",
+    "score": 54.2,
+    "error": null
+  },
+  {
+    "name": "CNSI",
+    "website": "http://www.cnsi.fr/",
+    "logo": null,
+    "slug": "cnsi",
+    "error": "Fetch failed: HTTP 404"
+  },
+  {
+    "name": "ConnexCS",
+    "website": "http://www.connexcs.com",
+    "slug": "connexcs",
+    "logo": "/logos/whoisusing/connexcs.png",
+    "logoUrl": "https://connexcs.com/_nuxt/connexcs-logo-white.m796CH9J.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "Core Telecom",
+    "website": "http://www.coretel.ca",
+    "slug": "core-telecom",
+    "logo": "/logos/whoisusing/core-telecom.png",
+    "logoUrl": "https://www.clearlycore.com/wp-content/uploads/2025/05/logo.png",
+    "attr": "icon",
+    "score": 54.2,
+    "error": null
+  },
+  {
+    "name": "Crexendo",
+    "website": "http://www.crexendo.com/",
+    "logo": null,
+    "slug": "crexendo",
+    "error": "Fetch failed: fetch failed"
+  },
+  {
+    "name": "Dazsoft",
+    "website": "http://dazsoft.com",
+    "slug": "dazsoft",
+    "logo": "/logos/whoisusing/dazsoft.png",
+    "logoUrl": "https://dazsoft.com.br/assets/imagens/novo/nav-logo.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "Digipigeon Limited",
+    "website": "http://www.digipigeon.com",
+    "slug": "digipigeon-limited",
+    "logo": "/logos/whoisusing/digipigeon-limited.png",
+    "logoUrl": "http://www.digipigeon.com/img/digipigeon-logo.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "Dynamic Packet",
+    "website": "http://dynamicpacket.com/",
+    "slug": "dynamic-packet",
+    "logo": "/logos/whoisusing/dynamic-packet.png",
+    "logoUrl": "http://new.dynamicpacket.com/wp-content/uploads/2015/03/logo1.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "e4 technologies",
+    "website": "http://e4strategies.com",
+    "slug": "e4-technologies",
+    "logo": "/logos/whoisusing/e4-technologies.png",
+    "logoUrl": "http://e4strategies.com/interworx_logo.gif",
+    "attr": "img-src",
+    "score": 30,
+    "error": null
+  },
+  {
+    "name": "Ecosmob Technologies",
+    "website": "http://www.ecosmob.com",
+    "logo": null,
+    "slug": "ecosmob-technologies",
+    "error": "Fetch failed: HTTP 403"
+  },
+  {
+    "name": "Emerginov (an Orange project)",
+    "website": "http://emerginov.ow2.org",
+    "logo": null,
+    "slug": "emerginov-an-orange-project",
+    "error": "No logo candidates found"
+  },
+  {
+    "name": "EVENMEDIAINTERACTIVE",
+    "website": "http://www.evenmedia.fr",
+    "slug": "evenmediainteractive",
+    "logo": "/logos/whoisusing/evenmediainteractive.svg",
+    "logoUrl": "https://evenmedia.fr/img/logoemi-interactive.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "FKS",
+    "website": "http://www.fks.be",
+    "slug": "fks",
+    "logo": "/logos/whoisusing/fks.png",
+    "logoUrl": "https://www.fks.be/web/static/img/odoo_logo_tiny.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "Freedom Broadband",
+    "website": "https://freedombroadband.com.au",
+    "slug": "freedom-broadband",
+    "logo": "/logos/whoisusing/freedom-broadband.png",
+    "logoUrl": "https://freedombroadband.com.au/wp-content/uploads/2022/01/FreedomBroadband_logo.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "GEMAHVOIP",
+    "website": "https://www.gemahvoip.com",
+    "logo": null,
+    "slug": "gemahvoip",
+    "error": "Fetch failed: fetch failed"
+  },
+  {
+    "name": "Globalive",
+    "website": "http://www.globalive.com/",
+    "slug": "globalive",
+    "logo": "/logos/whoisusing/globalive.svg",
+    "logoUrl": "https://cdn.prod.website-files.com/6832fc145b0b85b38019670e/683d52d96bb12de3b5b60e8b_Globalive%20Logo%20white.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "Gradwell",
+    "website": "http://www.gradwell.com/",
+    "logo": null,
+    "slug": "gradwell",
+    "error": "Fetch failed: fetch failed"
+  },
+  {
+    "name": "Gulfsip",
+    "website": "http://www.gulfsip.com",
+    "slug": "gulfsip",
+    "logo": "/logos/whoisusing/gulfsip.png",
+    "logoUrl": "https://d1h7lvz9w86dd1.cloudfront.net/assets/images/gulfsip-logo-200.png?30012014180054",
+    "attr": "img-src",
+    "score": 30,
+    "error": null
+  },
+  {
+    "name": "Headland Communications",
+    "website": "http://www.hcvoip.com",
+    "slug": "headland-communications",
+    "logo": "/logos/whoisusing/headland-communications.png",
+    "logoUrl": "https://www.hcvoip.com/images/logo.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "HEXANET",
+    "website": "http://www.hexanet.fr",
+    "slug": "hexanet",
+    "logo": "/logos/whoisusing/hexanet.svg",
+    "logoUrl": "https://www.hexanet.fr/sites/default/themes/hexanet/logo-simple.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "Host SBC",
+    "website": "http://hostsbc.com",
+    "slug": "host-sbc",
+    "logo": "/logos/whoisusing/host-sbc.webp",
+    "logoUrl": "https://hostsbc.com/wp-content/uploads/2026/02/HOSTSBC_RTC-06-1.webp",
+    "attr": "og:image",
+    "score": 5,
+    "error": null
+  },
+  {
+    "name": "Hostmonkeys",
+    "website": "https://hostmonkeys.nl",
+    "logo": null,
+    "slug": "hostmonkeys",
+    "error": "Fetch failed: fetch failed"
+  },
+  {
+    "name": "ikozer",
+    "website": "http://www.ikozer.com",
+    "logo": null,
+    "slug": "ikozer",
+    "error": "Fetch failed: fetch failed"
+  },
+  {
+    "name": "Infosat Communication",
+    "website": "https://www.infosat.com/",
+    "slug": "infosat-communication",
+    "logo": "/logos/whoisusing/infosat-communication.svg",
+    "logoUrl": "https://www.networkinnovations.com/hubfs/web-2023/solutions/argus/Argus-full-Logo-MASTER-White.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "Instatalk",
+    "website": "http://instatalk.in",
+    "slug": "instatalk",
+    "logo": "/logos/whoisusing/instatalk.png",
+    "logoUrl": "https://instatalk.in/wp-content/uploads/2026/02/12-300x300.png",
+    "attr": "icon",
+    "score": 39.2,
+    "error": null
+  },
+  {
+    "name": "Integrics",
+    "website": "http://integrics.com/",
+    "slug": "integrics",
+    "logo": "/logos/whoisusing/integrics.png",
+    "logoUrl": "https://integrics.com/images/logo.gif",
+    "attr": "img-src",
+    "score": 30,
+    "error": null
+  },
+  {
+    "name": "Intercity Zakelijk",
+    "website": "http://www.intercityzakelijk.nl",
+    "logo": null,
+    "slug": "intercity-zakelijk",
+    "error": "Fetch failed: fetch failed"
+  },
+  {
+    "name": "Internet Namibia",
+    "website": "http://www.internet.na",
+    "logo": null,
+    "slug": "internet-namibia",
+    "error": "Fetch failed: fetch failed"
+  },
+  {
+    "name": "Intratel",
+    "website": "http://www.intratel.ca",
+    "slug": "intratel",
+    "logo": "/logos/whoisusing/intratel.svg",
+    "logoUrl": "https://www.intratel.ca/wp-content/themes/wp-k-base-theme-intratel/images/intratel_logo_noslogan.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "IP Global Networks",
+    "website": "http://ipglobal.net",
+    "logo": null,
+    "slug": "ip-global-networks",
+    "error": "No logo candidates found"
+  },
+  {
+    "name": "iplink as",
+    "website": "http://www.iplink.no",
+    "logo": null,
+    "slug": "iplink-as",
+    "error": "No logo candidates found"
+  },
+  {
+    "name": "IPPI",
+    "website": "http://www.ippi.fr/",
+    "slug": "ippi",
+    "logo": "/logos/whoisusing/ippi.svg",
+    "logoUrl": "https://www.ippi.com/wp-content/themes/ippi/img/logo-blue.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "IST",
+    "website": "http://www.tecnico.ulisboa.pt",
+    "slug": "ist",
+    "logo": "/logos/whoisusing/ist.png",
+    "logoUrl": "https://static.tecnico.ulisboa.pt/themes/tecnico/img/ulisboa-logo.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "Jssolution Co Ltd",
+    "website": "http://webs.co.kr",
+    "slug": "jssolution-co-ltd",
+    "logo": "/logos/whoisusing/jssolution-co-ltd.png",
+    "logoUrl": "http://webs.co.kr/modules/admin/tpl/img/mobiconSample.png",
+    "attr": "apple-touch-icon",
+    "score": 30,
+    "error": null
+  },
+  {
+    "name": "Kolmisoft",
+    "website": "https://www.kolmisoft.com/",
+    "slug": "kolmisoft",
+    "logo": "/logos/whoisusing/kolmisoft.png",
+    "logoUrl": "https://www.kolmisoft.com/wp-content/themes/kolmisoft/assets/img/logo-trans.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "KurpfalzTel",
+    "website": "http://www.kurpfalztel.de/",
+    "slug": "kurpfalztel",
+    "logo": "/logos/whoisusing/kurpfalztel.svg",
+    "logoUrl": "https://kurpfalztel.de/assets/images/KurpfalzTEL-Logo.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "Localphone",
+    "website": "http://www.localphone.com/",
+    "slug": "localphone",
+    "logo": "/logos/whoisusing/localphone.png",
+    "logoUrl": "https://static.localphone.com/v3/images/common/new-localphoneLogo-en-3.5.01.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "Magic Telecom",
+    "website": "http://www.magictelecom.com",
+    "slug": "magic-telecom",
+    "logo": "/logos/whoisusing/magic-telecom.png",
+    "logoUrl": "https://www.magictelecom.com/favicon.ico",
+    "attr": "icon",
+    "score": -30,
+    "error": null
+  },
+  {
+    "name": "Magictel",
+    "website": "http://www.magictel.com",
+    "slug": "magictel",
+    "logo": "/logos/whoisusing/magictel.svg",
+    "logoUrl": "http://www.magictel.com/images/logo.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "MANGO OFFICE",
+    "website": "http://www.mango-office.ru/",
+    "logo": null,
+    "slug": "mango-office",
+    "error": "Fetch failed: This operation was aborted"
+  },
+  {
+    "name": "Manifone",
+    "website": "http://www.manifone.com",
+    "logo": null,
+    "slug": "manifone",
+    "error": "No logo candidates found"
+  },
+  {
+    "name": "Maxim Taxi Booking",
+    "website": "https://taximaxim.com",
+    "slug": "maxim-taxi-booking",
+    "logo": "/logos/whoisusing/maxim-taxi-booking.svg",
+    "logoUrl": "https://taximaxim.com/images/logo_black.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "MaxiTEL Telecom BV",
+    "website": "http://www.maxitel.nl",
+    "slug": "maxitel-telecom-bv",
+    "logo": "/logos/whoisusing/maxitel-telecom-bv.svg",
+    "logoUrl": "https://maxitel.nl/images/logo.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "Merge Communications",
+    "website": "http://www.mergecom.co.nz",
+    "slug": "merge-communications",
+    "logo": "/logos/whoisusing/merge-communications.png",
+    "logoUrl": "https://static.wixstatic.com/media/23f63b_5885e0ac5e284e1c84b9ad8b02217407~mv2.png/v1/fill/w_174,h_52,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/Merge-logo-HOR.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "Modulis Inc",
+    "website": "https://www.modulis.com/",
+    "slug": "modulis-inc",
+    "logo": "/logos/whoisusing/modulis-inc.svg",
+    "logoUrl": "https://clearlyip.com/wp-content/uploads/2021/11/clusterPBX-logo-stacked.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "NAKA AG",
+    "website": "http://www.nakamobile.com",
+    "slug": "naka-ag",
+    "logo": "/logos/whoisusing/naka-ag.png",
+    "logoUrl": "https://www.nakamobile.com/lib/img/naka-logo.png",
+    "attr": "icon",
+    "score": 35,
+    "error": null
+  },
+  {
+    "name": "Natterbox",
+    "website": "http://www.natterbox.com",
+    "slug": "natterbox",
+    "logo": "/logos/whoisusing/natterbox.svg",
+    "logoUrl": "https://natterbox.com/wp-content/uploads/2025/04/natterbox.svg",
+    "attr": "img-src",
+    "score": 65,
+    "error": null
+  },
+  {
+    "name": "Nehos Communications",
+    "website": "http://www.nehos.net",
+    "logo": null,
+    "slug": "nehos-communications",
+    "error": "Fetch failed: fetch failed"
+  },
+  {
+    "name": "Neron Informatics",
+    "website": "http://www.nerontech.com",
+    "slug": "neron-informatics",
+    "logo": "/logos/whoisusing/neron-informatics.png",
+    "logoUrl": "https://www.nerontech.com/images/neron-logo_white.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "NEXCOM Systems",
+    "website": "http://www.nexcom.fr/",
+    "slug": "nexcom-systems",
+    "logo": "/logos/whoisusing/nexcom-systems.png",
+    "logoUrl": "http://www.nexcom.fr/wp-content/uploads/2017/10/Groupama-logo.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "NobelBiz",
+    "website": "http://www.nobelbiz.com/",
+    "slug": "nobelbiz",
+    "logo": "/logos/whoisusing/nobelbiz.png",
+    "logoUrl": "https://nobelbiz.com/wp-content/uploads/2021/09/NobelBiz.png",
+    "attr": "img-src",
+    "score": 35,
+    "error": null
+  },
+  {
+    "name": "Novanet Inc",
+    "website": "http://www.novanet.net",
+    "slug": "novanet-inc",
+    "logo": "/logos/whoisusing/novanet-inc.png",
+    "logoUrl": "https://www.novanet.net/static/banner-c834b334558aded8344939a26f15470d.png",
+    "attr": "og:image",
+    "score": 25,
+    "error": null
+  },
+  {
+    "name": "Numintec",
+    "website": "http://www.numintec.com",
+    "slug": "numintec",
+    "logo": "/logos/whoisusing/numintec.svg",
+    "logoUrl": "https://www.numintec.com/wp-content/uploads/2025/09/logo-numintec.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "Ogi",
+    "website": "http://www.ogi.wales",
+    "slug": "ogi",
+    "logo": "/logos/whoisusing/ogi.svg",
+    "logoUrl": "https://ogi.wales/wp-content/themes/ogi/img/logo.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "OnSIP",
+    "website": "http://www.onsip.com/",
+    "slug": "onsip",
+    "logo": "/logos/whoisusing/onsip.svg",
+    "logoUrl": "https://www.onsip.com/hubfs/onsip-logo-centered.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "OpenIP",
+    "website": "http://www.openip.fr",
+    "slug": "openip",
+    "logo": "/logos/whoisusing/openip.svg",
+    "logoUrl": "https://www.dstny.fr/hubfs/Logo_EFI_Automotive.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "Orbtalk",
+    "website": "http://www.orbtalk.com",
+    "slug": "orbtalk",
+    "logo": "/logos/whoisusing/orbtalk.png",
+    "logoUrl": "https://www.orbtalk.co.uk/frontend/web/assets/img/social-media/animation-front-cover.png",
+    "attr": "og:image",
+    "score": 25,
+    "error": null
+  },
+  {
+    "name": "Oyatel",
+    "website": "http://oyatel.com",
+    "slug": "oyatel",
+    "logo": "/logos/whoisusing/oyatel.png",
+    "logoUrl": "https://cdn.prod.website-files.com/6821fd0119b743ef924b9cfd/6821fdc0bb29c72d8946306d_oyatel-mail_logo.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "PennState University",
+    "website": "http://www.psu.edu",
+    "slug": "pennstate-university",
+    "logo": "/logos/whoisusing/pennstate-university.svg",
+    "logoUrl": "https://images.ctfassets.net/p7x3ai5plaz1/1wVBvFkhF0ArrdaMlzLiCi/125b0659267cacef241e88b5517a51eb/logotype.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "Persephone",
+    "website": "https://persephone.com.tr",
+    "slug": "persephone",
+    "logo": "/logos/whoisusing/persephone.png",
+    "logoUrl": "https://persephone.com.tr/wp-content/uploads/2022/06/Persephone-300-100.png",
+    "attr": "og:image",
+    "score": 25,
+    "error": null
+  },
+  {
+    "name": "Planetel",
+    "website": "http://www.planetel.it",
+    "slug": "planetel",
+    "logo": "/logos/whoisusing/planetel.svg",
+    "logoUrl": "https://www.planetel.it/wp-content/uploads/2024/03/logo-planetel.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "Proxy Telecom Ltda",
+    "website": "http://www.proxytelecom.com.br",
+    "slug": "proxy-telecom-ltda",
+    "logo": "/logos/whoisusing/proxy-telecom-ltda.png",
+    "logoUrl": "http://www.proxytelecom.com.br/favicon.ico",
+    "attr": "apple-touch-icon",
+    "score": -20,
+    "error": null
+  },
+  {
+    "name": "Ratetel",
+    "website": "http://www.ratetel.com",
+    "logo": null,
+    "slug": "ratetel",
+    "error": "Fetch failed: HTTP 530"
+  },
+  {
+    "name": "Red Squared",
+    "website": "http://www.redsquared.com",
+    "slug": "red-squared",
+    "logo": "/logos/whoisusing/red-squared.png",
+    "logoUrl": "http://www.redsquared.com/images/red2_logo.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "RingCloud",
+    "website": "http://ringcloud.ru",
+    "logo": null,
+    "slug": "ringcloud",
+    "error": "Fetch failed: fetch failed"
+  },
+  {
+    "name": "SDCI - digiCONTACTS",
+    "website": "http://www.digicontacts.net",
+    "slug": "sdci-digicontacts",
+    "logo": "/logos/whoisusing/sdci-digicontacts.png",
+    "logoUrl": "https://www.digicontacts.net/wp-content/uploads/2025/01/stellantis-logo.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "SIP2SIP",
+    "website": "http://sip2sip.info",
+    "slug": "sip2sip",
+    "logo": "/logos/whoisusing/sip2sip.svg",
+    "logoUrl": "https://sip2sip.info/images/macOS-logo.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "SipPulse",
+    "website": "http://www.sippulse.com",
+    "slug": "sippulse",
+    "logo": "/logos/whoisusing/sippulse.svg",
+    "logoUrl": "https://sippulse.com/images/logos/sippulse-logo.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "Skysuite LLC",
+    "website": "http://www.skysuite.com",
+    "logo": null,
+    "slug": "skysuite-llc",
+    "error": "Fetch failed: fetch failed"
+  },
+  {
+    "name": "Slovak Telekom",
+    "website": "http://www.telekom.sk/",
+    "slug": "slovak-telekom",
+    "logo": "/logos/whoisusing/slovak-telekom.png",
+    "logoUrl": "https://media.acp.cdn.telekom.sk/1200x630/3a33a5ac22/t-logo.png",
+    "attr": "og:image",
+    "score": 40,
+    "error": null
+  },
+  {
+    "name": "snom technology AG",
+    "website": "https://www.snom.com",
+    "slug": "snom-technology-ag",
+    "logo": "/logos/whoisusing/snom-technology-ag.svg",
+    "logoUrl": "https://data.web.snom.com/m/filer_public_thumbnails/filer_public/4d/74/4d74f186-204d-46df-abc1-7772ab741712/logo_snom_servicehub_os.svg__1280x720.svg?Expires=1778856717&Signature=0mPIGe6RkbWGDJUTH6iyQYN~oRTJ20PJ-rOPT~hwwr4xsOYfF-mcJLxt8ri7xETZOEZgCbdUnI6AlWEjgxfq18EijFYt6Z66299gVSwNPxl44HdKkoicY9b5fkH1depfuPZq0bTwUMj3C6o5kIFHp2T1wT8vUvXb~FeUF6Ce2bb1ZSUUsf-vhNq1KNHu1ezC0qkfvvlUCz9-9KU4Oiz2IVNlCD7TE0APIwrYtqkaobLldxA~mxggKHusv1qjMi1szZ3R1A~Ocw2T8wdBCdu7-8PBzQwmD7fW5tpZBSsjcJblt2CXOr19di6BZ5fub8VieZUd~DakUQUCnvHThdOVGg__&Key-Pair-Id=K1AIWW47HV2HD2",
+    "attr": "img-src",
+    "score": 0,
+    "error": null
+  },
+  {
+    "name": "SORS Global Telecom",
+    "website": "http://www.sorsglobal.com",
+    "slug": "sors-global-telecom",
+    "logo": "/logos/whoisusing/sors-global-telecom.png",
+    "logoUrl": "https://www.sorsglobal.com/images/favicon.html",
+    "attr": "icon",
+    "score": -30,
+    "error": null
+  },
+  {
+    "name": "Sourcevox",
+    "website": "http://www.sourcevox.com",
+    "slug": "sourcevox",
+    "logo": "/logos/whoisusing/sourcevox.png",
+    "logoUrl": "https://static.wixstatic.com/media/1ad49e_aba299c48085486484a994c257c1ba69~mv2_d_5000_4167_s_4_2.png/v1/fill/w_143,h_119,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/sourcevox_white_logo_on_red_background_v.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "SureVoIP",
+    "website": "http://www.surevoip.co.uk",
+    "slug": "surevoip",
+    "logo": "/logos/whoisusing/surevoip.svg",
+    "logoUrl": "https://www.surevoip.co.uk/_next/static/media/surevoip_logo_yay.c01c5d51.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "Telappliant",
+    "website": "http://www.telappliant.com/",
+    "slug": "telappliant",
+    "logo": "/logos/whoisusing/telappliant.png",
+    "logoUrl": "https://telappliant.com/wp-content/uploads/2025/12/partner-logo-yealink.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "Telinka",
+    "website": "http://www.telinka.com",
+    "logo": null,
+    "slug": "telinka",
+    "error": "Fetch failed: This operation was aborted"
+  },
+  {
+    "name": "Tellbd",
+    "website": "http://www.tellbd.com",
+    "slug": "tellbd",
+    "logo": "/logos/whoisusing/tellbd.png",
+    "logoUrl": "http://www.tellbd.com/wp-content/uploads/2014/11/Logo.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "Tellix Telecom",
+    "website": "http://www.tellix.nl",
+    "logo": null,
+    "slug": "tellix-telecom",
+    "error": "Fetch failed: fetch failed"
+  },
+  {
+    "name": "tlkn",
+    "website": "http://www.tlkn.com",
+    "logo": null,
+    "slug": "tlkn",
+    "error": "Fetch failed: HTTP 500"
+  },
+  {
+    "name": "Tunisip",
+    "website": "http://www.tunisip.com",
+    "logo": null,
+    "slug": "tunisip",
+    "error": "No logo candidates found"
+  },
+  {
+    "name": "University of Siena",
+    "website": "http://www.unisi.it",
+    "logo": null,
+    "slug": "university-of-siena",
+    "error": "Fetch failed: HTTP 403"
+  },
+  {
+    "name": "ViciHost",
+    "website": "http://www.vicihost.com",
+    "slug": "vicihost",
+    "logo": "/logos/whoisusing/vicihost.jpg",
+    "logoUrl": "http://www.vicihost.com/wp-content/uploads/2021/09/cropped-vicihost-logo_300x100.jpg",
+    "attr": "img-src",
+    "score": 30,
+    "error": null
+  },
+  {
+    "name": "VOEMO INC",
+    "website": "https://www.voemo.com",
+    "logo": null,
+    "slug": "voemo-inc",
+    "error": "Fetch failed: fetch failed"
+  },
+  {
+    "name": "Voice Carrier",
+    "website": "http://voicecarrier.com/",
+    "slug": "voice-carrier",
+    "logo": "/logos/whoisusing/voice-carrier.png",
+    "logoUrl": "https://www.voicecarrier.com/wp-content/uploads/2017/02/Voice_Carrier_logo_330_67.png",
+    "attr": "img-src",
+    "score": 50,
+    "error": null
+  },
+  {
+    "name": "VoiceTel",
+    "website": "http://www.voicetel.com",
+    "slug": "voicetel",
+    "logo": "/logos/whoisusing/voicetel.svg",
+    "logoUrl": "https://voicetel.com/assets/logos/ace-hardware.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "VoIP Australia",
+    "website": "https://voipaustralia.com.au",
+    "slug": "voip-australia",
+    "logo": "/logos/whoisusing/voip-australia.png",
+    "logoUrl": "https://voipaustralia.com.au/wp-content/uploads/2022/07/Blue-Modern-Letter-C-Tech-Logo-Design1-300x300.png",
+    "attr": "icon",
+    "score": 54.2,
+    "error": null
+  },
+  {
+    "name": "VOIP Magazine",
+    "website": "http://voipmagazine.wordpress.com/",
+    "slug": "voip-magazine",
+    "logo": "/logos/whoisusing/voip-magazine.png",
+    "logoUrl": "https://voipmagazine.wordpress.com/wp-content/uploads/2025/01/image.png",
+    "attr": "og:image",
+    "score": 25,
+    "error": null
+  },
+  {
+    "name": "VoiPGRID",
+    "website": "http://www.voipgrid.nl",
+    "slug": "voipgrid",
+    "logo": "/logos/whoisusing/voipgrid.png",
+    "logoUrl": "https://www.voipgrid.nl/wp-content/uploads/2020/11/voipgrid-wholesale-voip-platform.png",
+    "attr": "og:image",
+    "score": 25,
+    "error": null
+  },
+  {
+    "name": "VoIPstudio",
+    "website": "https://voipstudio.com",
+    "slug": "voipstudio",
+    "logo": "/logos/whoisusing/voipstudio.svg",
+    "logoUrl": "https://voipstudio.com/wp-content/uploads/trustpilot-2.svg",
+    "attr": "img-src",
+    "score": 65,
+    "error": null
+  },
+  {
+    "name": "VoIPTrack",
+    "website": "http://www.voiptrack.eu",
+    "slug": "voiptrack",
+    "logo": "/logos/whoisusing/voiptrack.png",
+    "logoUrl": "http://voiptrack.eu/favicon.ico",
+    "attr": "icon",
+    "score": -30,
+    "error": null
+  },
+  {
+    "name": "Volli Communication",
+    "website": "http://www.vollicomm.com",
+    "slug": "volli-communication",
+    "logo": "/logos/whoisusing/volli-communication.svg",
+    "logoUrl": "https://upload.wikimedia.org/wikipedia/commons/6/62/Fortinet_logo.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "Voxbeam",
+    "website": "http://www.voxbeam.com",
+    "logo": null,
+    "slug": "voxbeam",
+    "error": "Fetch failed: fetch failed"
+  },
+  {
+    "name": "VozToVoice",
+    "website": "http://www.voztovoice.net",
+    "logo": null,
+    "slug": "voztovoice",
+    "error": "Fetch failed: HTTP 401"
+  },
+  {
+    "name": "webCall",
+    "website": "http://www.webcall.today",
+    "slug": "webcall",
+    "logo": "/logos/whoisusing/webcall.jpg",
+    "logoUrl": "https://expireddomains.com/logos/ed.jpg",
+    "attr": "twitter:image",
+    "score": 15,
+    "error": null
+  },
+  {
+    "name": "X-on",
+    "website": "http://www.x-on.co.uk",
+    "slug": "x-on",
+    "logo": "/logos/whoisusing/x-on.svg",
+    "logoUrl": "https://www.x-on.co.uk/wp-content/themes/x-on/img/x-on-logo-white.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "Xconnect",
+    "website": "http://www.xconnect.net/",
+    "slug": "xconnect",
+    "logo": "/logos/whoisusing/xconnect.svg",
+    "logoUrl": "https://www.xconnect.net/images/icons/xconnect-logo-white.svg",
+    "attr": "img-src",
+    "score": 80,
+    "error": null
+  },
+  {
+    "name": "Xstream Services",
+    "website": "https://barbadoslive.net",
+    "logo": null,
+    "slug": "xstream-services",
+    "error": "Fetch failed: fetch failed"
+  }
+]

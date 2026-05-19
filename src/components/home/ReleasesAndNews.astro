@@ -1,0 +1,116 @@
+---
+import { fetchWordPressFeed } from '~/utils/wordpressFeed';
+import { news as staticNews } from '~/data/news';
+
+const blogPosts = await fetchWordPressFeed('https://blog.opensips.org/feed/', 10);
+
+const formatBlogDate = (d: Date) =>
+  d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+const formatNewsDate = (s: string) => {
+  const d = new Date(s);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+---
+
+<section class="not-content rn-section">
+  <div class="rn-col">
+    <header class="rn-header">
+      <h3>Latest news</h3>
+    </header>
+    <div class="rn-list rn-list--scrollable">
+      {staticNews.length === 0 ? (
+        <p class="rn-meta rn-empty">No news items yet — add them to <code>src/data/news.ts</code>.</p>
+      ) : (
+        staticNews.map((item) => (
+          <a href={item.url} target="_blank" rel="noopener" class="rn-card rn-link">
+            <h4>{item.title}</h4>
+            {item.description && <p class="rn-desc">{item.description}</p>}
+            <p class="rn-meta">
+              {formatNewsDate(item.date)}
+              {item.source && <span class="rn-source">{item.source}</span>}
+            </p>
+          </a>
+        ))
+      )}
+    </div>
+  </div>
+
+  <div class="rn-col">
+    <header class="rn-header">
+      <h3>From the blog</h3>
+      <a href="https://blog.opensips.org" target="_blank" rel="noopener">All →</a>
+    </header>
+    <div class="rn-list rn-list--scrollable">
+      {blogPosts.length === 0 ? (
+        <p class="rn-meta">
+          Visit <a href="https://blog.opensips.org">blog.opensips.org</a> for the latest posts.
+        </p>
+      ) : (
+        blogPosts.map((item) => (
+          <a href={item.link} target="_blank" rel="noopener" class="rn-card rn-link">
+            <h4>{item.title}</h4>
+            {item.description && <p class="rn-desc">{item.description}</p>}
+            <p class="rn-meta">{formatBlogDate(item.pubDate)}</p>
+          </a>
+        ))
+      )}
+    </div>
+  </div>
+</section>
+
+<style>
+  .rn-section {
+    display: grid;
+    grid-template-columns: 1fr;
+    background-color: var(--color-base-100, #fff);
+    background-image: radial-gradient(circle, rgba(176, 176, 176, 0.25) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-attachment: fixed;
+  }
+  @media (min-width: 768px) {
+    .rn-section { grid-template-columns: 1fr 1fr; }
+    .rn-col + .rn-col { border-left: 1px solid var(--color-base-300, #e5e5e5); }
+  }
+  .rn-col { padding: 2.5rem 2rem; }
+  @media (min-width: 768px) {
+    .rn-col:first-child { padding-left: 7rem; }
+    .rn-col:last-child  { padding-right: 7rem; }
+  }
+  .rn-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+  .rn-header h3 { font-size: 1.25rem; font-weight: 700; margin: 0; }
+  .rn-header a { font-size: 0.875rem; color: var(--color-primary, #7da82e); text-decoration: none; }
+  .rn-header a:hover { text-decoration: underline; }
+  .rn-list { display: grid; gap: 0.75rem; }
+  .rn-list--scrollable {
+    max-height: 18rem;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-base-300, #e5e5e5) transparent;
+    padding-right: 0.25rem;
+  }
+  .rn-card {
+    border: 1px solid var(--color-base-300, #e5e5e5);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    background: var(--color-base-100, #fff);
+  }
+  .rn-link { display: block; text-decoration: none; color: inherit; transition: border-color 0.15s; }
+  .rn-link:hover { border-color: var(--color-primary, #7da82e); }
+  .rn-meta { font-size: 0.75rem; opacity: 0.6; margin: 0.25rem 0 0; display: flex; align-items: center; gap: 0.5rem; }
+  .rn-source {
+    background: var(--color-base-200, #f3f3f3);
+    border-radius: 0.25rem;
+    padding: 0.1rem 0.4rem;
+    font-size: 0.7rem;
+    opacity: 1;
+  }
+  .rn-empty { font-style: italic; }
+  .rn-card h4 { font-size: 0.95rem; font-weight: 500; margin: 0; line-height: 1.4; }
+  .rn-desc { font-size: 0.8rem; opacity: 0.6; line-height: 1.5; margin: 0.4rem 0 0; }
+</style>

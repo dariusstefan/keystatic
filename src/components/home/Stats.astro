@@ -1,0 +1,59 @@
+---
+import { yearsSinceFirstRelease } from '~/utils/project';
+const years = yearsSinceFirstRelease();
+
+const stats = [
+  { value: '120+', label: 'Modules' },
+  { value: `${years}+`, label: 'Years in production' },
+  { value: 'LTS + yearly', label: 'Release cadence' },
+  { value: '1.6k★', label: 'on GitHub' },
+];
+---
+
+<section class="not-content stats-section">
+  <div class="stats-grid">
+    {
+      stats.map((s, i) => (
+        <div class:list={['stat-cell', { 'with-divider': i > 0 }]}>
+          <div class="stat-value">{s.value}</div>
+          <div class="stat-label">{s.label}</div>
+        </div>
+      ))
+    }
+  </div>
+</section>
+
+<style>
+  .stats-section {
+    background: var(--color-base-200, #f3f3f3);
+    
+    padding: 2.5rem 1rem;
+  }
+  .stats-grid {
+    max-width: 64rem;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem 0;
+  }
+  @media (min-width: 768px) {
+    .stats-grid { grid-template-columns: repeat(4, 1fr); gap: 0; }
+    .stat-cell.with-divider { border-left: 1px solid var(--color-base-300, #e5e5e5); }
+  }
+  .stat-cell {
+    text-align: center;
+    padding: 0 1rem;
+  }
+  .stat-value {
+    font-size: 1.875rem;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+  .stat-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.6;
+    margin-top: 0.5rem;
+  }
+</style>

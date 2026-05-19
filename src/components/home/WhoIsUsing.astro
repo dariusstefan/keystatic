@@ -1,0 +1,157 @@
+---
+import allCompanies from '~/data/whoisusing.json';
+
+const companies = allCompanies.filter((c) => c.updatedLogo !== false && !c.hideFromHome);
+const mid = Math.ceil(companies.length / 2);
+const row1 = companies.slice(0, mid);
+const row2 = companies.slice(mid);
+---
+
+<section class="not-content trusted-section">
+  <p class="trusted-eyebrow">Trusted by</p>
+
+  <div class="marquee-outer">
+    <div class="marquee-row">
+      <div class="marquee-track">
+        {[...row1, ...row1].map((c) => (
+          <a href={c.website} target="_blank" rel="noopener" title={c.name} class="logo-item">
+            {c.logoDark || c.logoLight ? (
+              <>
+                <img src={c.logoLight ?? c.logo} alt={c.name} loading="lazy" class="logo-light" />
+                <img src={c.logoDark  ?? c.logo} alt={c.name} loading="lazy" class="logo-dark" />
+              </>
+            ) : (
+              <img src={c.logo} alt={c.name} loading="lazy" />
+            )}
+          </a>
+        ))}
+      </div>
+    </div>
+
+    <div class="marquee-row marquee-row--reverse">
+      <div class="marquee-track">
+        {[...row2, ...row2].map((c) => (
+          <a href={c.website} target="_blank" rel="noopener" title={c.name} class="logo-item">
+            {c.logoDark || c.logoLight ? (
+              <>
+                <img src={c.logoLight ?? c.logo} alt={c.name} loading="lazy" class="logo-light" />
+                <img src={c.logoDark  ?? c.logo} alt={c.name} loading="lazy" class="logo-dark" />
+              </>
+            ) : (
+              <img src={c.logo} alt={c.name} loading="lazy" />
+            )}
+          </a>
+        ))}
+      </div>
+    </div>
+  </div>
+
+  <p class="trusted-cta"><a href="/about/whos-using">See all →</a></p>
+</section>
+
+<style>
+  .trusted-section {
+    background-color: var(--color-base-100, #fff);
+    background-image: radial-gradient(circle, rgba(176, 176, 176, 0.25) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-attachment: fixed;
+    padding: 3rem 0;
+    overflow: hidden;
+  }
+
+  .trusted-eyebrow {
+    text-align: center;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    opacity: 0.5;
+    margin: 0 0 0.5rem;
+  }
+
+  /* Theme-aware logo switching */
+  .logo-dark  { display: none; }
+  .logo-light { display: block; }
+
+  :root[data-theme="dark"] .logo-light { display: none; }
+  :root[data-theme="dark"] .logo-dark  { display: block; }
+
+  /* Edge fade masks */
+  .marquee-outer {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      black 12%,
+      black 88%,
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent 0%,
+      black 12%,
+      black 88%,
+      transparent 100%
+    );
+  }
+
+  .marquee-row {
+    overflow: hidden;
+  }
+
+  .marquee-track {
+    display: flex;
+    gap: 1.5rem;
+    width: max-content;
+    animation: scroll-left 90s linear infinite;
+  }
+
+  .marquee-row--reverse .marquee-track {
+    animation-direction: reverse;
+    animation-duration: 75s;
+  }
+
+
+  @keyframes scroll-left {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  .logo-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 13rem;
+    height: 5rem;
+    padding: 0.75rem 1.25rem;
+    filter: grayscale(1);
+    opacity: 0.6;
+    transition: filter 0.2s, opacity 0.2s;
+  }
+
+  .logo-item:hover {
+    filter: grayscale(0);
+    opacity: 1;
+  }
+
+  .logo-item img {
+    max-width: 100%;
+    max-height: 2.5rem;
+    object-fit: contain;
+  }
+
+  .trusted-cta {
+    text-align: center;
+    margin: 2rem 0 0;
+    font-size: 0.875rem;
+  }
+
+  .trusted-cta a {
+    color: var(--color-primary, #7da82e);
+    text-decoration: none;
+  }
+
+  .trusted-cta a:hover { text-decoration: underline; }
+</style>

@@ -1,0 +1,179 @@
+---
+import { versions } from '~/data/versions';
+
+const beta = versions.find((v) => v.status === 'beta');
+const lts = versions.find((v) => v.status === 'lts');
+const headline = beta
+  ? `v${beta.series}.0 in beta`
+  : lts
+    ? `v${lts.series} LTS available`
+    : 'Latest release available';
+---
+
+<section class="not-content hero-section">
+  <div class="hero-inner">
+    <a href="/about/versions" class="hero-badge">
+      {headline} · See the full release history
+    </a>
+
+    <h1 class="hero-title">
+      The SIP server that<br />
+      powers <span class="hero-accent"> real networks</span>
+    </h1>
+
+    <p class="hero-sub">
+      From startup VoIP platforms to Tier-1 operators — <strong>OpenSIPS</strong> handles the signaling.
+    </p>
+
+    <div class="hero-actions">
+      <a href="/downloads" class="btn-primary-hero">
+        ↓ Download {beta?.series ?? lts?.series ?? '4.0'}
+      </a>
+      <a href="/documentation" class="btn-outline-hero">
+        Read the docs
+      </a>
+    </div>
+
+    <div class="hero-snippet">
+      <div class="snippet-dots">
+        <span></span><span></span><span></span>
+      </div>
+      <pre class="snippet-pre"><span class="snippet-prompt">$</span> <span class="snippet-typed">apt install opensips</span></pre>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero-section {
+    position: relative;
+    background-color: var(--color-base-100, #fff);
+    background-image:
+      radial-gradient(circle, rgba(176, 176, 176, 0.25) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-attachment: fixed;
+    padding: 5rem 1rem;
+    text-align: center;
+  }
+  .hero-inner {
+    max-width: 48rem;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  .hero-badge {
+    display: inline-block;
+    background: color-mix(in srgb, var(--color-primary, #7da82e) 12%, transparent);
+    color: var(--color-primary, #7da82e);
+    border: 1px solid color-mix(in srgb, var(--color-primary, #7da82e) 30%, transparent);
+    border-radius: 9999px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    padding: 0.25rem 0.875rem;
+    text-decoration: none;
+    margin-bottom: 1.5rem;
+    transition: opacity 0.15s;
+  }
+  .hero-badge:hover { opacity: 0.8; }
+  .hero-title {
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin: 0 0 1.25rem;
+  }
+  .hero-accent { color: var(--color-primary, #7da82e); }
+  .hero-sub {
+    font-size: 1.0625rem;
+    opacity: 0.65;
+    line-height: 1.6;
+    max-width: 38rem;
+    margin: 0 auto 1.75rem;
+  }
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: center;
+    margin-bottom: 2rem;
+  }
+  .btn-primary-hero {
+    background: var(--color-neutral, #1f2328);
+    color: var(--color-neutral-content, #fff);
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    text-decoration: none;
+    transition: opacity 0.15s;
+  }
+  .btn-primary-hero:hover { opacity: 0.85; }
+  .btn-outline-hero {
+    background: transparent;
+    color: inherit;
+    border: 1px solid var(--color-base-300, #e5e5e5);
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    text-decoration: none;
+    transition: border-color 0.15s;
+  }
+  .btn-outline-hero:hover { border-color: var(--color-primary, #7da82e); }
+  .hero-snippet {
+    background: #1e2330;
+    border-radius: 0.75rem;
+    width: 100%;
+    max-width: 26rem;
+    margin: 0 auto;
+    overflow: hidden;
+    text-align: left;
+  }
+  .snippet-dots {
+    display: flex;
+    gap: 0.375rem;
+    padding: 0.625rem 0.875rem 0;
+  }
+  .snippet-dots span {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: #4a5568;
+  }
+  .snippet-pre {
+    margin: 0;
+    padding: 0.625rem 1rem 0.875rem;
+    font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+    font-size: 0.9rem;
+    color: #e2e8f0;
+    background: transparent;
+    border: none;
+  }
+  .snippet-prompt {
+    color: var(--color-primary, #7da82e);
+    margin-right: 0.5rem;
+    user-select: none;
+  }
+
+  .snippet-typed {
+    display: inline-block;
+    overflow: hidden;
+    white-space: nowrap;
+    vertical-align: bottom;
+    width: 0;
+    border-right: 2px solid var(--color-primary, #7da82e);
+    animation:
+      snippet-typing 1.4s steps(20, end) 0.6s forwards,
+      snippet-blink 0.7s step-end infinite;
+  }
+
+  @keyframes snippet-typing {
+    to { width: 20ch; }
+  }
+
+  @keyframes snippet-blink {
+    0%, 100% { border-color: var(--color-primary, #7da82e); }
+    50%       { border-color: transparent; }
+  }
+</style>
