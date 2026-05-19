@@ -6,32 +6,7 @@ description: >-
 ---
 **OpenSIPS** (**Open** **SIP** **S**erver) is a mature *open source* SIP server. More than a proxy or router, it includes application-level functionality that makes it the core component of any SIP-based VoIP solution. With a flexible routing engine and a modular design, OpenSIPS unifies voice, video, IM and presence services — at a scale that ranges from small deployments to enterprise and carrier-grade platforms.
 
-## Why OpenSIPS?
-
-**Performance.** OpenSIPS is one of the fastest SIP servers available. As a stateless load-balancer it handles over 5,000 call setups per second; on a 4 GB system it serves more than 300,000 online subscribers. It scales horizontally by adding nodes and supports geographically distributed platforms.
-
-**Flexibility.** A custom scripting language (similar in syntax to C) combined with a plug-and-play module architecture lets you cover a wide range of scenarios without touching the core. Plug in the modules you need and build routing logic on top of them.
-
-**Ease of use.** OpenSIPS ships with a graphical `menuconfig` console for compile-time configuration and script generation, a per-version [manual](/documentation/), and a large library of recorded webinars covering everything from first install to advanced routing.
-
-**Monitoring & control.** The MI (Management Interface), Statistics Interface and Event Interface let you pull live metrics, receive async notifications (gateway down, memory pressure, slow DB), and send control commands — all from external tools.
-
-## What it can do
-
-* SIP registrar, location, proxy and redirect server
-* Back-to-back User Agent (B2BUA)
-* SIP presence agent (with XCAP support)
-* Load-balancer and dispatcher
-* Least-cost and dynamic routing
-* NAT traversal for SIP and RTP
-* SIP to XMPP and SIP to SMS gateways
-* IM server (chat and end-to-end messaging)
-* SIP application server
-* STIR/SHAKEN support
-
-See [Features](/about/features/) for a full list.
-
-## Prerequisites
+**Prerequisites**
 
 OpenSIPS runs on most \*nix systems. Deploying it requires basic Linux familiarity, some [SIP (RFC 3261)](https://www.ietf.org/rfc/rfc3261.txt) knowledge for non-trivial scenarios, and comfort with a C-like scripting language for writing routing logic.
 
