@@ -1,2350 +1,1283 @@
 ---
 title: CoreVariables
 ---
-\---
+##### Documentation -> [Manuals](Documentation.Manuals) -> [Manual devel](Documentation.Manual-4-1) -> Core Variables
 
-title: Core Variables - 4.1
+---
 
-\---
+| \*\*Core Variables v4.1 \*\* |
+| ---------------------------- |
 
+| [Prev](Script-CoreFunctions-4-1) | [Next](Script-Flags-4-1) |
+| -------------------------------- | ------------------------ |
 
+---
 
-\##### Documentation -> \[Manuals]\(./Documentation.Manuals) -> \[Manual devel]\(./Documentation.Manual-4-1) -> Core Variables
+**OpenSIPS** provides multiple type of variables to be used in the routing script. The difference between the types of variables comes from (1) the visibility of the variable (when it is visible), (2) what the variable is attached to (where the variable resides), (3) read-write status of the variable (some types of the variables are read-only and (4) how multiple values (for the same variable are handled).
 
+The **OpenSIPS** variables can be easily identified in the script as all their names (or notations) start with the **$** sign.
 
-
-\----
-
-
-
-\<br/>
-
-
-
-\| \<span style=\{\{color: "#185662"}}>\[+\*\*Core Variables v4.1 \*\*+]\</span> |
-
-
-
-|\[Prev]\(./Script-CoreFunctions-4-1) || \[Next]\(./Script-Flags-4-1)|
-
-\----
-
-
-
-\*\*OpenSIPS\*\* provides multiple type of variables to be used in the routing script. The difference between the types of variables comes from (1) the visibility of the variable (when it is visible), (2) what the variable is attached to (where the variable resides), (3) read-write status of the variable (some types of the variables are read-only and (4) how multiple values (for the same variable are handled).
-
-
-
-The \*\*OpenSIPS\*\* variables can be easily identified in the script as all their names (or notations) start with the \*\*$\*\* sign.
-
-
-
-Syntax:\<br/>
-
-The complete syntax for a pseudo variable is: 
-
-\>>lframe\<\<
-
-$(\<span style=\{\{color: "green"}}>\*\<context>\*%black%\*\*name\*\*%green%\*(subname)\[index]\{transformation}\*\</span>)
-
-\>>\<\<
-
-
+Syntax:\<br />
+The complete syntax for a pseudo variable is:
+$(*\<context>**name**(subname)\[index]\{transformation}*)
 
 The fields written in green are optional.
-
 The fields meaning is:
 
-\* \*\*name\*\*(compulsory) - the pseudo-variable name(type).\<br/>
-
-Ex: pvar, avp, ru, DLG\_status, etc.
-
-\* \*\*subname\*\* - the identifier of a certain pv from the given type.\<br/>
-
-Ex: hdr(From), avp(name).
-
-\* \*\*index\*\* - a pv can store more than one value - it can refer to a list of values. You can access a certain value from the list if you specify its index. You can also specify indexes with negative values, -1 means the last inserted, -2 the value before the previous inserted one.
-
-\* \*\*transformation\*\* - a series of processing actions can be applied on pseudo-variable. You can find the whole list of possible transformations \[ here]\(./Documentation.Script-Tran). The transformations can be cascaded, using the output of one transformation as the input of another.     
-
-\* \*\*context\*\* - the context in which the pseudo0variable will be evaluated. Now there are 2 pv contexts: reply and request. The reply context can be used in the failure route to request for the pseudo-variable to be evaluated in the context of the reply message. The request context can be used if in a reply route is desired for the pv to be evaluated in the context of the corresponding request.
-
-
+* **name**(compulsory) - the pseudo-variable name(type).\<br />
+  Ex: pvar, avp, ru, DLG\_status, etc.
+* **subname** - the identifier of a certain pv from the given type.\<br />
+  Ex: hdr(From), avp(name).
+* **index** - a pv can store more than one value - it can refer to a list of values. You can access a certain value from the list if you specify its index. You can also specify indexes with negative values, -1 means the last inserted, -2 the value before the previous inserted one.
+* **transformation** - a series of processing actions can be applied on pseudo-variable. You can find the whole list of possible transformations [here](Documentation.Script-Tran). The transformations can be cascaded, using the output of one transformation as the input of another.
+* **context** - the context in which the pseudo0variable will be evaluated. Now there are 2 pv contexts: reply and request. The reply context can be used in the failure route to request for the pseudo-variable to be evaluated in the context of the reply message. The request context can be used if in a reply route is desired for the pv to be evaluated in the context of the corresponding request.
 
 Usage examples:
 
-\* Only \*\*name\*\*: \<span style=\{\{color: "green"}}>$ru 
-
-\* \*\*Name\*\* and \*'subname\*: %green%$hdr(Contact)\</span>
-
-\* \*\*Name\*\* and \*\*index\*\*: \<span style=\{\{color: "green"}}>$(ct\[0])\</span>
-
-\* \*\*Name\*\*, \*\*subname\*\* and \*\*index\*\*: \<span style=\{\{color: "green"}}>$(avp(i:10)\[2])
-
-\* \*\*Context\*\* 
-
-\*\* %green%$(\<request>ru)\</span> from a reply route will get the Request-URI from the request
-
-\*\* \<span style=\{\{color: "green"}}>$(\<reply>hdr(Contact))\</span> context can be used from failure route to access information from the reply 
-
-
+* Only **name**: $ru
+* **Name** and *'subname*: $hdr(Contact)
+* **Name** and **index**: $(ct\[0])
+* **Name**, **subname** and **index**: $(avp(i:10)\[2])
+* **Context**
+  \*\* $(\<request>ru) from a reply route will get the Request-URI from the request
+  \*\* $(\<reply>hdr(Contact)) context can be used from failure route to access information from the reply
 
 Types of variables:
 
+* [**script variables**](#varscript) - as the name says, these variables are strictly bound to the script routes. The variables are visible only in the routing blocks - they are not message or transaction related, but they are process related (script variables will be inherited by script routes executed by the same **OpenSIPS** process).\<br />
+  Script variables are read write and they can have integer or string values. A script variable can only hold a single value. A new assignment (or write operation) will overwrite the existing value.
+* [**AVP - Attribute Value Pair**](#varavps) - the AVPs are dynamic variables (as name) that can be created - the AVPS are linked to a singular message or transaction (if stateful processing is used). A message or a transaction will initially (when received or created) have an empty list of AVPS attached to it. During the routing script, the script directly or functions called from script may create new AVPS that will automatically attached to the message/transaction. The AVPS will be visible in all routes where any message (reply or request) of the transaction will be processed - branch\_route , failure\_route, onreply\_route (for this last route you need to enable the TM parameter *onreply\_avp\_mode*).\<br />
+  AVPs are read write and an existing AVP can be even deleted (removed). An AVP may contain multiple values - a new assignment (or write operation) will add a new value to the AVP; the values are kept in "last added first to be used" order (stack).\<br />
+  A special index **append** is defined to allow you to add a new value at the end of the list (at the bottom of the stack) - $(avp(name)\[append]) = "last value";
+* [**pseudo variables**](#varpv) - pseudo-variables (or PV) provide access to information from the processed SIP message (headers, RURI, transport level info, a.s.o) or from **OpenSIPS** inners (time values, process PID, return code of a function). Depending of what info they provide, the PVs are either bound to the message, either to nothing  (global). Most of the PVs are read-only and only several allow write operations. A PV may return several values or only one, depending of the referred info (if can have multiple values or not).\<br />
+  Standard PV is read-only and returns a single value (if not otherwise documented).
+* [**escape sequences**](#varesc) - escape sequences used to format the strings; they are actually not variables, but rather formatters.
 
+\<a id="varscript">\</a>
 
-\* \[ \*\*script variables\*\*]\(./#varscript ) - as the name says, these variables are strictly bound to the script routes. The variables are visible only in the routing blocks - they are not message or transaction related, but they are process related (script variables will be inherited by script routes executed by the same \*\*OpenSIPS\*\* process).\<br/>
+### Script variables
 
-Script variables are read write and they can have integer or string values. A script variable can only hold a single value. A new assignment (or write operation) will overwrite the existing value.
+**Naming**: **$var(name)**
 
+**Hints**:
 
+# if you want to start using a script variable in a route, better initialize it with same value (or reset it), otherwise you may inherit a value from a previous route that was executed by the same process.
 
-\* \[ \*\*AVP - Attribute Value Pair\*\*]\(./#varavps ) - the AVPs are dynamic variables (as name) that can be created - the AVPS are linked to a singular message or transaction (if stateful processing is used). A message or a transaction will initially (when received or created) have an empty list of AVPS attached to it. During the routing script, the script directly or functions called from script may create new AVPS that will automatically attached to the message/transaction. The AVPS will be visible in all routes where any message (reply or request) of the transaction will be processed - branch\_route , failure\_route, onreply\_route (for this last route you need to enable the TM parameter \*onreply\_avp\_mode\*).\<br/>
+# script variables are faster than AVPs, as they directly reference a memory location.
 
-AVPs are read write and an existing AVP can be even deleted (removed). An AVP may contain multiple values - a new assignment (or write operation) will add a new value to the AVP; the values are kept in "last added first to be used" order (stack).\<br/>
+# the value of script variables persists over a **OpenSIPS** process.
 
-A special index \*\*append\*\* is defined to allow you to add a new value at the end of the list (at the bottom of the stack) - $(avp(name)\[append]) = "last value";
-
-
-
-\* \[ \*\*pseudo variables\*\*]\(./#varpv ) - pseudo-variables (or PV) provide access to information from the processed SIP message (headers, RURI, transport level info, a.s.o) or from \*\*OpenSIPS\*\* inners (time values, process PID, return code of a function). Depending of what info they provide, the PVs are either bound to the message, either to nothing  (global). Most of the PVs are read-only and only several allow write operations. A PV may return several values or only one, depending of the referred info (if can have multiple values or not).\<br/>
-
-Standard PV is read-only and returns a single value (if not otherwise documented).
-
-
-
-\* \[ \*\*escape sequences\*\*]\(./#varesc ) - escape sequences used to format the strings; they are actually not variables, but rather formatters.
-
-
-
-\[#varscript]\(./#varscript)
-
-\### Script variables \[\&#x1F517;]\(./#varscript)
-
-
-
-\*\*Naming\*\*: \*\*$var(name)\*\* 
-
-
-
-\*\*Hints\*\*:
-
-\# if you want to start using a script variable in a route, better initialize it with same value (or reset it), otherwise you may inherit a value from a previous route that was executed by the same process.
-
-\# script variables are faster than AVPs, as they directly reference a memory location.
-
-\# the value of script variables persists over a \*\*OpenSIPS\*\* process.
-
-\# a script variable can only hold one value.
-
-
+# a script variable can only hold one value.
 
 Example of usage:
 
-
-
-\`\`\`text
-
-
-
-$var(a) = 2;  # sets the value of variable 'a' to integer '2'
-
-$var(a) = "2";  # sets the value of variable 'a' to string '2'
-
-$var(a) = 3 + (7&(\~2)); # arithmetic and bitwise operation
-
+```
+$var(a) = 2;  # sets the value of variable 'a' to integer '2'
+$var(a) = "2";  # sets the value of variable 'a' to string '2'
+$var(a) = 3 + (7&(~2)); # arithmetic and bitwise operation
 $var(a) = "sip:" + $au + "@" + $fd; # compose a value from authentication username and From URI domain
 
-
-
-\# using a script variable for tests
-
-if( \[ $var(a) & 4 ] ) \{
-
-  xlog("var a has third bit set\<br/>n");
-
+# using a script variable for tests
+if( [ $var(a) & 4 ] ) {
+  xlog("var a has third bit set\n");
 }
-
-
-
-\`\`\`
-
-
+```
 
 Setting a variable to NULL is actually initializing the value to integer '0'. Script variables don't have NULL value.
 
+\<a id="varavps">\</a>
 
+### AVP variables
 
-\[#varavps]\(./#varavps)
-
-\### AVP variables \[\&#x1F517;]\(./#varavps)
-
-
-
-\*\*Naming\*\*: \*\*$avp(name)\*\* or \*\*$(avp(name)\[N])\*\*
-
-
+**Naming**: **$avp(name)** or **$(avp(name)\[N])**
 
 When using the index "N" you can force the AVP to return a certain value (the N-th value). If no index is given, the first value will be returned.
 
+**Hints**:
 
+# to enable AVPs in onreply\_route, use "modparam("tm", "onreply\_avp\_mode", 1)"
 
-\*\*Hints\*\*:
+# if multiple values are used for a single AVP, the values are index in revert order than added
 
-\# to enable AVPs in onreply\_route, use "modparam("tm", "onreply\_avp\_mode", 1)"
+# AVPs are part of the transaction context, so they will be visible everywhere where the transaction is present.
 
-\# if multiple values are used for a single AVP, the values are index in revert order than added
-
-\# AVPs are part of the transaction context, so they will be visible everywhere where the transaction is present.
-
-\# the value of an AVP can be deleted
-
-
+# the value of an AVP can be deleted
 
 Example of usage:
 
-\# Transaction persistence example
+# Transaction persistence example
 
-\`\`\`text
-
-
-
-\# enable avps in onreply route
-
-modparam("tm", "onreply\_avp\_mode", 1)
-
+```
+# enable avps in onreply route
+modparam("tm", "onreply_avp_mode", 1)
 ...
-
-route\{
-
+route{
 ...
-
 $avp(tmp) = $Ts ; # store the current time (at request processing)
-
 ...
-
-t\_onreply("1");
-
-t\_relay();
-
+t_onreply("1");
+t_relay();
 ...
-
 }
 
-
-
-onreply\_route\[1] \{
-
-if (t\_check\_status("200")) \{
-
-\# calculate the setup time
-
-$var(setup\_time) = $Ts - $avp(tmp);
-
+onreply_route[1] {
+	if (t_check_status("200")) {
+		# calculate the setup time
+		$var(setup_time) = $Ts - $avp(tmp);
+	}
 }
+```
 
-}
+# Multiple values example
 
+```
+$avp(my_arr) = "one";
+# we have a single value
 
+$avp(my_arr) = "two";
+# we have two values ("two","one")
 
-\`\`\`
+$avp(my_arr) = "three";
+# we have three values ("three","two","one")
 
+xlog("accessing values with no index: $avp(my_arr)\n");
+# this will print the first value, which is the last added value -> "three"
 
+xlog("accessing values with no index: $(avp(my_arr)[2])\n");
+# this will print the index 2 value (third one), -> "one"
 
-\# Multiple values example
+# remove the first value of the avp (lastly added one); if there is only one value, the AVP itself will be destroyed
+$avp(my_arr) = NULL;
 
-\`\`\`text
+# delete all values and destroy the AVP
+$avp(my_arr) := NULL;
 
+# delete the value located at a certain index
+$(avp(my_arr)[1]) = NULL;
 
+# overwrite the value at a certain index
+$(avp(my_arr)[0]) = "zero";
+```
 
-$avp(my\_arr) = "one";
+The **AVPOPS** module provides a lot of useful functions to operate AVPs (like checking values, pushing values into different other locations, deleting AVPs, etc).
 
-\# we have a single value
+\<a id="varpv">\</a>
 
+### Scripting Variables
 
+**Naming**: $name
 
-$avp(my\_arr) = "two";
+**Hints**:
 
-\# we have two values ("two","one")
+# the PV tokens can be given as parameters to different script functions and they will be replaced with a value before the execution of the function.
 
-
-
-$avp(my\_arr) = "three";
-
-\# we have three values ("three","two","one")
-
-
-
-xlog("accessing values with no index: $avp(my\_arr)\<br/>n");
-
-\# this will print the first value, which is the last added value -> "three"
-
-
-
-xlog("accessing values with no index: $(avp(my\_arr)\[2])\<br/>n");
-
-\# this will print the index 2 value (third one), -> "one"
-
-
-
-\# remove the first value of the avp (lastly added one); if there is only one value, the AVP itself will be destroyed
-
-$avp(my\_arr) = NULL;
-
-
-
-\# delete all values and destroy the AVP
-
-$avp(my\_arr) := NULL;
-
-
-
-\# delete the value located at a certain index 
-
-$(avp(my\_arr)\[1]) = NULL;
-
-
-
-\# overwrite the value at a certain index
-
-$(avp(my\_arr)\[0]) = "zero";
-
-
-
-\`\`\`
-
-
-
-The \*\*AVPOPS\*\* module provides a lot of useful functions to operate AVPs (like checking values, pushing values into different other locations, deleting AVPs, etc).
-
-
-
-\[#varpv]\(./#varpv)
-
-\### Scripting Variables \[\&#x1F517;]\(./#varpv)
-
-
-
-\*\*Naming\*\*: $name
-
-
-
-\*\*Hints\*\*:
-
-\# the PV tokens can be given as parameters to different script functions and they will be replaced with a value before the execution of the function.
-
-\# most of PVs are made available by \*\*OpenSIPS\*\* core, but there are also module exporting PV (to make available info specific to that module) - check the modules documentation.
-
-
+# most of PVs are made available by **OpenSIPS** core, but there are also module exporting PV (to make available info specific to that module) - check the modules documentation.
 
 Predefined (provided by core) PVs are listed in alphabetical order.
 
+\<a id="ai">\</a>
 
+#### URI in SIP Request's P-Asserted-Identity header - $ai
 
-\[#ai]\(./#ai)
+**$ai** - reference to URI in request's P-Asserted-Identity header (see RFC 3325)
 
-\####  URI in SIP Request's P-Asserted-Identity header - $ai \[\&#x1F517;]\(./#ai)
+\<a id="adu">\</a>
 
+#### Authentication Digest URI - $adu
 
+**$adu** - URI from Authorization or Proxy-Authorization header. This URI is used when calculating the HTTP Digest Response.
 
-\*\*$ai\*\* - reference to URI in request's P-Asserted-Identity header (see RFC 3325)
+\<a id="ar">\</a>
 
+#### Authentication realm - $ar
 
+**$ar** - realm from Authorization or Proxy-Authorization header
 
-\[#adu]\(./#adu)
+\<a id="au">\</a>
 
-\####  Authentication Digest URI - $adu \[\&#x1F517;]\(./#adu)
+#### Auth username user - $au
 
+**$au** - user part of username from Authorization or Proxy-Authorization header
 
+\<a id="ad">\</a>
 
-\*\*$adu\*\* - URI from Authorization or Proxy-Authorization header. This URI is used when calculating the HTTP Digest Response.
+#### Auth username domain - $ad
 
+**$ad** - domain part of username from Authorization or Proxy-Authorization header
 
+\<a id="an">\</a>
 
-\[#ar]\(./#ar)
+#### Auth nonce - $an
 
-\####  Authentication realm - $ar \[\&#x1F517;]\(./#ar)
+**$an** - the nonce from Authorization or Proxy-Authorization header
 
+\<a id="auth.resp">\</a>
 
+#### Auth response  - $auth.resp
 
-\*\*$ar\*\* - realm from Authorization or Proxy-Authorization header
+**$auth.resp** - the authentication response from Authorization or Proxy-Authorization header
 
+\<a id="auth.nonce">\</a>
 
+#### Auth nonce  - $auth.nonce
 
-\[#au]\(./#au)
+**$auth.nonce** - the nonce string from Authorization or Proxy-Authorization header
 
-\####  Auth username user - $au \[\&#x1F517;]\(./#au)
+\<a id="auth.opaque">\</a>
 
+#### Auth opaque - $auth.opaque
 
+**$auth.opaque** - the opaque string from Authorization or Proxy-Authorization header
 
-\*\*$au\*\* - user part of username from Authorization or Proxy-Authorization header
+\<a id="auth.alg">\</a>
 
+#### Auth algorithm - $auth.alg
 
+**$auth.alg** - the algorithm string from Authorization or Proxy-Authorization header
 
-\[#ad]\(./#ad)
+\<a id="auth.qop">\</a>
 
-\####  Auth username domain - $ad \[\&#x1F517;]\(./#ad)
+#### Auth QOP - $auth.qop
 
+**$auth.qop** - the value of qop parameter from Authorization or Proxy-Authorization header
 
+\<a id="auth.nc">\</a>
 
-\*\*$ad\*\* - domain part of username from Authorization or Proxy-Authorization header
+#### Auth nonce count (nc) - $auth.nc
 
+**$auth.nc** - the value of nonce count parameter from Authorization or Proxy-Authorization header
 
+\<a id="aU">\</a>
 
-\[#an]\(./#an)
+#### Auth whole username - $aU
 
-\####  Auth nonce - $an \[\&#x1F517;]\(./#an)
+**$aU** - whole username from Authorization or Proxy-Authorization header
 
+\<a id="Au">\</a>
 
+#### Acc username - $Au
 
-\*\*$an\*\* - the nonce from Authorization or Proxy-Authorization header
+**$Au** - username for accounting purposes. It's a selective pseudo variable (inherited from acc module). It returns $au if exits or From username otherwise.
 
+\<a id="argv">\</a>
 
+#### Argument options - $argv
 
-\[#auth.resp]\(./#auth.resp)
+**$argv** - provides access to command line arguments specified with '-o' option.
+Examples:
 
-\####  Auth response  - $auth.resp \[\&#x1F517;]\(./#auth.resp)
+```
+   # for option '-o foo=0'
+   xlog("foo is $argv(foo) \n");
+```
 
+\<a id="bf">\</a>
 
+#### Branch flags list - $bf
 
-\*\*$auth.resp\*\* - the authentication response from Authorization or Proxy-Authorization header
+**$bf** - displays a list with the branch flags set for the current SIP request\<br />
+TO BECOME OBSOLETE, replaced by [$msg.branch.flags](#msg.branch.flags)
 
+\<a id="branch">\</a>
 
+#### Branch - $branch
 
-\[#auth.nonce]\(./#auth.nonce)
+**$branch** - this variable is used for creating new branches by writing into it the value of a SIP URI.\<br />
+TO BECOME OBSOLETE, replaced by [$msg.branch.uri](#msg.branch.uri)
+Examples:
 
-\####  Auth nonce  - $auth.nonce \[\&#x1F517;]\(./#auth.nonce)
+```
+   # creates a new branch
+   $branch = "sip:new@doamin.org";
+   # print its URI
+   xlog("last added branch has URI $(branch(uri)[-1]) \n");
+```
 
+\<a id="branch.fields">\</a>
 
+#### Branch fields - $branch.fields
 
-\*\*$auth.nonce\*\* - the nonce string from Authorization or Proxy-Authorization header
+**$branch()** - this variable provides read/write access to all fields/attributes of an already existing branch (prior created with append\_branch() ). The fields of the branch are:
 
+* uri - the RURI of the branch  (string value)
+* duri - destination URI of the branch (outbound proxy of the branch)  (string value)
+* q - q value of the branch (int value)
+* path - the PATH string for this branch (string value)
+* flags - the branch flags of this branch (int value)
+* socket - the local socket to be used for relaying this branch (string value)
+  The variable accepts also index **$(branch(uri)\[1])** for accessing a specific branch (multiple branches can be defined at a moment). The index starts from 0 (first branch). If the index is negative, it is considered the n-th branch from the end ( index -1 means the last branch).\<br />
+  To get all branches, use the \* index - $(branch(uri)\[\*]).\<br />
+  TO BECOME OBSOLETE, replaced by [$msg.branch.uri](#msg.branch.uri)\<br />
+  Examples:
 
+```
+   # creates the first branch
+   append_branch();
+   # creates the second branch
+   force_send_socket(udp:194.168.1.12:5060);
+   $du = "sip:194.168.4.10";
+   append_branch("sip:foo@bar.com","0.5");
 
-\[#auth.opaque]\(./#auth.opaque)
+   # display branches
+   xlog("----- branch 0: $(branch(uri)[0]) , $(branch(q)[0]), $(branch(duri)[0]), $(branch(path)[0]), $(branch(flags)[0]), $(branch(socket)[0]) \n");
+   xlog("----- branch 1: $(branch(uri)[1]) , $(branch(q)[1]), $(branch(duri)[1]), $(branch(path)[1]), $(branch(flags)[1]), $(branch(socket)[1]) \n");
 
-\####  Auth opaque - $auth.opaque \[\&#x1F517;]\(./#auth.opaque)
+   # do some changes over the branches
+   $branch(uri) = "sip:user@domain.ro";   # set URI for the first branch
+   $(branch(q)[0]) = 1000;  # set to 1.00 for the first branch
+   $(branch(socket)[1]) = NULL;  # reset the socket of the second branch
+   $branch(duri) = NULL;  # reset the destination URI or the first branch
+```
 
+It is R/W variable (you can assign values to it from routing logic)
 
+\<a id="branch.flag">\</a>
 
-\*\*$auth.opaque\*\* - the opaque string from Authorization or Proxy-Authorization header
+#### Branch flag - $branch.flag
 
+**$branch.flag(flag\_name)\[]** - this variable provides read/write access to the value of a single certain branch flag (identified by name). The values accepted for writing are 1 (set) and 0 (unset). The returned values are 1/"true" (set) and 0/"false" (unset). An index is accepted, in order to access the flag for a certain branch. By default the 0 (or current) branch accessed (for more on index, see the the [branch.fields](#branch.fields) variable) - note that "\*" is not accepted.\<br />
+TO BECOME OBSOLETE, replaced by [$msg.branch.flag](#msg.branch.flag)
 
+```
+  setbflag("X");
+  xlog("---- flag value is $branch.flag(X) \n");
+  $branch.flag(X) = off;
+  xlog("---- flag value is $branch.flag(X) \n");
+```
 
-\[#auth.alg]\(./#auth.alg)
+\<a id="challenge.algorithm">\</a>
 
-\####  Auth algorithm - $auth.alg \[\&#x1F517;]\(./#auth.alg)
+#### Authorize Challenge Algorithm - $challenge.algorithm
 
+**$challenge.algorithm** - the algorithm value taken from the WWW-Authorize or Proxy-Authorize header.
 
+\<a id="challenge.realm">\</a>
 
-\*\*$auth.alg\*\* - the algorithm string from Authorization or Proxy-Authorization header
+#### Authorize Challenge Realm - $challenge.realm
 
+**$challenge.realm** - the realm value taken from the WWW-Authorize or Proxy-Authorize header.
 
+\<a id="challenge.nonce">\</a>
 
-\[#auth.qop]\(./#auth.qop)
+#### Authorize Challenge Nonce - $challenge.nonce
 
-\####  Auth QOP - $auth.qop \[\&#x1F517;]\(./#auth.qop)
+**$challenge.nonce** - the nonce value taken from the WWW-Authorize or Proxy-Authorize header.
 
+\<a id="challenge.opaque">\</a>
 
+#### Authorize Challenge Opaque - $challenge.opaque
 
-\*\*$auth.qop\*\* - the value of qop parameter from Authorization or Proxy-Authorization header
+**$challenge.opaque** - the opaque value taken from the WWW-Authorize or Proxy-Authorize header.
 
+\<a id="challenge.qop">\</a>
 
+#### Authorize Challenge QOP - $challenge.qop
 
-\[#auth.nc]\(./#auth.nc)
+**$challenge.qop** - the qop value taken from the WWW-Authorize or Proxy-Authorize header.
 
-\####  Auth nonce count (nc) - $auth.nc \[\&#x1F517;]\(./#auth.nc)
+\<a id="challenge.ik">\</a>
 
+#### Authorize Challenge IK - $challenge.ik
 
+**$challenge.ik** - the ik value taken from the WWW-Authorize or Proxy-Authorize header.
 
-\*\*$auth.nc\*\* - the value of nonce count parameter from Authorization or Proxy-Authorization header
+\<a id="challenge.ck">\</a>
 
+#### Authorize Challenge CK - $challenge.ck
 
+**$challenge.ck** - the ck value taken from the WWW-Authorize or Proxy-Authorize header.
 
-\[#aU]\(./#aU)
+\<a id="ci">\</a>
 
-\####  Auth whole username - $aU \[\&#x1F517;]\(./#aU)
+#### Call-Id - $ci
 
+**$ci** - reference to body of call-id header
 
+\<a id="cl">\</a>
 
-\*\*$aU\*\* - whole username from Authorization or Proxy-Authorization header
+#### Content-Length - $cl
 
+**$cl** - reference to body of content-length header
 
+\<a id="cs">\</a>
 
-\[#Au]\(./#Au)
+#### CSeq number - $cs
 
-\####  Acc username - $Au \[\&#x1F517;]\(./#Au)
+**$cs** - reference to cseq number from cseq header
 
+\<a id="ct">\</a>
 
+#### Contact instance - $ct
 
-\*\*$Au\*\* - username for accounting purposes. It's a selective pseudo variable (inherited from acc module). It returns $au if exits or From username otherwise.
+**$ct** - reference to contact instance/body from the contact header. A contact instance is  display\_name + URI + contact\_params. As a Contact header may contain multiple Contact instances and a message may contain multiple Contact headers, an index was added to the $ct variable:
 
+* $ct -first contact instance from message
+* $(ct\[n]) - the n-th contact instance form the beginning of message, starting with index 0
+* $(ct\[-n]) - the n-th contact instance form the end of the message, starting with index -1 (the last contact instance)
 
+\<a id="ct.fields">\</a>
 
-\[#argv]\(./#argv)
+#### Fields of a contact instance - $ct.fields
 
-\####  Argument options - $argv \[\&#x1F517;]\(./#argv)
+**$ct.fields()** - reference to the fields of a contact instance/body (see above). Supported fields are:
 
-
-
-\*\*$argv\*\* - provides access to command line arguments specified with '-o' option.
+* name - display name
+* uri - contact uri
+* q  - q param (value only)
+* expires - expires param (value only)
+* methods - methods param (value only)
+* received - received param (value only)
+* params - all params (including names)
 
 Examples:
 
-\`\`\`text
+* $ct.fields(uri) - the URI of the first contact instance
+* $(ct.fields(name)\[1]) - the display name of the second contact instance
 
+\<a id="cT">\</a>
 
+#### Content-Type - $cT
 
-   # for option '-o foo=0'
+**$cT** - reference to body of Content-Type header and also the content-type headers inside a multi-part body
 
-   xlog("foo is $argv(foo) \<br/>n");
+* $cT - the main Content-Type of the message; the one inside the headers
+* $(cT\[n]) - the **n**-th Content-Type inside a multi-part body from the beginning of message, starting with index 0
+* $(cT\[-n]) - the **n**-th Content-Type inside a multi-part body from the end of the message, starting with index -1 (the last contact instance)
+* $(cT\[\*]) - all the Content-Type headers including the main one and the ones from the multi-part body
 
+\<a id="dd">\</a>
 
+#### Domain of destination URI - $dd
 
-\`\`\`
+**$dd** - reference to domain of destination uri
 
+It is R/W variable (you can assign values to it from routing logic)
 
+\<a id="di">\</a>
 
-\[#bf]\(./#bf)
+#### Diversion header URI - $di
 
-\####  Branch flags list - $bf \[\&#x1F517;]\(./#bf)
+**$di** - reference to Diversion header URI
 
+\<a id="dip">\</a>
 
+#### Diversion "privacy" parameter - $dip
 
-\*\*$bf\*\* - displays a list with the branch flags set for the current SIP request\<br/>
+**$dip** - reference to Diversion header "privacy" parameter value
 
-\<span style=\{\{color: "red"}}>TO BECOME OBSOLETE\</span>, replaced by \[ $msg.branch.flags]\(./#msg.branch.flags)
+\<a id="dir">\</a>
 
+#### Diversion "reason" parameter - $dir
 
+**$dir** - reference to Diversion header "reason" parameter value
 
-\[#branch]\(./#branch)
+\<a id="dp">\</a>
 
-\####  Branch - $branch \[\&#x1F517;]\(./#branch)
+#### Port of destination URI - $dp
 
+**$dp** - reference to port of destination uri
 
+It is R/W variable (you can assign values to it from routing logic)
 
-\*\*$branch\*\* - this variable is used for creating new branches by writing into it the value of a SIP URI.\<br/>
+\<a id="dP">\</a>
 
-\<span style=\{\{color: "red"}}>TO BECOME OBSOLETE\</span>, replaced by \[ $msg.branch.uri]\(./#msg.branch.uri)
+#### Transport protocol of destination URI - $dP
 
-Examples:
+**$dP** - reference to transport protocol of destination uri
 
-\`\`\`text
+\<a id="ds">\</a>
 
+#### Destination set - $ds
 
+**$ds** - reference to destination set
 
-   # creates a new branch
+\<a id="du">\</a>
 
-   $branch = "sip:new\@doamin.org";
+#### Destination URI - $du
 
-   # print its URI
-
-   xlog("last added branch has URI $(branch(uri)\[-1]) \<br/>n");
-
-
-
-\`\`\`
-
-
-
-\[#branch.fields]\(./#branch.fields)
-
-\####  Branch fields - $branch.fields \[\&#x1F517;]\(./#branch.fields)
-
-
-
-\*\*$branch()\*\* - this variable provides read/write access to all fields/attributes of an already existing branch (prior created with append\_branch() ). The fields of the branch are:
-
-\* uri - the RURI of the branch  (string value)
-
-\* duri - destination URI of the branch (outbound proxy of the branch)  (string value)
-
-\* q - q value of the branch (int value)
-
-\* path - the PATH string for this branch (string value)
-
-\* flags - the branch flags of this branch (int value)
-
-\* socket - the local socket to be used for relaying this branch (string value)
-
-The variable accepts also index \*\*$(branch(uri)\[1])\*\* for accessing a specific branch (multiple branches can be defined at a moment). The index starts from 0 (first branch). If the index is negative, it is considered the n-th branch from the end ( index -1 means the last branch).\<br/>
-
-To get all branches, use the \* index - $(branch(uri)\[\*]).\<br/>
-
-\<span style=\{\{color: "red"}}>TO BECOME OBSOLETE\</span>, replaced by \[ $msg.branch.uri]\(./#msg.branch.uri)\<br/>
-
-Examples:
-
-\`\`\`text
-
-
-
-   # creates the first branch
-
-   append\_branch();
-
-   # creates the second branch
-
-   force\_send\_socket(udp:194.168.1.12:5060);
-
-   $du = "sip:194.168.4.10";
-
-   append\_branch("sip:foo\@bar.com","0.5");
-
-
-
-   # display branches
-
-   xlog("----- branch 0: $(branch(uri)\[0]) , $(branch(q)\[0]), $(branch(duri)\[0]), $(branch(path)\[0]), $(branch(flags)\[0]), $(branch(socket)\[0]) \<br/>n");
-
-   xlog("----- branch 1: $(branch(uri)\[1]) , $(branch(q)\[1]), $(branch(duri)\[1]), $(branch(path)\[1]), $(branch(flags)\[1]), $(branch(socket)\[1]) \<br/>n");
-
-
-
-   # do some changes over the branches
-
-   $branch(uri) = "sip:user\@domain.ro";   # set URI for the first branch
-
-   $(branch(q)\[0]) = 1000;  # set to 1.00 for the first branch
-
-   $(branch(socket)\[1]) = NULL;  # reset the socket of the second branch
-
-   $branch(duri) = NULL;  # reset the destination URI or the first branch
-
-
-
-\`\`\`
-
-
-
-\<span style=\{\{color: "red"}}>It is R/W variable (you can assign values to it from routing logic)\</span>
-
-
-
-\[#branch.flag]\(./#branch.flag)
-
-\####  Branch flag - $branch.flag \[\&#x1F517;]\(./#branch.flag)
-
-
-
-\*\*$branch.flag(flag\_name)\[]\*\* - this variable provides read/write access to the value of a single certain branch flag (identified by name). The values accepted for writing are 1 (set) and 0 (unset). The returned values are 1/"true" (set) and 0/"false" (unset). An index is accepted, in order to access the flag for a certain branch. By default the 0 (or current) branch accessed (for more on index, see the the \[branch.fields]\(./#branch.fields) variable) - note that "\*" is not accepted.\<br/>
-
-\<span style=\{\{color: "red"}}>TO BECOME OBSOLETE\</span>, replaced by \[ $msg.branch.flag]\(./#msg.branch.flag)
-
-
-
-\`\`\`text
-
-
-
-  setbflag("X");
-
-  xlog("---- flag value is $branch.flag(X) \<br/>n");
-
-  $branch.flag(X) = off;
-
-  xlog("---- flag value is $branch.flag(X) \<br/>n");
-
-
-
-\`\`\`
-
-
-
-\[#challenge.algorithm]\(./#challenge.algorithm)
-
-\####  Authorize Challenge Algorithm - $challenge.algorithm \[\&#x1F517;]\(./#challenge.algorithm)
-
-
-
-\*\*$challenge.algorithm\*\* - the algorithm value taken from the WWW-Authorize or Proxy-Authorize header.
-
-
-
-\[#challenge.realm]\(./#challenge.realm)
-
-\####  Authorize Challenge Realm - $challenge.realm \[\&#x1F517;]\(./#challenge.realm)
-
-
-
-\*\*$challenge.realm\*\* - the realm value taken from the WWW-Authorize or Proxy-Authorize header.
-
-
-
-\[#challenge.nonce]\(./#challenge.nonce)
-
-\####  Authorize Challenge Nonce - $challenge.nonce \[\&#x1F517;]\(./#challenge.nonce)
-
-
-
-\*\*$challenge.nonce\*\* - the nonce value taken from the WWW-Authorize or Proxy-Authorize header.
-
-
-
-\[#challenge.opaque]\(./#challenge.opaque)
-
-\####  Authorize Challenge Opaque - $challenge.opaque \[\&#x1F517;]\(./#challenge.opaque)
-
-
-
-\*\*$challenge.opaque\*\* - the opaque value taken from the WWW-Authorize or Proxy-Authorize header.
-
-
-
-\[#challenge.qop]\(./#challenge.qop)
-
-\####  Authorize Challenge QOP - $challenge.qop \[\&#x1F517;]\(./#challenge.qop)
-
-
-
-\*\*$challenge.qop\*\* - the qop value taken from the WWW-Authorize or Proxy-Authorize header.
-
-
-
-\[#challenge.ik]\(./#challenge.ik)
-
-\####  Authorize Challenge IK - $challenge.ik \[\&#x1F517;]\(./#challenge.ik)
-
-
-
-\*\*$challenge.ik\*\* - the ik value taken from the WWW-Authorize or Proxy-Authorize header.
-
-
-
-\[#challenge.ck]\(./#challenge.ck)
-
-\####  Authorize Challenge CK - $challenge.ck \[\&#x1F517;]\(./#challenge.ck)
-
-
-
-\*\*$challenge.ck\*\* - the ck value taken from the WWW-Authorize or Proxy-Authorize header.
-
-
-
-\[#ci]\(./#ci)
-
-\####  Call-Id - $ci \[\&#x1F517;]\(./#ci)
-
-
-
-\*\*$ci\*\* - reference to body of call-id header
-
-
-
-\[#cl]\(./#cl)
-
-\####  Content-Length - $cl \[\&#x1F517;]\(./#cl)
-
-
-
-\*\*$cl\*\* - reference to body of content-length header
-
-
-
-\[#cs]\(./#cs)
-
-\####  CSeq number - $cs \[\&#x1F517;]\(./#cs)
-
-
-
-\*\*$cs\*\* - reference to cseq number from cseq header
-
-
-
-\[#ct]\(./#ct)
-
-\####  Contact instance - $ct \[\&#x1F517;]\(./#ct)
-
-
-
-\*\*$ct\*\* - reference to contact instance/body from the contact header. A contact instance is  display\_name + URI + contact\_params. As a Contact header may contain multiple Contact instances and a message may contain multiple Contact headers, an index was added to the $ct variable:
-
-\* $ct -first contact instance from message
-
-\* $(ct\[n]) - the n-th contact instance form the beginning of message, starting with index 0
-
-\* $(ct\[-n]) - the n-th contact instance form the end of the message, starting with index -1 (the last contact instance)
-
-
-
-\[#ct.fields]\(./#ct.fields)
-
-\####  Fields of a contact instance - $ct.fields \[\&#x1F517;]\(./#ct.fields)
-
-
-
-\*\*$ct.fields()\*\* - reference to the fields of a contact instance/body (see above). Supported fields are:
-
-\* name - display name
-
-\* uri - contact uri
-
-\* q  - q param (value only)
-
-\* expires - expires param (value only) 
-
-\* methods - methods param (value only)
-
-\* received - received param (value only)
-
-\* params - all params (including names)
-
-
-
-Examples:
-
-\* $ct.fields(uri) - the URI of the first contact instance
-
-\* $(ct.fields(name)\[1]) - the display name of the second contact instance
-
-
-
-\[#cT]\(./#cT)
-
-\####  Content-Type - $cT \[\&#x1F517;]\(./#cT)
-
-
-
-\*\*$cT\*\* - reference to body of Content-Type header and also the content-type headers inside a multi-part body
-
-\* $cT - the main Content-Type of the message; the one inside the headers
-
-\* $(cT\[n]) - the \*\*n\*\*-th Content-Type inside a multi-part body from the beginning of message, starting with index 0
-
-\* $(cT\[-n]) - the \*\*n\*\*-th Content-Type inside a multi-part body from the end of the message, starting with index -1 (the last contact instance)
-
-\* $(cT\[\*]) - all the Content-Type headers including the main one and the ones from the multi-part body
-
-
-
-\[#dd]\(./#dd)
-
-\####  Domain of destination URI - $dd \[\&#x1F517;]\(./#dd)
-
-
-
-\*\*$dd\*\* - reference to domain of destination uri
-
-
-
-\<span style=\{\{color: "red"}}>It is R/W variable (you can assign values to it from routing logic)\</span>
-
-
-
-\[#di]\(./#di)
-
-\####  Diversion header URI - $di \[\&#x1F517;]\(./#di)
-
-
-
-\*\*$di\*\* - reference to Diversion header URI
-
-
-
-\[#dip]\(./#dip)
-
-\####  Diversion "privacy" parameter - $dip \[\&#x1F517;]\(./#dip)
-
-
-
-\*\*$dip\*\* - reference to Diversion header "privacy" parameter value
-
-
-
-\[#dir]\(./#dir)
-
-\####  Diversion "reason" parameter - $dir \[\&#x1F517;]\(./#dir)
-
-
-
-\*\*$dir\*\* - reference to Diversion header "reason" parameter value
-
-
-
-\[#dp]\(./#dp)
-
-\####  Port of destination URI - $dp \[\&#x1F517;]\(./#dp)
-
-
-
-\*\*$dp\*\* - reference to port of destination uri
-
-
-
-\<span style=\{\{color: "red"}}>It is R/W variable (you can assign values to it from routing logic)\</span>
-
-
-
-\[#dP]\(./#dP)
-
-\####  Transport protocol of destination URI - $dP \[\&#x1F517;]\(./#dP)
-
-
-
-\*\*$dP\*\* - reference to transport protocol of destination uri
-
-
-
-\[#ds]\(./#ds)
-
-\####  Destination set - $ds \[\&#x1F517;]\(./#ds)
-
-
-
-\*\*$ds\*\* - reference to destination set
-
-
-
-\[#du]\(./#du)
-
-\####  Destination URI - $du \[\&#x1F517;]\(./#du)
-
-
-
-\*\*$du\*\* - reference to destination uri (outbound proxy to be used for sending the request)
-
+**$du** - reference to destination uri (outbound proxy to be used for sending the request)
 If loose\_route() returns TRUE a destination uri is set according to the first Route header.
 
+It is R/W variable (you can assign values to it from routing logic)
 
+\<a id="err.class">\</a>
 
-\<span style=\{\{color: "red"}}>It is R/W variable (you can assign values to it from routing logic)\</span>
+#### Error class - $err.class
 
+**$err.class** - the class of error (now is '1' for parsing errors)
 
+\<a id="err.level">\</a>
 
-\[#err.class]\(./#err.class)
+#### Error level - $err.level
 
-\####  Error class - $err.class \[\&#x1F517;]\(./#err.class)
+**$err.level** - severity level for the error
 
+\<a id="err.info">\</a>
 
+#### Error info - $err.info
 
-\*\*$err.class\*\* - the class of error (now is '1' for parsing errors)
+**$err.info** - text describing the error
 
+\<a id="err.rcode">\</a>
 
+#### Error reply code - $err.rcode
 
-\[#err.level]\(./#err.level)
+**$err.rcode** - recommended reply code
 
-\####  Error level - $err.level \[\&#x1F517;]\(./#err.level)
+\<a id="err.rreason">\</a>
 
+#### Error reply reason - $err.rreason
 
+**$err.rreason** - recommended reply reason phrase
 
-\*\*$err.level\*\* - severity level for the error
+\<a id="fd">\</a>
 
+#### From URI domain - $fd
 
+**$fd** - reference to domain in URI of 'From' header
 
-\[#err.info]\(./#err.info)
+\<a id="fn">\</a>
 
-\####  Error info - $err.info \[\&#x1F517;]\(./#err.info)
+#### From display name - $fn
 
+**$fn** - reference to display name of 'From' header
 
+\<a id="ft">\</a>
 
-\*\*$err.info\*\* - text describing the error
+#### From tag - $ft
 
+**$ft** - reference to tag parameter of 'From' header
 
+\<a id="fu">\</a>
 
-\[#err.rcode]\(./#err.rcode)
+#### From URI - $fu
 
-\####  Error reply code - $err.rcode \[\&#x1F517;]\(./#err.rcode)
+**$fu** - reference to URI of 'From' header
 
+\<a id="fU">\</a>
 
+#### From URI username - $fU
 
-\*\*$err.rcode\*\* - recommended reply code
+**$fU** - reference to username in URI of 'From' header
 
+\<a id="log\_level">\</a>
 
+#### OpenSIPS Log level - $log\_level
 
-\[#err.rreason]\(./#err.rreason)
-
-\####  Error reply reason - $err.rreason \[\&#x1F517;]\(./#err.rreason)
-
-
-
-\*\*$err.rreason\*\* - recommended reply reason phrase
-
-
-
-\[#fd]\(./#fd)
-
-\####  From URI domain - $fd \[\&#x1F517;]\(./#fd)
-
-
-
-\*\*$fd\*\* - reference to domain in URI of 'From' header
-
-
-
-\[#fn]\(./#fn)
-
-\####  From display name - $fn \[\&#x1F517;]\(./#fn)
-
-
-
-\*\*$fn\*\* - reference to display name of 'From' header
-
-
-
-\[#ft]\(./#ft)
-
-\####  From tag - $ft \[\&#x1F517;]\(./#ft)
-
-
-
-\*\*$ft\*\* - reference to tag parameter of 'From' header
-
-
-
-\[#fu]\(./#fu)
-
-\####  From URI - $fu \[\&#x1F517;]\(./#fu)
-
-
-
-\*\*$fu\*\* - reference to URI of 'From' header
-
-
-
-\[#fU]\(./#fU)
-
-\####  From URI username - $fU \[\&#x1F517;]\(./#fU)
-
-
-
-\*\*$fU\*\* - reference to username in URI of 'From' header
-
-
-
-\[#log\_level]\(./#log\_level)
-
-\####  OpenSIPS Log level - $log\_level \[\&#x1F517;]\(./#log\_level)
-
-
-
-\*\*$log\_level\*\* - changes the log level for the current process ; the log level can be set to a new value (see \[possible values]\(./Documentation/Script-CoreParameters-4-1#log\_level) or it can be reset back to the global log level.
-
-This function is very helpful if you are tracing and debugging only a specific piece of code. 
-
-
+**$log\_level** - changes the log level for the current process ; the log level can be set to a new value (see [possible values](Documentation/Script-CoreParameters-4-1#log_level) or it can be reset back to the global log level.
+This function is very helpful if you are tracing and debugging only a specific piece of code.
 
 Example of usage:
 
+log\_level= -1 # errors only
+.....
+\{
+......
+$log\_level = 4; # set the debug level of the current process to DBG
+uac\_replace\_from(....);
+$log\_level = NULL; # reset the log level of the current process to its default level
+.......
+}
 
+#### SIP message buffer
 
-    log\_level= -1 # errors only
+\<a id="mb">\</a>
+**$mb** - reference to SIP message buffer
 
-    .....
+\<a id="mf">\</a>
 
-    \{
+#### Message Flags - $mf
 
-      ......
+**$mf** - displays a list with the message/transaction flags set for the current SIP request
 
-      $log\_level = 4; # set the debug level of the current process to DBG
+\<a id="mi">\</a>
 
-      uac\_replace\_from(....);
+#### SIP message ID - $mi
 
-      $log\_level = NULL; # reset the log level of the current process to its default level
+**$mi** - reference to SIP message id
 
-      .......
+\<a id="ml">\</a>
 
-    }
+#### SIP message length - $ml
 
+**$ml** - reference to SIP message length
 
+\<a id="msg.branch">\</a>
 
-\#### SIP message buffer
+#### Message branch - $msg.branch
 
+**$msg.branch** - similar to [$branch](#branch), this variable is used for creating new message branches by writing into it the value of a SIP URI. By reading this variable, you get the SIP URI of the current/last added branch (or of the RURI branch if no additional branch was added so far).
 
+```
+   # creates a new branch
+   $msg.branch = "sip:new@domain.org";
+   # print its URI
+   xlog("last added branch has URI $msg.branch \n");
+```
 
-\[#mb]\(./#mb)
+\<a id="msg.branch.uri">\</a>
 
-\*\*$mb\*\* - reference to SIP message buffer
+#### SIP URI of a message branch - $msg.branch.uri
 
-
-
-\[#mf]\(./#mf)
-
-\####  Message Flags - $mf \[\&#x1F517;]\(./#mf)
-
-
-
-\*\*$mf\*\* - displays a list with the message/transaction flags set for the current SIP request
-
-
-
-\[#mi]\(./#mi)
-
-\####  SIP message ID - $mi \[\&#x1F517;]\(./#mi)
-
-
-
-\*\*$mi\*\* - reference to SIP message id
-
-
-
-\[#ml]\(./#ml)
-
-\####  SIP message length - $ml \[\&#x1F517;]\(./#ml)
-
-
-
-\*\*$ml\*\* - reference to SIP message length
-
-
-
-\[#msg.branch]\(./#msg.branch)
-
-\####  Message branch - $msg.branch \[\&#x1F517;]\(./#msg.branch)
-
-
-
-\*\*$msg.branch\*\* - similar to \[$branch]\(./#branch), this variable is used for creating new message branches by writing into it the value of a SIP URI. By reading this variable, you get the SIP URI of the current/last added branch (or of the RURI branch if no additional branch was added so far).
-
-\`\`\`text
-
-
-
-   # creates a new branch
-
-   $msg.branch = "sip:new\@domain.org";
-
-   # print its URI
-
-   xlog("last added branch has URI $msg.branch \<br/>n");
-
-
-
-\`\`\`
-
-
-
-\[#msg.branch.uri]\(./#msg.branch.uri)
-
-\####  SIP URI of a message branch - $msg.branch.uri \[\&#x1F517;]\(./#msg.branch.uri)
-
-
-
-\*\*$msg.branch.uri\*\* -  gives read / write access over the SIP URI (as string) of an existing message branch. The message branches are created via \[append\_msg\_branch()]\(./Documentation.Script-CoreFunctions-4-1#append\_branch) core function or by various modules (like "registrar" module). The message branches are consumed by the TM "t\_relay()" function (they are converted to TM branches).\<br/>
-
+**$msg.branch.uri** -  gives read / write access over the SIP URI (as string) of an existing message branch. The message branches are created via [append\_msg\_branch()](Documentation.Script-CoreFunctions-4-1#append_branch) core function or by various modules (like "registrar" module). The message branches are consumed by the TM "t\_relay()" function (they are converted to TM branches).\<br />
 The variable supports indexing - it starts from 0, meaning the RURI (or message) branch. The newly added branches will start from 1. So the branch 0 exists all
-
-the time, there is no need to creat it. If no index is specified, the current/last added branch (or of the RURI branch if no additional branch was added so far) will be considered. Negative values are also accepted, meaning indexing from the last branch ( -1 is the latest/higher branch) to the RURI branch. An \*\*\*\*\* / ALL index will return the comma separated list with the values from all branches.\<br/>
-
+the time, there is no need to creat it. If no index is specified, the current/last added branch (or of the RURI branch if no additional branch was added so far) will be considered. Negative values are also accepted, meaning indexing from the last branch ( -1 is the latest/higher branch) to the RURI branch. An \*\*\*\*\* / ALL index will return the comma separated list with the values from all branches.\<br />
 The variable can be used in REQUEST and FAILURE routes.
 
-\`\`\`text
+```
+   # creates a new branch
+   $msg.branch = "sip:new@domain.org";
+   # change its URI
+   $msg.branch.uri = "sip:new_new@domain.org"
+   # change its URI of RURI branch
+   $(msg.branch.uri[0]) = "sip:new_RURI@domain.org"
+```
 
+\<a id="msg.branch.duri">\</a>
 
+#### Destiation URI of a message branch - $msg.branch.duri
 
-   # creates a new branch
+**$msg.branch.duri** -  100% similar to [$msg.branch.uri](#msg.branch.uri), but operating with the Detination-URI value of the message branch.
 
-   $msg.branch = "sip:new\@domain.org";
+\<a id="msg.branch.path">\</a>
 
-   # change its URI
+#### PATH of a message branch - $msg.branch.path
 
-   $msg.branch.uri = "sip:new\_new\@domain.org"
+**$msg.branch.path** -  100% similar to [$msg.branch.uri](#msg.branch.uri), but operating with the PATH value of the message branch.
 
-   # change its URI of RURI branch
+\<a id="msg.branch.q">\</a>
 
-   $(msg.branch.uri\[0]) = "sip:new\_RURI\@domain.org"
+#### Q of a message branch - $msg.branch.q
 
+**$msg.branch.q** -  100% similar to [$msg.branch.uri](#msg.branch.uri), but operating with the Q value of the message branch.
 
+\<a id="msg.branch.flags">\</a>
 
-\`\`\`
+#### Flags of a message branch - $msg.branch.flags
 
+**$msg.branch.flags** -  100% similar to [$msg.branch.uri](#msg.branch.uri), but operating with list (comma separated) of per-branch flags (which are set for the branch).
 
+\<a id="msg.branch.socket">\</a>
 
-\[#msg.branch.duri]\(./#msg.branch.duri)
+#### SIP socket of a message branch - $msg.branch.socket
 
-\####  Destiation URI of a message branch - $msg.branch.duri \[\&#x1F517;]\(./#msg.branch.duri)
+**$msg.branch.socket** -  100% similar to [$msg.branch.uri](#msg.branch.uri), but operating with the (forced) socket value of the message branch.
 
+\<a id="msg.branch.flag">\</a>
 
+#### A flag of a message branch - $msg.branch.flag()
 
-\*\*$msg.branch.duri\*\* -  100% similar to \[ $msg.branch.uri]\(./#msg.branch.uri), but operating with the Detination-URI value of the message branch.
-
-
-
-\[#msg.branch.path]\(./#msg.branch.path)
-
-\####  PATH of a message branch - $msg.branch.path \[\&#x1F517;]\(./#msg.branch.path)
-
-
-
-\*\*$msg.branch.path\*\* -  100% similar to \[ $msg.branch.uri]\(./#msg.branch.uri), but operating with the PATH value of the message branch.
-
-
-
-\[#msg.branch.q]\(./#msg.branch.q)
-
-\####  Q of a message branch - $msg.branch.q \[\&#x1F517;]\(./#msg.branch.q)
-
-
-
-\*\*$msg.branch.q\*\* -  100% similar to \[ $msg.branch.uri]\(./#msg.branch.uri), but operating with the Q value of the message branch.
-
-
-
-\[#msg.branch.flags]\(./#msg.branch.flags)
-
-\####  Flags of a message branch - $msg.branch.flags \[\&#x1F517;]\(./#msg.branch.flags)
-
-
-
-\*\*$msg.branch.flags\*\* -  100% similar to \[ $msg.branch.uri]\(./#msg.branch.uri), but operating with list (comma separated) of per-branch flags (which are set for the branch).
-
-
-
-\[#msg.branch.socket]\(./#msg.branch.socket)
-
-\####  SIP socket of a message branch - $msg.branch.socket \[\&#x1F517;]\(./#msg.branch.socket)
-
-
-
-\*\*$msg.branch.socket\*\* -  100% similar to \[ $msg.branch.uri]\(./#msg.branch.uri), but operating with the (forced) socket value of the message branch.
-
-
-
-\[#msg.branch.flag]\(./#msg.branch.flag)
-
-\####  A flag of a message branch - $msg.branch.flag() \[\&#x1F517;]\(./#msg.branch.flag)
-
-
-
-\*\*$msg.branch.flag()\*\* -  similar to \[ $msg.branch.uri]\(./#msg.branch.uri), but operating over a single branch flag (for the current branch).\<br/>
-
-The accepted values are 0 for FALSE, pozitive non-zero for TRUE. The returned values are 0 for FALSE and 1 for TRUE.\<br/>
-
+**$msg.branch.flag()** -  similar to [$msg.branch.uri](#msg.branch.uri), but operating over a single branch flag (for the current branch).\<br />
+The accepted values are 0 for FALSE, pozitive non-zero for TRUE. The returned values are 0 for FALSE and 1 for TRUE.\<br />
 NOTE: the \*\*\*\*\*/ALL index cannot be used here.
 
-\`\`\`text
+```
+   # creates a new branch
+   $msg.branch = "sip:new@domain.org";
+   # set the "pstn" named flag for this branch
+   $msg.branch.flag(pstn) = 1;
+   $msg.branch.flag(foo) = 1;
+   # print all the set flags
+   xlog("Flags are <$msg.branch.flags>\n");
+```
 
+\<a id="msg.branch.attr">\</a>
 
+#### An attribute of a message branch - $msg.branch.attr()
 
-   # creates a new branch
-
-   $msg.branch = "sip:new\@domain.org";
-
-   # set the "pstn" named flag for this branch
-
-   $msg.branch.flag(pstn) = 1;
-
-   $msg.branch.flag(foo) = 1;
-
-   # print all the set flags
-
-   xlog("Flags are \<$msg.branch.flags>\<br/>n");
-
-
-
-\`\`\`
-
-
-
-\[#msg.branch.attr]\(./#msg.branch.attr)
-
-\####  An attribute of a message branch - $msg.branch.attr() \[\&#x1F517;]\(./#msg.branch.attr)
-
-
-
-\*\*$msg.branch.attr()\*\* -  similar to \[ $msg.branch.uri]\(./#msg.branch.uri), but operating over a single branch attribute (attached to the current branch).\<br/>
-
-An attribute can have whatever name (no need to be pre-defined) and it can have a single value (at a time), string or integer.\<br/>
-
+**$msg.branch.attr()** -  similar to [$msg.branch.uri](#msg.branch.uri), but operating over a single branch attribute (attached to the current branch).\<br />
+An attribute can have whatever name (no need to be pre-defined) and it can have a single value (at a time), string or integer.\<br />
 NOTE: the \*\*\*\*\*/ALL index cannot be used here.
 
-\`\`\`text
+```
+   # creates a new branch
+   $msg.branch = "sip:new@domain.org";
+   # set the "pstn" named flag for this branch
+   $msg.branch.attr(name) = "one";
+   $msg.branch.attr(num) = 5;
+```
 
+\<a id="msg.branch.last\_idx">\</a>
 
+#### Index of the last message branch - $msg.branch.last\_idx
 
-   # creates a new branch
+**$msg.branch.last\_idx()** -  returns the index of the last message branch. IF no additional branche were added, it will return 0, the index of the RURI branch. Then the returned value will get incremented with each append\_msg\_branch().\<br />
 
-   $msg.branch = "sip:new\@domain.org";
+\<a id="msg.flag">\</a>
 
-   # set the "pstn" named flag for this branch
+#### Message flag - $msg.flag
 
-   $msg.branch.attr(name) = "one";
+**$msg.flag(flag\_name)** - this variable provides read/write access to the value of a single certain message flag (identified by name). The values accepted for writing are 1 (set) and 0 (unset). The returned values are 1/"true" (set) and 0/"false" (unset).
 
-   $msg.branch.attr(num) = 5;
+```
+  setflag("X");
+  xlog("---- flag value is $msg.flag(X) \n");
+  $msg.flag(X) = off;
+  xlog("---- flag value is $msg.flag(X) \n");
+```
 
+\<a id="msg.is\_request">\</a>
 
+#### Message is request  - $msg.is\_request
 
-\`\`\`
+**$msg.is\_request** - this variable tells if the current SIP message is a request or not. The returned values are 1/"true" (request) and 0/"false" (reply).
 
+```
+  xlog("---- this message is a request:  $msg.is_request \n");
+  if ( $msg.is_request )
+    xlog("---- yes, it is a request\n");
 
+```
 
-\[#msg.branch.last\_idx]\(./#msg.branch.last\_idx)
+\<a id="msg.type">\</a>
 
-\####  Index of the last message branch - $msg.branch.last\_idx \[\&#x1F517;]\(./#msg.branch.last\_idx)
+#### Message type - $msg.type
 
+**$msg.type** - this variable returns the type of the current  message. The returned values are "request" (request) or "reply" (reply).
 
+```
+  xlog("---- this message is a SIP $msg.type \n");
+```
 
-\*\*$msg.branch.last\_idx()\*\* -  returns the index of the last message branch. IF no additional branche were added, it will return 0, the index of the RURI branch. Then the returned value will get incremented with each append\_msg\_branch().\<br/>
+\<a id="od">\</a>
 
+#### Domain in SIP Request's original URI - $od
 
+**$od** - reference to domain in request's original R-URI
 
-\[#msg.flag]\(./#msg.flag)
+\<a id="op">\</a>
 
-\####  Message flag - $msg.flag \[\&#x1F517;]\(./#msg.flag)
+#### Port of SIP request's original URI - $op
 
+**$op** - reference to port of original R-URI
 
+\<a id="oP">\</a>
 
-\*\*$msg.flag(flag\_name)\*\* - this variable provides read/write access to the value of a single certain message flag (identified by name). The values accepted for writing are 1 (set) and 0 (unset). The returned values are 1/"true" (set) and 0/"false" (unset).
+#### Transport protocol of SIP request original URI - $oP
 
-\`\`\`text
+**$oP** - reference to transport protocol of original R-URI
 
+\<a id="ou">\</a>
 
+#### SIP Request's original URI - $ou
 
-  setflag("X");
+**$ou** - reference to request's original URI
 
-  xlog("---- flag value is $msg.flag(X) \<br/>n");
+\<a id="oU">\</a>
 
-  $msg.flag(X) = off;
+#### Username in SIP Request's original URI - $oU
 
-  xlog("---- flag value is $msg.flag(X) \<br/>n");
+**$oU** - reference to username in request's original URI
 
+\<a id="param">\</a>
 
+#### Route parameter - $param
 
-\`\`\`
-
-
-
-\[#msg.is\_request]\(./#msg.is\_request)
-
-\####  Message is request  - $msg.is\_request \[\&#x1F517;]\(./#msg.is\_request)
-
-
-
-\*\*$msg.is\_request\*\* - this variable tells if the current SIP message is a request or not. The returned values are 1/"true" (request) and 0/"false" (reply).
-
-\`\`\`text
-
-
-
-  xlog("---- this message is a request:  $msg.is\_request \<br/>n");
-
-  if ( $msg.is\_request )
-
-    xlog("---- yes, it is a request\<br/>n");
-
-
-
-\`\`\`
-
-
-
-\[#msg.type]\(./#msg.type)
-
-\####  Message type - $msg.type \[\&#x1F517;]\(./#msg.type)
-
-
-
-\*\*$msg.type\*\* - this variable returns the type of the current  message. The returned values are "request" (request) or "reply" (reply).
-
-\`\`\`text
-
-
-
-  xlog("---- this message is a SIP $msg.type \<br/>n");
-
-
-
-\`\`\`
-
-
-
-\[#od]\(./#od)
-
-\####  Domain in SIP Request's original URI - $od \[\&#x1F517;]\(./#od)
-
-
-
-\*\*$od\*\* - reference to domain in request's original R-URI
-
-
-
-\[#op]\(./#op)
-
-\####  Port of SIP request's original URI - $op \[\&#x1F517;]\(./#op)
-
-
-
-\*\*$op\*\* - reference to port of original R-URI
-
-
-
-\[#oP]\(./#oP)
-
-\####  Transport protocol of SIP request original URI - $oP \[\&#x1F517;]\(./#oP)
-
-
-
-\*\*$oP\*\* - reference to transport protocol of original R-URI
-
-
-
-\[#ou]\(./#ou)
-
-\####  SIP Request's original URI - $ou \[\&#x1F517;]\(./#ou)
-
-
-
-\*\*$ou\*\* - reference to request's original URI
-
-
-
-\[#oU]\(./#oU)
-
-\####  Username in SIP Request's original URI - $oU \[\&#x1F517;]\(./#oU)
-
-
-
-\*\*$oU\*\* - reference to username in request's original URI
-
-
-
-\[#param]\(./#param)
-
-\####  Route parameter - $param \[\&#x1F517;]\(./#param)
-
-\*\*$param(idx)\*\* - retrieves the parameters of the route. The index can be an integer, or a pseudo-variable (index starts at 1).\<br/>
-
+**$param(idx)** - retrieves the parameters of the route. The index can be an integer, or a pseudo-variable (index starts at 1).\<br />
 Example:
 
-\`\`\`text
+```
+   route {
+      ...
+      $var(debug) = "DBUG:"
+      route(PRINT_VAR, $var(debug), "param value");
+      ...
+   }
 
+   route[PRINT_VAR] {
+      $var(index) = 2;
+      xlog("$param(1): The parameter value is <$param($var(index))>\n");
+   }
+```
 
+\<a id="pd">\</a>
 
-   route \{
+#### Domain in SIP Request's P-Preferred-Identity header URI - $pd
 
-      ...
+**$pd** - reference to domain in request's P-Preferred-Identity header URI (see RFC 3325)
 
-      $var(debug) = "DBUG:"
+\<a id="proxy\_protocol">\</a>
 
-      route(PRINT\_VAR, $var(debug), "param value");
+#### Proxy Protocol from transport layer - $proxy\_protocol
 
-      ...
-
-   }
-
-
-
-   route\[PRINT\_VAR] \{
-
-      $var(index) = 2;
-
-      xlog("$param(1): The parameter value is \<$param($var(index))>\<br/>n");
-
-   }
-
-
-
-\`\`\`
-
-
-
-\[#pd]\(./#pd)
-
-\####  Domain in SIP Request's P-Preferred-Identity header URI - $pd \[\&#x1F517;]\(./#pd)
-
-
-
-\*\*$pd\*\* - reference to domain in request's P-Preferred-Identity header URI (see RFC 3325)
-
-
-
-\[#proxy\_protocol]\(./#proxy\_protocol)
-
-\####  Proxy Protocol from transport layer - $proxy\_protocol \[\&#x1F517;]\(./#proxy\_protocol)
-
-\*\*$proxy\_protocol(field)\*\* - retrieves Proxy Protocol information from the transport layer. Supported fields are: \*\*src\_ip\*\*, \*\*src\_port\*\*, \*\*dst\_ip\*\*, \*\*dst\_port\*\*, \*\*af\*\*\<br/>
-
+**$proxy\_protocol(field)** - retrieves Proxy Protocol information from the transport layer. Supported fields are: **src\_ip**, **src\_port**, **dst\_ip**, **dst\_port**, **af**\<br />
 Example:
 
-\`\`\`text
+```
+   route {
+      ...
+      if ($proxy_protocol(af) != NULL)
+          xlog("$proxy_protocol(src_ip):$proxy_protocol(src_port) -> $proxy_protocol(dst_ip):$proxy_protocol(dst_port)\n");
+      ...
+   }
+```
 
+\<a id="pn">\</a>
 
+#### Display Name in SIP Request's P-Preferred-Identity header - $pn
 
-   route \{
+**$pn** - reference to Display Name in request's P-Preferred-Identity header (see RFC 3325)
 
-      ...
+\<a id="pp">\</a>
 
-      if ($proxy\_protocol(af) != NULL)
+#### Process id - $pp
 
-          xlog("$proxy\_protocol(src\_ip):$proxy\_protocol(src\_port) -> $proxy\_protocol(dst\_ip):$proxy\_protocol(dst\_port)\<br/>n");
+**$pp** - reference to process id (pid)
 
-      ...
+\<a id="pU">\</a>
 
-   }
+#### User in SIP Request's P-Preferred-Identity header URI - $pU
 
+**$pU** - reference to user in request's P-Preferred-Identity header URI (see RFC 3325)
 
+\<a id="pu">\</a>
 
-\`\`\`
+#### URI in SIP Request's P-Preferred-Identity header - $pu
 
+**$pu** - reference to URI in request's P-Preferred-Identity header (see RFC 3325)
 
+\<a id="rd">\</a>
 
-\[#pn]\(./#pn)
+#### Domain in SIP Request's URI - $rd
 
-\####  Display Name in SIP Request's P-Preferred-Identity header - $pn \[\&#x1F517;]\(./#pn)
+**$rd** - reference to domain in request's URI
 
+It is R/W variable (you can assign values to it routing script)
 
+\<a id="rb">\</a>
 
-\*\*$pn\*\* - reference to Display Name in request's P-Preferred-Identity header (see RFC 3325)
+#### Body of request/reply - $rb
 
+**$rb** - reference to the body or a body part of the SIP message
 
+* $rb - the whole body of the message (with all the parts)
+* $(rb\[\*]) - same as $rb
+* $(rb\[n]) - the n-th body belonging to a multi-part body from the beginning of message, starting with index 0
+* $(rb\[-n]) - the n-th body belonging to a multi-part body from the end of the message, starting with index -1 (the last contact instance)
+* $rb(application/sdp)   - get the first SDP body part
+* $(rb(application/isup)\[-1])  - get the last ISUP body part
 
-\[#pp]\(./#pp)
+\<a id="rc">\</a>
 
-\####  Process id - $pp \[\&#x1F517;]\(./#pp)
+#### Returned code - $rc
 
+**$rc** - reference to returned code by last invoked function
 
+**$retcode** - same as **$rc**
 
-\*\*$pp\*\* - reference to process id (pid)
+\<a id="re">\</a>
 
+#### Remote-Party-ID header URI - $re
 
+**$re** - reference to Remote-Party-ID header URI
 
-\[#pU]\(./#pU)
+\<a id="return">\</a>
 
-\####  User in SIP Request's P-Preferred-Identity header URI - $pU \[\&#x1F517;]\(./#pU)
+#### Return value - $return
 
-
-
-\*\*$pU\*\* - reference to user in request's P-Preferred-Identity header URI (see RFC 3325)
-
-
-
-\[#pu]\(./#pu)
-
-\####  URI in SIP Request's P-Preferred-Identity header - $pu \[\&#x1F517;]\(./#pu)
-
-
-
-\*\*$pu\*\* - reference to URI in request's P-Preferred-Identity header (see RFC 3325)
-
-
-
-\[#rd]\(./#rd)
-
-\####  Domain in SIP Request's URI - $rd \[\&#x1F517;]\(./#rd)
-
-
-
-\*\*$rd\*\* - reference to domain in request's URI
-
-
-
-\<span style=\{\{color: "red"}}>It is R/W variable (you can assign values to it routing script)\</span>
-
-
-
-\[#rb]\(./#rb)
-
-\####  Body of request/reply - $rb \[\&#x1F517;]\(./#rb)
-
-
-
-\*\*$rb\*\* - reference to the body or a body part of the SIP message
-
-\* $rb - the whole body of the message (with all the parts)
-
-\* $(rb\[\*]) - same as $rb
-
-\* $(rb\[n]) - the n-th body belonging to a multi-part body from the beginning of message, starting with index 0
-
-\* $(rb\[-n]) - the n-th body belonging to a multi-part body from the end of the message, starting with index -1 (the last contact instance)
-
-\* $rb(application/sdp)   - get the first SDP body part
-
-\* $(rb(application/isup)\[-1])  - get the last ISUP body part
-
-
-
-\[#rc]\(./#rc)
-
-\####  Returned code - $rc \[\&#x1F517;]\(./#rc)
-
-
-
-\*\*$rc\*\* - reference to returned code by last invoked function
-
-
-
-\*\*$retcode\*\* - same as \*\*$rc\*\*
-
-
-
-\[#re]\(./#re)
-
-\####  Remote-Party-ID header URI - $re \[\&#x1F517;]\(./#re)
-
-
-
-\*\*$re\*\* - reference to Remote-Party-ID header URI
-
-
-
-\[#return]\(./#return)
-
-\####  Return value - $return \[\&#x1F517;]\(./#return)
-
-
-
-\*\*$return\*\* - Returns the value of the previously executed route.
-
-
+**$return** - Returns the value of the previously executed route.
 
 The variable receives an index, starting with 0, indicating the return value that needs to be read.
 
+\<a id="rm">\</a>
 
+#### SIP request's method - $rm
 
-\[#rm]\(./#rm)
+**$rm** - reference to request's method
 
-\####  SIP request's method - $rm \[\&#x1F517;]\(./#rm)
+\<a id="rp">\</a>
 
+#### SIP request's port - $rp
 
+**$rp** - reference to port of R-URI
 
-\*\*$rm\*\* - reference to request's method
+It is R/W variable (you can assign values to it routing script)
 
+\<a id="rP">\</a>
 
+#### Transport protocol of SIP request URI - $rP
 
-\[#rp]\(./#rp)
+**$rP** - reference to transport protocol of R-URI
 
-\####  SIP request's port - $rp \[\&#x1F517;]\(./#rp)
+\<a id="rr">\</a>
 
+#### SIP reply's reason - $rr
 
+**$rr** - reference to reply's reason
 
-\*\*$rp\*\* - reference to port of R-URI
+\<a id="rs">\</a>
 
+#### SIP reply's status - $rs
 
+**$rs** - reference to reply's status
 
-\<span style=\{\{color: "red"}}>It is R/W variable (you can assign values to it routing script)\</span>
+\<a id="rt">\</a>
 
+#### Refer-to URI - $rt
 
+**$rt** - reference to URI of refer-to header
 
-\[#rP]\(./#rP)
+\<a id="ru">\</a>
 
-\####  Transport protocol of SIP request URI - $rP \[\&#x1F517;]\(./#rP)
+#### SIP Request's URI - $ru
 
+**$ru** - reference to request's URI
 
+It is R/W variable (you can assign values to it routing script)
 
-\*\*$rP\*\* - reference to transport protocol of R-URI
+\<a id="rU">\</a>
 
+#### Username in SIP Request's URI - $rU
 
+**$rU** - reference to username in request's URI
 
-\[#rr]\(./#rr)
+It is R/W variable (you can assign values to it routing script)
 
-\####  SIP reply's reason - $rr \[\&#x1F517;]\(./#rr)
+\<a id="ru\_q">\</a>
 
+#### Q value of the SIP Request's URI - $ru\_q
 
+**$ru\_q** - reference to q value of the R-URI
 
-\*\*$rr\*\* - reference to reply's reason
+It is R/W variable (you can assign values to it routing script)
 
+\<a id="sdp">\</a>
 
+#### SDP body - $sdp
 
-\[#rs]\(./#rs)
+**$sdp** - Read/Write reference to the SDP body of the current SIP message
 
-\####  SIP reply's status - $rs \[\&#x1F517;]\(./#rs)
-
-
-
-\*\*$rs\*\* - reference to reply's status
-
-
-
-\[#rt]\(./#rt)
-
-\####  Refer-to URI - $rt \[\&#x1F517;]\(./#rt)
-
-
-
-\*\*$rt\*\* - reference to URI of refer-to header
-
-
-
-\[#ru]\(./#ru)
-
-\####  SIP Request's URI - $ru \[\&#x1F517;]\(./#ru)
-
-
-
-\*\*$ru\*\* - reference to request's URI
-
-
-
-\<span style=\{\{color: "red"}}>It is R/W variable (you can assign values to it routing script)\</span>
-
-
-
-\[#rU]\(./#rU)
-
-\####  Username in SIP Request's URI - $rU \[\&#x1F517;]\(./#rU)
-
-
-
-\*\*$rU\*\* - reference to username in request's URI
-
-
-
-\<span style=\{\{color: "red"}}>It is R/W variable (you can assign values to it routing script)\</span>
-
-
-
-\[#ru\_q]\(./#ru\_q)
-
-\####  Q value of the SIP Request's URI - $ru\_q \[\&#x1F517;]\(./#ru\_q)
-
-
-
-\*\*$ru\_q\*\* - reference to q value of the R-URI
-
-
-
-\<span style=\{\{color: "red"}}>It is R/W variable (you can assign values to it routing script)\</span>
-
-
-
-\[#sdp]\(./#sdp)
-
-\####  SDP body - $sdp \[\&#x1F517;]\(./#sdp)
-
-
-
-\*\*$sdp\*\* - Read/Write reference to the SDP body of the current SIP message
-
-
-
-\`\`\`text
-
-
-
-\# READ operation on the SIP msg SDP
-
+```
+# READ operation on the SIP msg SDP
 $sdp
 
+# WRITE operation (assign a new SDP)
+$sdp = $var(rtpengine_sdp);
 
+# READ operation on the SIP reply SDP
+$(<reply>sdp)
 
-\# WRITE operation (assign a new SDP)
+# WRITE operation (assign a new SDP to SIP reply)
+$(<reply>sdp) = $var(rtpengine_sdp);
+```
 
-$sdp = $var(rtpengine\_sdp);
+\<a id="sdp.line">\</a>
 
+#### SDP body line - $sdp.line
 
+**$sdp.line** - Read/Write reference to SDP body lines, with filtering support
 
-\# READ operation on the SIP reply SDP
+```
+# Fetch the 1st, 2nd, 3rd, etc. attribute line (starting with "a=")
+$sdp.line(a=)         # fetch first "a=" lin
+$sdp.line(a=[0])      # equivalent, "a=" line at index 0
+$sdp.line(a=ptime[1]) # "a=ptime" line at index 1
+$sdp.line(a=[100])    # will likely yield NULL
 
-$(\<reply>sdp)
+# Token-based filtering, inside a line
+$sdp.line(m=audio[1])         # m=audio 27292 RTP/AVP 9 8 0 2 102 100 99 101
+$sdp.line(m=audio[1]/[0])     # audio
+$sdp.line(m=audio[1]/[1])     # 27292
+$sdp.line(m=audio[1]/[2])     # RTP/AVP
+$sdp.line(m=audio[1]/[10])    # 101
+$sdp.line(m=audio[1]/[11])    # NULL
+$sdp.line(m=audio[1]/RTP)         # RTP/AVP
+$sdp.line(m=audio[1]/RTP\/AVP)    # RTP/AVP
+$sdp.line(m=audio[1]/RTP\/AVP[0]) # RTP/AVP
+$sdp.line(m=audio[1]/RTP\/AVP[1]) # NULL
+$sdp.line(m=audio[1]/RTQ)         # NULL
+```
 
+\<a id="sdp.stream">\</a>
 
+#### SDP body line - $sdp.stream
 
-\# WRITE operation (assign a new SDP to SIP reply)
+**$sdp.stream** - Read/Write reference to SDP body streams, with filtering support
 
-$(\<reply>sdp) = $var(rtpengine\_sdp);
+```
+# Within a desired stream, you can first filter by line...
+$sdp.stream(/a=ptime);         # first “a=ptime” line from Stream #0 ("m=", matching any stream type)
+$sdp.stream([1]/a=ptime);      # first “a=ptime” line from Stream #1 ("m=", matching any stream type))
+$sdp.stream(audio[1]/a=ptime); # first “a=ptime” line from Audio Stream #1 ("m=audio...")
+$sdp.stream(a[1]/a=ptime);     # first “a=ptime” line from Audio Stream #1 ("m=a...")
+$sdp.stream(video[1]/a=nortpproxy) = NULL;  # delete entire line starting with "a=nortpproxy" from Video Stream #1
+$sdp.stream(v[1]/a=nortpproxy:/[0]) = “yes”;   # set first "a=nortpproxy" line "yes" value, in Video Stream #1
 
+# ... and, additionally, by token
+$sdp.stream(video[1]/a=fmtp:115/bitrate=) = 48000; # set "bitrate=" to 48000, under "a=fmtp:115" line #0, as part of Video Stream #1
+$sdp.stream(video[1]/a=fmtp:115[3]) = NULL; # delete the 4th occurrence (if any) of "a=fmtp:115" line, but only within Video Stream #1
+$sdp.stream(video[1]/a=fmtp:115/bitrate=) = 48000; # set "bitrate=" to 48000, under "a=fmtp:115" line #0, as part of Video Stream #1
+```
 
+\<a id="sdp.session">\</a>
 
-\`\`\`
+#### SDP body session - $sdp.session
 
+**$sdp.session** - Read/Write reference to the SDP body session, with filtering support
 
+```
+# Within the SDP session (i.e. until the 1st "m=" line), you can first filter by line...
+$sdp.session(a=ptime);            # 1st “a=ptime” line at Session level
+$sdp.session(a=ptime[0]);         # same as above
+$sdp.session(a=ptime[1]);         # 2nd “a=ptime” line at Session level
+$sdp.session(a=ptime[0]) = NULL;  # delete 1st “a=ptime” line at Session level
 
-\[#sdp.line]\(./#sdp.line)
+# ... but also filter and edit by token:
+$sdp.session(a=rtpmap/telephone-event\/) = "8000";  # Match 1st "a=rtpmap" line which describes telephone-event at Session level, and force bitrate to 8000
+```
 
-\####  SDP body line - $sdp.line \[\&#x1F517;]\(./#sdp.line)
+\<a id="sdp.stream.idx">\</a>
 
+#### SDP stream index - $sdp.stream.idx
 
+**$sdp.stream.idx** - Read-Only reference to the index of the matched SDP stream.  Yields NULL on no-match.
 
-\*\*$sdp.line\*\* - Read/Write reference to SDP body lines, with filtering support
+This variable is especially useful in order to match a line having one specific attribute (e.g. "the rtpmap= line for PCMU codec"), then changing a different attribute within the same stream.  Example:
 
-
-
-\`\`\`text
-
-
-
-\# Fetch the 1st, 2nd, 3rd, etc. attribute line (starting with "a=")
-
-$sdp.line(a=)         # fetch first "a=" lin
-
-$sdp.line(a=\[0])      # equivalent, "a=" line at index 0
-
-$sdp.line(a=ptime\[1]) # "a=ptime" line at index 1
-
-$sdp.line(a=\[100])    # will likely yield NULL
-
-
-
-\# Token-based filtering, inside a line
-
-$sdp.line(m=audio\[1])         # m=audio 27292 RTP/AVP 9 8 0 2 102 100 99 101
-
-$sdp.line(m=audio\[1]/\[0])     # audio
-
-$sdp.line(m=audio\[1]/\[1])     # 27292
-
-$sdp.line(m=audio\[1]/\[2])     # RTP/AVP
-
-$sdp.line(m=audio\[1]/\[10])    # 101
-
-$sdp.line(m=audio\[1]/\[11])    # NULL
-
-$sdp.line(m=audio\[1]/RTP)         # RTP/AVP
-
-$sdp.line(m=audio\[1]/RTP\<br/>/AVP)    # RTP/AVP
-
-$sdp.line(m=audio\[1]/RTP\<br/>/AVP\[0]) # RTP/AVP
-
-$sdp.line(m=audio\[1]/RTP\<br/>/AVP\[1]) # NULL
-
-$sdp.line(m=audio\[1]/RTQ)         # NULL
-
-
-
-\`\`\`
-
-
-
-\[#sdp.stream]\(./#sdp.stream)
-
-\####  SDP body line - $sdp.stream \[\&#x1F517;]\(./#sdp.stream)
-
-
-
-\*\*$sdp.stream\*\* - Read/Write reference to SDP body streams, with filtering support
-
-
-
-\`\`\`text
-
-
-
-\# Within a desired stream, you can first filter by line...
-
-$sdp.stream(/a=ptime);         # first a=ptime line from Stream #0 ("m=", matching any stream type)
-
-$sdp.stream(\[1]/a=ptime);      # first a=ptime line from Stream #1 ("m=", matching any stream type))
-
-$sdp.stream(audio\[1]/a=ptime); # first a=ptime line from Audio Stream #1 ("m=audio...")
-
-$sdp.stream(a\[1]/a=ptime);     # first a=ptime line from Audio Stream #1 ("m=a...")
-
-$sdp.stream(video\[1]/a=nortpproxy) = NULL;  # delete entire line starting with "a=nortpproxy" from Video Stream #1
-
-$sdp.stream(v\[1]/a=nortpproxy:/\[0]) = yes;   # set first "a=nortpproxy" line "yes" value, in Video Stream #1
-
-
-
-\# ... and, additionally, by token
-
-$sdp.stream(video\[1]/a=fmtp:115/bitrate=) = 48000; # set "bitrate=" to 48000, under "a=fmtp:115" line #0, as part of Video Stream #1
-
-$sdp.stream(video\[1]/a=fmtp:115\[3]) = NULL; # delete the 4th occurrence (if any) of "a=fmtp:115" line, but only within Video Stream #1
-
-$sdp.stream(video\[1]/a=fmtp:115/bitrate=) = 48000; # set "bitrate=" to 48000, under "a=fmtp:115" line #0, as part of Video Stream #1
-
-
-
-\`\`\`
-
-
-
-\[#sdp.session]\(./#sdp.session)
-
-\####  SDP body session - $sdp.session \[\&#x1F517;]\(./#sdp.session)
-
-
-
-\*\*$sdp.session\*\* - Read/Write reference to the SDP body session, with filtering support
-
-
-
-\`\`\`text
-
-
-
-\# Within the SDP session (i.e. until the 1st "m=" line), you can first filter by line...
-
-$sdp.session(a=ptime);            # 1st a=ptime line at Session level
-
-$sdp.session(a=ptime\[0]);         # same as above
-
-$sdp.session(a=ptime\[1]);         # 2nd a=ptime line at Session level
-
-$sdp.session(a=ptime\[0]) = NULL;  # delete 1st a=ptime line at Session level
-
-
-
-\# ... but also filter and edit by token:
-
-$sdp.session(a=rtpmap/telephone-event\<br/>/) = "8000";  # Match 1st "a=rtpmap" line which describes telephone-event at Session level, and force bitrate to 8000
-
-
-
-\`\`\`
-
-
-
-\[#sdp.stream.idx]\(./#sdp.stream.idx)
-
-\####  SDP stream index - $sdp.stream.idx \[\&#x1F517;]\(./#sdp.stream.idx)
-
-
-
-\*\*$sdp.stream.idx\*\* - Read-Only reference to the index of the matched SDP stream.  Yields NULL on no-match.
-
-
-
-This variable is especially useful in order to match a line having one specific attribute (e.g. "the rtpmap= line for PCMU codec"), then changing a different attribute within the same stream.  Example:
-
-
-
-\`\`\`text
-
-
-
-$var(line\_idx) = $sdp.stream.idx(video/a=fmtp/packetization-mode=); # locate index of first "a=fmtp" line, containing a packetization-mode= attribute
-
-$var(data) = $sdp.line(\[$var(line\_idx)]); # grab the full line data
-
+```
+$var(line_idx) = $sdp.stream.idx(video/a=fmtp/packetization-mode=); # locate index of first "a=fmtp" line, containing a packetization-mode= attribute
+$var(data) = $sdp.line([$var(line_idx)]); # grab the full line data
 ... perform processing on that line ...
+$sdp.line([$var(line_idx)]) = $var(data); # re-write the line
+```
 
-$sdp.line(\[$var(line\_idx)]) = $var(data); # re-write the line
+\<a id="si">\</a>
 
+#### IP source address - $si
 
+**$si** - reference to IP source address of the message
 
-\`\`\`
+\<a id="socket\_in">\</a>
 
+#### Socket inbound - $socket\_in
 
+**$socket\_in** - read-only variable to get the description (proto:ip:port format) of the inbound socket (used for receiving the message).
 
-\[#si]\(./#si)
+The variable also offers detailed read-only access to various attributes/sub-fields of the socket, as  **$socket\_in()**. The sub-fields of the socket are:
 
-\####  IP source address - $si \[\&#x1F517;]\(./#si)
+* ip - the IP part of the socket
+* port - the port part of the socket
+* proto - the name of the protocol of the socket (as "UDP", "TPC", etc)
+* advertised\_ip - the advertised IP part of the socket (it may be NULL if no advertising is done on this particlar socket)
+* advertised\_port - the advertised part part of the socket (it may be NULL if no advertising is done on this particlar socket)
+* tag - the socket internal tag/alias
+* anycast - if the socket uses an anycast IP or not (returns 0 if not, 1 if yes)
+* af - the address family of the socket's IP. It's value is "INET" if IPv4 or "INET6" if IPv6.
+  For more details on the meaning of these sub-fields, please also read about the [socket definition](Documentation.Script-CoreParameters-4-1#toc66).
 
+\<a id="socket\_out">\</a>
 
+#### Socket outbound - $socket\_out
 
-\*\*$si\*\* - reference to IP source address of the message
+**$socket\_out** - read-write variable for reading or changing the outbound socket of the message. Originally (before being written/changed) it will return the same socket description as [$socket\_in](#socket_in) (the inbound socket will be used as outbound socket also). In addition, it also supports the @@forced@@ sub-field, which returns a socket description only if a socket had been explicitly forced; thus, as opposed to the regular [$socket\_out](#socket_ou), if no socket had explicitly been forced, the variable returns NULL.
 
+The variable also offers detailed read-only access to various attributes/sub-fields of the socket, as  $socket\_out()'''. It provides the same sub-fields as the [$socket\_in](#socket_in) variable.
 
+```
+   $socket_out = "udp:11.11.11.11:5060";
+   xlog("The outbound port is $socket_out(port)\n");
+```
 
-\[#socket\_in]\(./#socket\_in)
+\<a id="sp">\</a>
 
-\####  Socket inbound - $socket\_in \[\&#x1F517;]\(./#socket\_in)
+#### Source port - $sp
 
+**$sp** - reference to the source port of the message
 
+\<a id="td">\</a>
 
-\*\*$socket\_in\*\* - read-only variable to get the description (proto:ip:port format) of the inbound socket (used for receiving the message).
+#### To URI Domain - $td
 
-\<br/>
+**$td** - reference to domain in URI of 'To' header
 
-The variable also offers detailed read-only access to various attributes/sub-fields of the socket, as  \*\*$socket\_in()\*\*. The sub-fields of the socket are:
+\<a id="tn">\</a>
 
-\* ip - the IP part of the socket
+#### To display name - $tn
 
-\* port - the port part of the socket
+**$tn** - reference to display name of 'To' header
 
-\* proto - the name of the protocol of the socket (as "UDP", "TPC", etc)
+\<a id="tt">\</a>
 
-\* advertised\_ip - the advertised IP part of the socket (it may be NULL if no advertising is done on this particlar socket)
+#### To tag - $tt
 
-\* advertised\_port - the advertised part part of the socket (it may be NULL if no advertising is done on this particlar socket)
+**$tt** - reference to tag parameter of 'To' header
 
-\* tag - the socket internal tag/alias 
+\<a id="tu">\</a>
 
-\* anycast - if the socket uses an anycast IP or not (returns 0 if not, 1 if yes)
+#### To URI - $tu
 
-\* af - the address family of the socket's IP. It's value is "INET" if IPv4 or "INET6" if IPv6.
+**$tu** - reference to URI of 'To' header
 
-For more details on the meaning of these sub-fields, please also read about the \[socket definition]\(./Documentation.Script-CoreParameters-4-1#toc66).
+\<a id="tU">\</a>
 
+#### To URI Username - $tU
 
+**$tU** - reference to username in URI of 'To' header
 
-\[#socket\_out]\(./#socket\_out)
+\<a id="time">\</a>
 
-\####  Socket outbound - $socket\_out \[\&#x1F517;]\(./#socket\_out)
+#### Formatted date and time - $time
 
+**$time(format)** - returns the string formatted time according to UNIX date (see: **man date**).
 
+\<a id="T\_branch\_idx">\</a>
 
-\*\*$socket\_out\*\* - read-write variable for reading or changing the outbound socket of the message. Originally (before being written/changed) it will return the same socket description as \[$socket\_in]\(./#socket\_in) (the inbound socket will be used as outbound socket also). In addition, it also supports the @@forced@@ sub-field, which returns a socket description only if a socket had been explicitly forced; thus, as opposed to the regular \[$socket\_out]\(./#socket\_ou), if no socket had explicitly been forced, the variable returns NULL.
+#### Branch index - $T\_branch\_idx
 
+**$T\_branch\_idx** - the index (starting with 1 for the first branch) of the branch for which is executed the branch\_route\[]. If used outside of branch\_route\[] block, the value is '0'. This is exported by TM module.
 
+\<a id="Tf">\</a>
 
-\<br/>
+#### String formatted time - $Tf
 
-The variable also offers detailed read-only access to various attributes/sub-fields of the socket, as  $socket\_out()'''. It provides the same sub-fields as the \[$socket\_in]\(./#socket\_in) variable.
+**$Tf** - reference string formatted time
 
+\<a id="Ts">\</a>
 
+#### Current unix time stamp in seconds - $Ts
 
-\`\`\`text
+**$Ts** - reference to current unix time stamp in seconds
 
+\<a id="Tsm">\</a>
 
+#### Current microseconds of the current second - $Tsm
 
-   $socket\_out = "udp:11.11.11.11:5060";
+**$Tsm** - reference to current microseconds of the current second
 
-   xlog("The outbound port is $socket\_out(port)\<br/>n");
+\<a id="TS">\</a>
 
+#### Startup unix time stamp - $TS
 
+**$TS** - reference to startup unix time stamp
 
-\`\`\`
+\<a id="ua">\</a>
 
+#### User agent header - $ua
 
+**$ua** - reference to user agent header field
 
-\[#sp]\(./#sp)
+\<a id="hdr">\</a>
 
-\####  Source port - $sp \[\&#x1F517;]\(./#sp)
+#### SIP Headers - $hdr
 
+**$(hdr(name)\[N])** - represents the body of the N-th header identified by 'name'. If \[N] is omitted then the body of the first header is printed. The first header is got when N=0, for the second N=1, a.s.o. To print the last header of that type, use -1, no other negative values are supported now. No white spaces are allowed inside the specifier (before }, before or after \{, \[, ] symbols). When N='\*', all headers of that type are printed.
 
+The module should identify most of compact header names (the ones recognized by **OpenSIPS** which should be all at this moment), if not, the compact form has to be specified explicitly. It is recommended to use dedicated specifiers for headers (e.g., %ua for user agent header), if they are available -- they are faster.
 
-\*\*$sp\*\* - reference to the source port of the message
+**$(hdr\_name\[N])** - returns the name of the N-th header. The first header name is obtained for N=0, the second for N=1, a.s.o. To print the last header name use -1, the second last -2 a.s.o. No white spaces are allowed inside the specifier (before }, before or after \{, \[, ] symbols). When N='\*', all header names are printed.
 
+**$(hdrcnt(name))** -- returns number of headers of type given by 'name'. Uses same rules for specifying header names as **$hdr(name)** above. Many headers (e.g., Via, Path, Record-Route) may appear more than once in the message. This variable returns the number of headers of a given type.
 
+Note that some headers (e.g., Path) may be joined together with commas and appear as a single header line. This variable counts the number of header lines, not header values.
 
-\[#td]\(./#td)
+For message fragment below, **$hdrcnt(Path)** will have value 2 and **$(hdr(Path)\[0])** will have value **\<a.com>**:
 
-\####  To URI Domain - $td \[\&#x1F517;]\(./#td)
+```
+    Path: <a.com>
+    Path: <b.com>
+```
 
+For message fragment below, **$hdrcnt(Path)** will have value 1 and **$(hdr(Path)\[0])** will have value **\<a.com>,\<b.com>**:
 
-
-\*\*$td\*\* - reference to domain in URI of 'To' header
-
-
-
-\[#tn]\(./#tn)
-
-\####  To display name - $tn \[\&#x1F517;]\(./#tn)
-
-
-
-\*\*$tn\*\* - reference to display name of 'To' header
-
-
-
-\[#tt]\(./#tt)
-
-\####  To tag - $tt \[\&#x1F517;]\(./#tt)
-
-
-
-\*\*$tt\*\* - reference to tag parameter of 'To' header
-
-
-
-\[#tu]\(./#tu)
-
-\####  To URI - $tu \[\&#x1F517;]\(./#tu)
-
-
-
-\*\*$tu\*\* - reference to URI of 'To' header
-
-
-
-\[#tU]\(./#tU)
-
-\####  To URI Username - $tU \[\&#x1F517;]\(./#tU)
-
-
-
-\*\*$tU\*\* - reference to username in URI of 'To' header
-
-
-
-\[#time]\(./#time)
-
-\####  Formatted date and time - $time \[\&#x1F517;]\(./#time)
-
-
-
-\*\*$time(format)\*\* - returns the string formatted time according to UNIX date (see: \*\*man date\*\*).
-
-
-
-\[#T\_branch\_idx]\(./#T\_branch\_idx)
-
-\####  Branch index - $T\_branch\_idx \[\&#x1F517;]\(./#T\_branch\_idx)
-
-
-
-\*\*$T\_branch\_idx\*\* - the index (starting with 1 for the first branch) of the branch for which is executed the branch\_route\[]. If used outside of branch\_route\[] block, the value is '0'. This is exported by TM module.
-
-
-
-\[#Tf]\(./#Tf)
-
-\####  String formatted time - $Tf \[\&#x1F517;]\(./#Tf)
-
-
-
-\*\*$Tf\*\* - reference string formatted time
-
-
-
-\[#Ts]\(./#Ts)
-
-\####  Current unix time stamp in seconds - $Ts \[\&#x1F517;]\(./#Ts)
-
-
-
-\*\*$Ts\*\* - reference to current unix time stamp in seconds
-
-
-
-\[#Tsm]\(./#Tsm)
-
-\####  Current microseconds of the current second - $Tsm \[\&#x1F517;]\(./#Tsm)
-
-
-
-\*\*$Tsm\*\* - reference to current microseconds of the current second
-
-
-
-\[#TS]\(./#TS)
-
-\####  Startup unix time stamp - $TS \[\&#x1F517;]\(./#TS)
-
-
-
-\*\*$TS\*\* - reference to startup unix time stamp
-
-
-
-\[#ua]\(./#ua)
-
-\####  User agent header - $ua \[\&#x1F517;]\(./#ua)
-
-
-
-\*\*$ua\*\* - reference to user agent header field
-
-
-
-\[#hdr]\(./#hdr)
-
-\####  SIP Headers - $hdr \[\&#x1F517;]\(./#hdr)
-
-
-
-\*\*$(hdr(name)\[N])\*\* - represents the body of the N-th header identified by 'name'. If \[N] is omitted then the body of the first header is printed. The first header is got when N=0, for the second N=1, a.s.o. To print the last header of that type, use -1, no other negative values are supported now. No white spaces are allowed inside the specifier (before }, before or after \{, \[, ] symbols). When N='\*', all headers of that type are printed.
-
-
-
-The module should identify most of compact header names (the ones recognized by \*\*OpenSIPS\*\* which should be all at this moment), if not, the compact form has to be specified explicitly. It is recommended to use dedicated specifiers for headers (e.g., %ua for user agent header), if they are available -- they are faster.
-
-
-
-\*\*$(hdr\_name\[N])\*\* - returns the name of the N-th header. The first header name is obtained for N=0, the second for N=1, a.s.o. To print the last header name use -1, the second last -2 a.s.o. No white spaces are allowed inside the specifier (before }, before or after \{, \[, ] symbols). When N='\*', all header names are printed.
-
-
-
-\*\*$(hdrcnt(name))\*\* -- returns number of headers of type given by 'name'. Uses same rules for specifying header names as \*\*$hdr(name)\*\* above. Many headers (e.g., Via, Path, Record-Route) may appear more than once in the message. This variable returns the number of headers of a given type. 
-
-
-
-Note that some headers (e.g., Path) may be joined together with commas and appear as a single header line. This variable counts the number of header lines, not header values. 
-
-
-
-For message fragment below, \*\*$hdrcnt(Path)\*\* will have value 2 and \*\*$(hdr(Path)\[0])\*\* will have value \*\*\<a.com>\*\*:
-
-\`\`\`text
-
-
-
-    Path: \<a.com>
-
-    Path: \<b.com>
-
-
-
-\`\`\`
-
-
-
-For message fragment below, \*\*$hdrcnt(Path)\*\* will have value 1 and \*\*$(hdr(Path)\[0])\*\* will have value \*\*\<a.com>,\<b.com>\*\*:
-
-\`\`\`text
-
-
-
-    Path: \<a.com>,\<b.com>
-
-
-
-\`\`\`
-
-
+```
+    Path: <a.com>,<b.com>
+```
 
 Note that both examples above are semantically equivalent but the variables take on different values.
 
+\<a id="route">\</a>
 
+#### Route Name (Full) - $route
 
-\[#route]\(./#route)
+**$route** - Access route names of the current route call stack.  Usage examples (assuming a route call stack of "route > route\[A] > route\[B]"):
 
-\####   Route Name (Full) - $route \[\&#x1F517;]\(./#route)
+* **$route** and **$(route\[0])** both return **"route\[B]"** (current route)
+* **$(route\[1])** returns **"route\[A]"** (parent route)
+* **$(route\[2])** returns **"route"** (previous-parent route)
+* **$(route\[-1])** returns **"route"** (topmost route)
+* **$(route\[-2])** returns **"route\[A]"** (next-topmost route)
+* **$(route\[-3])** returns **"route\[B]"** (next-next-topmost route)
+* **$(route\[3])** and **$(route\[-4])** both return **NULL** (index out of bounds)
+* **$(route\[\*])** returns **"route > route\[A] > route\[B]"** (entire call stack)
 
-\*\*$route\*\* - Access route names of the current route call stack.  Usage examples (assuming a route call stack of "route > route\[A] > route\[B]"):
+\<a id="route.type">\</a>
 
+#### Route Type - $route.type
 
+**$route.type** - Access the type of the current route.  May be indexed, using positive or negative indexes.
 
-\* \*\*$route\*\* and \*\*$(route\[0])\*\* both return \*\*"route\[B]"\*\* (current route)
+* **$route.type** and **$(route.type\[0])** both return current route type
+* **$(route.type\[1])** returns parent route type
+* **$(route.type\[-1])** returns topmost route type
+* **$(route.type\[-2])** returns next-topmost route type
 
-\* \*\*$(route\[1])\*\* returns \*\*"route\[A]"\*\* (parent route)
+\<a id="route.name">\</a>
 
-\* \*\*$(route\[2])\*\* returns \*\*"route"\*\* (previous-parent route)
+#### Route Name - $route.name
 
-\* \*\*$(route\[-1])\*\* returns \*\*"route"\*\* (topmost route)
+**$route.name** - Access the name of the current route.  May be indexed, using positive or negative indexes.
 
-\* \*\*$(route\[-2])\*\* returns \*\*"route\[A]"\*\* (next-topmost route)
+* **$route.name** and **$(route.name\[0])** both return current route name
+* **$(route.name\[1])** returns parent route name
+* **$(route.name\[-1])** returns topmost route name
+* **$(route.name\[-2])** returns next-topmost route name
 
-\* \*\*$(route\[-3])\*\* returns \*\*"route\[B]"\*\* (next-next-topmost route)
+\<a id="cfg\_line">\</a>
 
-\* \*\*$(route\[3])\*\* and \*\*$(route\[-4])\*\* both return \*\*NULL\*\* (index out of bounds)
+#### Current script line and file  - $cfg\_line
 
-\* \*\*$(route\[\*])\*\* returns \*\*"route > route\[A] > route\[B]"\*\* (entire call stack)
+**$cfg\_line** - Holds the current line from the script of the action being executed, useful for logging purposes \<br />
+**$cfg\_file** - Holds the current name of the cfg file being executed, useful when using multiple scripts via the include statement
 
+\<a id="xlog\_level">\</a>
 
+#### Log level for xlog() - $xlog\_level
 
-\[#route.type]\(./#route.type)
-
-\####   Route Type - $route.type \[\&#x1F517;]\(./#route.type)
-
-\*\*$route.type\*\* - Access the type of the current route.  May be indexed, using positive or negative indexes.
-
-
-
-\* \*\*$route.type\*\* and \*\*$(route.type\[0])\*\* both return current route type
-
-\* \*\*$(route.type\[1])\*\* returns parent route type
-
-\* \*\*$(route.type\[-1])\*\* returns topmost route type
-
-\* \*\*$(route.type\[-2])\*\* returns next-topmost route type
-
-
-
-\[#route.name]\(./#route.name)
-
-\####   Route Name - $route.name \[\&#x1F517;]\(./#route.name)
-
-\*\*$route.name\*\* - Access the name of the current route.  May be indexed, using positive or negative indexes.
-
-
-
-\* \*\*$route.name\*\* and \*\*$(route.name\[0])\*\* both return current route name
-
-\* \*\*$(route.name\[1])\*\* returns parent route name
-
-\* \*\*$(route.name\[-1])\*\* returns topmost route name
-
-\* \*\*$(route.name\[-2])\*\* returns next-topmost route name
-
-
-
-\[#cfg\_line]\(./#cfg\_line)
-
-\####   Current script line and file  - $cfg\_line \[\&#x1F517;]\(./#cfg\_line)
-
-\*\*$cfg\_line\*\* - Holds the current line from the script of the action being executed, useful for logging purposes \<br/>
-
-\*\*$cfg\_file\*\* - Holds the current name of the cfg file being executed, useful when using multiple scripts via the include statement
-
-
-
-\[#xlog\_level]\(./#xlog\_level)
-
-\####   Log level for xlog() - $xlog\_level \[\&#x1F517;]\(./#xlog\_level)
-
-
-
-\*\*$xlog\_level\*\* - allows to set /reset the xlog() logging level on per-process bases. Shortly said, you can read the verbosity level for the xlog() calls or you can temporary change the level per process bases.
-
-
+**$xlog\_level** - allows to set /reset the xlog() logging level on per-process bases. Shortly said, you can read the verbosity level for the xlog() calls or you can temporary change the level per process bases.
 
 Example:
 
-\`\`\`text
-
-
-
-xlog("current verbosity is $xlog\_level \<br/>n");
-
-$xlog\_level = L\_DBG; # force local xlogging limit to DBG
-
+```
+xlog("current verbosity is $xlog_level \n");
+$xlog_level = L_DBG; # force local xlogging limit to DBG
 ...
-
 (set of xlogs)
-
 ...
+$xlog_level = NULL;  # reset to initial value
+```
 
-$xlog\_level = NULL;  # reset to initial value
+### Escape Sequences
 
+These sequences are exported, and mainly used, by xlog module to print messages in many colors (foreground and background) using escape sequences.
 
+#### Foreground and background colors
 
-\`\`\`
-
-
-
-\### Escape Sequences
-
-
-
-These sequences are exported, and mainly used, by xlog module to print messages in many colors (foreground and background) using escape sequences. 
-
-
-
-\#### Foreground and background colors
-
-
-
-$C(xy) - reference to an escape sequence. x represents the foreground color and y represents the background color.
-
-
+$C(xy) - reference to an escape sequence. ¿x¿ represents the foreground color and ¿y¿ represents the background color.
 
 Colors could be:
 
+* x : default color of the terminal
+* s : Black
+* r : Red
+* g : Green
+* y : Yellow
+* b : Blue
+* p : Purple
+* c : Cyan
+* w : White
 
-
-\* x : default color of the terminal
-
-\* s : Black
-
-\* r : Red
-
-\* g : Green
-
-\* y : Yellow
-
-\* b : Blue
-
-\* p : Purple
-
-\* c : Cyan
-
-\* w : White 
-
-
-
-\#### Examples
-
-
+#### Examples
 
 A few examples of usage.
 
-
-
-\`\`\`text
-
-
-
+```
 ...
-
-route \{
-
+route {
 ...
-
-    $avp(uuid)="caller\_id";
-
-    $avp(tmp)= $avp(uuid) + ": " + $fu;
-
-    xlog("$C(bg)$avp(tmp)$C(xx) \[$avp(tmp)] $C(br)$cs$C(xx)=\[$hdr(cseq)]\<br/>n");
-
+    $avp(uuid)="caller_id";
+    $avp(tmp)= $avp(uuid) + ": " + $fu;
+    xlog("$C(bg)$avp(tmp)$C(xx) [$avp(tmp)] $C(br)$cs$C(xx)=[$hdr(cseq)]\n");
 ...
-
 }
-
 ...
-
-
-
-\`\`\`
+```
