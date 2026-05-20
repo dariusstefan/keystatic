@@ -17,16 +17,19 @@ title: CoreVariables
 
 The **OpenSIPS** variables can be easily identified in the script as all their names (or notations) start with the **$** sign.
 
-Syntax:\<br />
+Syntax:
 The complete syntax for a pseudo variable is:
-$(*\<context>**name**(subname)\[index]\{transformation}*)
+
+```
+$(<context>name(subname)[index]{transformation})
+```
 
 The fields written in green are optional.
 The fields meaning is:
 
-* **name**(compulsory) - the pseudo-variable name(type).\<br />
+* **name**(compulsory) - the pseudo-variable name(type).
   Ex: pvar, avp, ru, DLG\_status, etc.
-* **subname** - the identifier of a certain pv from the given type.\<br />
+* **subname** - the identifier of a certain pv from the given type.
   Ex: hdr(From), avp(name).
 * **index** - a pv can store more than one value - it can refer to a list of values. You can access a certain value from the list if you specify its index. You can also specify indexes with negative values, -1 means the last inserted, -2 the value before the previous inserted one.
 * **transformation** - a series of processing actions can be applied on pseudo-variable. You can find the whole list of possible transformations [here](Documentation.Script-Tran). The transformations can be cascaded, using the output of one transformation as the input of another.
@@ -39,17 +42,17 @@ Usage examples:
 * **Name** and **index**: $(ct\[0])
 * **Name**, **subname** and **index**: $(avp(i:10)\[2])
 * **Context**
-  \*\* $(\<request>ru) from a reply route will get the Request-URI from the request
-  \*\* $(\<reply>hdr(Contact)) context can be used from failure route to access information from the reply
+  * $(\<request>ru) from a reply route will get the Request-URI from the request
+  * $(\<reply>hdr(Contact)) context can be used from failure route to access information from the reply
 
 Types of variables:
 
-* [**script variables**](#varscript) - as the name says, these variables are strictly bound to the script routes. The variables are visible only in the routing blocks - they are not message or transaction related, but they are process related (script variables will be inherited by script routes executed by the same **OpenSIPS** process).\<br />
+* [**script variables**](#varscript) - as the name says, these variables are strictly bound to the script routes. The variables are visible only in the routing blocks - they are not message or transaction related, but they are process related (script variables will be inherited by script routes executed by the same **OpenSIPS** process).
   Script variables are read write and they can have integer or string values. A script variable can only hold a single value. A new assignment (or write operation) will overwrite the existing value.
-* [**AVP - Attribute Value Pair**](#varavps) - the AVPs are dynamic variables (as name) that can be created - the AVPS are linked to a singular message or transaction (if stateful processing is used). A message or a transaction will initially (when received or created) have an empty list of AVPS attached to it. During the routing script, the script directly or functions called from script may create new AVPS that will automatically attached to the message/transaction. The AVPS will be visible in all routes where any message (reply or request) of the transaction will be processed - branch\_route , failure\_route, onreply\_route (for this last route you need to enable the TM parameter *onreply\_avp\_mode*).\<br />
-  AVPs are read write and an existing AVP can be even deleted (removed). An AVP may contain multiple values - a new assignment (or write operation) will add a new value to the AVP; the values are kept in "last added first to be used" order (stack).\<br />
+* [**AVP - Attribute Value Pair**](#varavps) - the AVPs are dynamic variables (as name) that can be created - the AVPS are linked to a singular message or transaction (if stateful processing is used). A message or a transaction will initially (when received or created) have an empty list of AVPS attached to it. During the routing script, the script directly or functions called from script may create new AVPS that will automatically attached to the message/transaction. The AVPS will be visible in all routes where any message (reply or request) of the transaction will be processed - branch\_route , failure\_route, onreply\_route (for this last route you need to enable the TM parameter *onreply\_avp\_mode*).
+  AVPs are read write and an existing AVP can be even deleted (removed). An AVP may contain multiple values - a new assignment (or write operation) will add a new value to the AVP; the values are kept in "last added first to be used" order (stack).
   A special index **append** is defined to allow you to add a new value at the end of the list (at the bottom of the stack) - $(avp(name)\[append]) = "last value";
-* [**pseudo variables**](#varpv) - pseudo-variables (or PV) provide access to information from the processed SIP message (headers, RURI, transport level info, a.s.o) or from **OpenSIPS** inners (time values, process PID, return code of a function). Depending of what info they provide, the PVs are either bound to the message, either to nothing  (global). Most of the PVs are read-only and only several allow write operations. A PV may return several values or only one, depending of the referred info (if can have multiple values or not).\<br />
+* [**pseudo variables**](#varpv) - pseudo-variables (or PV) provide access to information from the processed SIP message (headers, RURI, transport level info, a.s.o) or from **OpenSIPS** inners (time values, process PID, return code of a function). Depending of what info they provide, the PVs are either bound to the message, either to nothing  (global). Most of the PVs are read-only and only several allow write operations. A PV may return several values or only one, depending of the referred info (if can have multiple values or not).
   Standard PV is read-only and returns a single value (if not otherwise documented).
 * [**escape sequences**](#varesc) - escape sequences used to format the strings; they are actually not variables, but rather formatters.
 
@@ -61,13 +64,10 @@ Types of variables:
 
 **Hints**:
 
-# if you want to start using a script variable in a route, better initialize it with same value (or reset it), otherwise you may inherit a value from a previous route that was executed by the same process.
-
-# script variables are faster than AVPs, as they directly reference a memory location.
-
-# the value of script variables persists over a **OpenSIPS** process.
-
-# a script variable can only hold one value.
+1. if you want to start using a script variable in a route, better initialize it with same value (or reset it), otherwise you may inherit a value from a previous route that was executed by the same process.
+2. script variables are faster than AVPs, as they directly reference a memory location.
+3. the value of script variables persists over a **OpenSIPS** process.
+4. a script variable can only hold one value.
 
 Example of usage:
 
@@ -95,17 +95,14 @@ When using the index "N" you can force the AVP to return a certain value (the N-
 
 **Hints**:
 
-# to enable AVPs in onreply\_route, use "modparam("tm", "onreply\_avp\_mode", 1)"
-
-# if multiple values are used for a single AVP, the values are index in revert order than added
-
-# AVPs are part of the transaction context, so they will be visible everywhere where the transaction is present.
-
-# the value of an AVP can be deleted
+1. to enable AVPs in onreply\_route, use "modparam("tm", "onreply\_avp\_mode", 1)"
+2. if multiple values are used for a single AVP, the values are index in revert order than added
+3. AVPs are part of the transaction context, so they will be visible everywhere where the transaction is present.
+4. the value of an AVP can be deleted
 
 Example of usage:
 
-# Transaction persistence example
+1. Transaction persistence example
 
 ```
 # enable avps in onreply route
@@ -128,7 +125,7 @@ onreply_route[1] {
 }
 ```
 
-# Multiple values example
+1. Multiple values example
 
 ```
 $avp(my_arr) = "one";
@@ -169,9 +166,8 @@ The **AVPOPS** module provides a lot of useful functions to operate AVPs (like c
 
 **Hints**:
 
-# the PV tokens can be given as parameters to different script functions and they will be replaced with a value before the execution of the function.
-
-# most of PVs are made available by **OpenSIPS** core, but there are also module exporting PV (to make available info specific to that module) - check the modules documentation.
+1. the PV tokens can be given as parameters to different script functions and they will be replaced with a value before the execution of the function.
+2. most of PVs are made available by **OpenSIPS** core, but there are also module exporting PV (to make available info specific to that module) - check the modules documentation.
 
 Predefined (provided by core) PVs are listed in alphabetical order.
 
@@ -275,14 +271,14 @@ Examples:
 
 #### Branch flags list - $bf
 
-**$bf** - displays a list with the branch flags set for the current SIP request\<br />
+**$bf** - displays a list with the branch flags set for the current SIP request
 TO BECOME OBSOLETE, replaced by [$msg.branch.flags](#msg.branch.flags)
 
 \<a id="branch">\</a>
 
 #### Branch - $branch
 
-**$branch** - this variable is used for creating new branches by writing into it the value of a SIP URI.\<br />
+**$branch** - this variable is used for creating new branches by writing into it the value of a SIP URI.
 TO BECOME OBSOLETE, replaced by [$msg.branch.uri](#msg.branch.uri)
 Examples:
 
@@ -305,9 +301,9 @@ Examples:
 * path - the PATH string for this branch (string value)
 * flags - the branch flags of this branch (int value)
 * socket - the local socket to be used for relaying this branch (string value)
-  The variable accepts also index **$(branch(uri)\[1])** for accessing a specific branch (multiple branches can be defined at a moment). The index starts from 0 (first branch). If the index is negative, it is considered the n-th branch from the end ( index -1 means the last branch).\<br />
-  To get all branches, use the \* index - $(branch(uri)\[\*]).\<br />
-  TO BECOME OBSOLETE, replaced by [$msg.branch.uri](#msg.branch.uri)\<br />
+  The variable accepts also index **$(branch(uri)\[1])** for accessing a specific branch (multiple branches can be defined at a moment). The index starts from 0 (first branch). If the index is negative, it is considered the n-th branch from the end ( index -1 means the last branch).
+  To get all branches, use the \* index - $(branch(uri)\[\*]).
+  TO BECOME OBSOLETE, replaced by [$msg.branch.uri](#msg.branch.uri)
   Examples:
 
 ```
@@ -335,7 +331,7 @@ It is R/W variable (you can assign values to it from routing logic)
 
 #### Branch flag - $branch.flag
 
-**$branch.flag(flag\_name)\[]** - this variable provides read/write access to the value of a single certain branch flag (identified by name). The values accepted for writing are 1 (set) and 0 (unset). The returned values are 1/"true" (set) and 0/"false" (unset). An index is accepted, in order to access the flag for a certain branch. By default the 0 (or current) branch accessed (for more on index, see the the [branch.fields](#branch.fields) variable) - note that "\*" is not accepted.\<br />
+**$branch.flag(flag\_name)\[]** - this variable provides read/write access to the value of a single certain branch flag (identified by name). The values accepted for writing are 1 (set) and 0 (unset). The returned values are 1/"true" (set) and 0/"false" (unset). An index is accepted, in order to access the flag for a certain branch. By default the 0 (or current) branch accessed (for more on index, see the the [branch.fields](#branch.fields) variable) - note that "\*" is not accepted.
 TO BECOME OBSOLETE, replaced by [$msg.branch.flag](#msg.branch.flag)
 
 ```
@@ -619,9 +615,9 @@ $log\_level = NULL; # reset the log level of the current process to its default 
 
 #### SIP URI of a message branch - $msg.branch.uri
 
-**$msg.branch.uri** -  gives read / write access over the SIP URI (as string) of an existing message branch. The message branches are created via [append\_msg\_branch()](Documentation.Script-CoreFunctions-4-1#append_branch) core function or by various modules (like "registrar" module). The message branches are consumed by the TM "t\_relay()" function (they are converted to TM branches).\<br />
+**$msg.branch.uri** -  gives read / write access over the SIP URI (as string) of an existing message branch. The message branches are created via [append\_msg\_branch()](Documentation.Script-CoreFunctions-4-1#append_branch) core function or by various modules (like "registrar" module). The message branches are consumed by the TM "t\_relay()" function (they are converted to TM branches).
 The variable supports indexing - it starts from 0, meaning the RURI (or message) branch. The newly added branches will start from 1. So the branch 0 exists all
-the time, there is no need to creat it. If no index is specified, the current/last added branch (or of the RURI branch if no additional branch was added so far) will be considered. Negative values are also accepted, meaning indexing from the last branch ( -1 is the latest/higher branch) to the RURI branch. An \*\*\*\*\* / ALL index will return the comma separated list with the values from all branches.\<br />
+the time, there is no need to creat it. If no index is specified, the current/last added branch (or of the RURI branch if no additional branch was added so far) will be considered. Negative values are also accepted, meaning indexing from the last branch ( -1 is the latest/higher branch) to the RURI branch. An \*\*\*\*\* / ALL index will return the comma separated list with the values from all branches.
 The variable can be used in REQUEST and FAILURE routes.
 
 ```
@@ -667,8 +663,8 @@ The variable can be used in REQUEST and FAILURE routes.
 
 #### A flag of a message branch - $msg.branch.flag()
 
-**$msg.branch.flag()** -  similar to [$msg.branch.uri](#msg.branch.uri), but operating over a single branch flag (for the current branch).\<br />
-The accepted values are 0 for FALSE, pozitive non-zero for TRUE. The returned values are 0 for FALSE and 1 for TRUE.\<br />
+**$msg.branch.flag()** -  similar to [$msg.branch.uri](#msg.branch.uri), but operating over a single branch flag (for the current branch).
+The accepted values are 0 for FALSE, pozitive non-zero for TRUE. The returned values are 0 for FALSE and 1 for TRUE.
 NOTE: the \*\*\*\*\*/ALL index cannot be used here.
 
 ```
@@ -685,8 +681,8 @@ NOTE: the \*\*\*\*\*/ALL index cannot be used here.
 
 #### An attribute of a message branch - $msg.branch.attr()
 
-**$msg.branch.attr()** -  similar to [$msg.branch.uri](#msg.branch.uri), but operating over a single branch attribute (attached to the current branch).\<br />
-An attribute can have whatever name (no need to be pre-defined) and it can have a single value (at a time), string or integer.\<br />
+**$msg.branch.attr()** -  similar to [$msg.branch.uri](#msg.branch.uri), but operating over a single branch attribute (attached to the current branch).
+An attribute can have whatever name (no need to be pre-defined) and it can have a single value (at a time), string or integer.
 NOTE: the \*\*\*\*\*/ALL index cannot be used here.
 
 ```
@@ -701,7 +697,7 @@ NOTE: the \*\*\*\*\*/ALL index cannot be used here.
 
 #### Index of the last message branch - $msg.branch.last\_idx
 
-**$msg.branch.last\_idx()** -  returns the index of the last message branch. IF no additional branche were added, it will return 0, the index of the RURI branch. Then the returned value will get incremented with each append\_msg\_branch().\<br />
+**$msg.branch.last\_idx()** -  returns the index of the last message branch. IF no additional branche were added, it will return 0, the index of the RURI branch. Then the returned value will get incremented with each append\_msg\_branch().
 
 \<a id="msg.flag">\</a>
 
@@ -773,7 +769,7 @@ NOTE: the \*\*\*\*\*/ALL index cannot be used here.
 
 #### Route parameter - $param
 
-**$param(idx)** - retrieves the parameters of the route. The index can be an integer, or a pseudo-variable (index starts at 1).\<br />
+**$param(idx)** - retrieves the parameters of the route. The index can be an integer, or a pseudo-variable (index starts at 1).
 Example:
 
 ```
@@ -800,7 +796,7 @@ Example:
 
 #### Proxy Protocol from transport layer - $proxy\_protocol
 
-**$proxy\_protocol(field)** - retrieves Proxy Protocol information from the transport layer. Supported fields are: **src\_ip**, **src\_port**, **dst\_ip**, **dst\_port**, **af**\<br />
+**$proxy\_protocol(field)** - retrieves Proxy Protocol information from the transport layer. Supported fields are: **src\_ip**, **src\_port**, **dst\_ip**, **dst\_port**, **af**
 Example:
 
 ```
@@ -1069,7 +1065,7 @@ The variable also offers detailed read-only access to various attributes/sub-fie
 
 #### Socket outbound - $socket\_out
 
-**$socket\_out** - read-write variable for reading or changing the outbound socket of the message. Originally (before being written/changed) it will return the same socket description as [$socket\_in](#socket_in) (the inbound socket will be used as outbound socket also). In addition, it also supports the @@forced@@ sub-field, which returns a socket description only if a socket had been explicitly forced; thus, as opposed to the regular [$socket\_out](#socket_ou), if no socket had explicitly been forced, the variable returns NULL.
+**$socket\_out** - read-write variable for reading or changing the outbound socket of the message. Originally (before being written/changed) it will return the same socket description as [$socket\_in](#socket_in) (the inbound socket will be used as outbound socket also). In addition, it also supports the `forced` sub-field, which returns a socket description only if a socket had been explicitly forced; thus, as opposed to the regular [$socket\_out](#socket_ou), if no socket had explicitly been forced, the variable returns NULL.
 
 The variable also offers detailed read-only access to various attributes/sub-fields of the socket, as  $socket\_out()'''. It provides the same sub-fields as the [$socket\_in](#socket_in) variable.
 
@@ -1226,7 +1222,7 @@ Note that both examples above are semantically equivalent but the variables take
 
 #### Current script line and file  - $cfg\_line
 
-**$cfg\_line** - Holds the current line from the script of the action being executed, useful for logging purposes \<br />
+**$cfg\_line** - Holds the current line from the script of the action being executed, useful for logging purposes
 **$cfg\_file** - Holds the current name of the cfg file being executed, useful when using multiple scripts via the include statement
 
 \<a id="xlog\_level">\</a>
