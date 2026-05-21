@@ -105,6 +105,7 @@ html[data-theme='dark'] {
   --sl-color-accent: #7da82e;
   --sl-color-accent-high: #c5e288;
   --sl-color-text-accent: #7da82e;
+  --sl-content-width: 64rem;
 }
 
 /* Doc page: pad the content elements directly, not the container.
@@ -295,6 +296,10 @@ main:has(.home-splash) .sl-markdown-content > * {
 }
 main:has(.home-splash) .sl-markdown-content > :first-child {
   margin-top: 0;
+}
+main:has(.home-splash) .sl-markdown-content h2::before,
+main:has(.home-splash) .sl-markdown-content h3::before {
+  content: none;
 }
 
 /* Footer (home only): full-width, no panel padding */
