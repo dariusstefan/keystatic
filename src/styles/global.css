@@ -257,39 +257,11 @@ starlight-toc nav a[href*="#"]:where([data-level="3"])::before {
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Callout blocks (replaces <Aside>) */
-.sl-markdown-content .callout {
-  border-left: 4px solid;
-  border-radius: 0.375rem;
-  padding: 0.75rem 1rem;
-  margin-block: 1rem;
-  font-size: 0.9rem;
-}
-.sl-markdown-content .callout-note   { border-color: var(--sl-color-info);    background: color-mix(in oklch, var(--sl-color-info) 10%, transparent); }
-.sl-markdown-content .callout-tip    { border-color: var(--sl-color-success); background: color-mix(in oklch, var(--sl-color-success) 10%, transparent); }
-.sl-markdown-content .callout-caution { border-color: var(--sl-color-warning); background: color-mix(in oklch, var(--sl-color-warning) 10%, transparent); }
-.sl-markdown-content .callout-danger  { border-color: var(--sl-color-error);   background: color-mix(in oklch, var(--sl-color-error) 10%, transparent); }
-
-/* Inline badges (replaces <Badge>) */
-.sl-markdown-content .badge {
-  display: inline-block;
-  padding: 0.15em 0.55em;
-  border-radius: 0.35rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  line-height: 1.4;
-  vertical-align: middle;
-}
-.sl-markdown-content .badge-note    { background: var(--sl-color-info);    color: #fff; }
-.sl-markdown-content .badge-tip     { background: var(--sl-color-success); color: #fff; }
-.sl-markdown-content .badge-caution { background: var(--sl-color-warning); color: #000; }
-.sl-markdown-content .badge-danger  { background: var(--sl-color-error);   color: #fff; }
-
-/* Utility color classes for MDX content */
-.color-green  { color: #2f855a; }
-.color-red    { color: #e53e3e; }
-.color-blue   { color: #2b6cb0; }
-.color-orange { color: #c05621; }
+/* Inline color markers: @@red|text@@, @@green|text@@, @@blue|text@@, @@orange|text@@ */
+.sl-markdown-content .color-green  { color: #2f855a; }
+.sl-markdown-content .color-red    { color: #e53e3e; }
+.sl-markdown-content .color-blue   { color: #2b6cb0; }
+.sl-markdown-content .color-orange { color: #c05621; }
 
 /* Overscroll bounce areas: match footer on home, match content elsewhere */
 html:has(.home-splash) {

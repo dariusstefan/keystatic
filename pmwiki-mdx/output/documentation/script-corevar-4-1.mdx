@@ -11,7 +11,7 @@ Syntax:
 
 The complete syntax for a pseudo variable is: 
 
-$(`<context>name(subname)[index]{transformation}`)
+$(@@green|<context>name(subname)[index]{transformation}@@)
 
 The fields written in green are optional.
 The fields meaning is:
@@ -25,12 +25,12 @@ Ex: hdr(From), avp(name).
 
 Usage examples:
 - Only **name**: $ru 
-- **Name** and *'subname*: `$hdr(Contact)`
-- **Name** and **index**: `$(ct[0])`
+- **Name** and *'subname*: @@green|$hdr(Contact)@@
+- **Name** and **index**: @@green|$(ct[0])@@
 - **Name**, **subname** and **index**: $(avp(i:10)[2])
 - **Context** 
-  - `$(<request>ru)` from a reply route will get the Request-URI from the request
-  - `$(<reply>hdr(Contact))` context can be used from failure route to access information from the reply 
+  - @@green|$(<request>ru)@@ from a reply route will get the Request-URI from the request
+  - @@green|$(<reply>hdr(Contact))@@ context can be used from failure route to access information from the reply 
 
 Types of variables:
 
@@ -227,17 +227,13 @@ Examples:
 
 **$bf** - displays a list with the branch flags set for the current SIP request  
 
-<Aside type="caution">TO BECOME OBSOLETE</Aside>
-
-, replaced by [$msg.branch.flags](#msg.branch.flags)
+> **Caution:** TO BECOME OBSOLETE, replaced by [$msg.branch.flags](#msg.branch.flags)
 
 ### Branch - $branch 
 
 **$branch** - this variable is used for creating new branches by writing into it the value of a SIP URI.  
 
-<Aside type="caution">TO BECOME OBSOLETE</Aside>
-
-, replaced by [$msg.branch.uri](#msg.branch.uri)
+> **Caution:** TO BECOME OBSOLETE, replaced by [$msg.branch.uri](#msg.branch.uri)
 Examples:
 ```c
 
@@ -261,9 +257,7 @@ The variable accepts also index **$(branch(uri)[1])** for accessing a specific b
 
 To get all branches, use the * index - $(branch(uri)[*]).  
 
-<Aside type="caution">TO BECOME OBSOLETE</Aside>
-
-, replaced by [$msg.branch.uri](#msg.branch.uri)  
+> **Caution:** TO BECOME OBSOLETE, replaced by [$msg.branch.uri](#msg.branch.uri)  
 
 Examples:
 ```c
@@ -287,15 +281,13 @@ Examples:
 
 ```
 
-`It is R/W variable (you can assign values to it from routing logic)`
+@@red|It is R/W variable (you can assign values to it from routing logic)@@
 
 ### Branch flag - $branch.flag 
 
 **$branch.flag(flag_name)[]** - this variable provides read/write access to the value of a single certain branch flag (identified by name). The values accepted for writing are 1 (set) and 0 (unset). The returned values are 1/"true" (set) and 0/"false" (unset). An index is accepted, in order to access the flag for a certain branch. By default the 0 (or current) branch accessed (for more on index, see the the [branch.fields](#branch.fields) variable) - note that "*" is not accepted.  
 
-<Aside type="caution">TO BECOME OBSOLETE</Aside>
-
-, replaced by [$msg.branch.flag](#msg.branch.flag)
+> **Caution:** TO BECOME OBSOLETE, replaced by [$msg.branch.flag](#msg.branch.flag)
 
 ```c
 
@@ -380,7 +372,7 @@ Examples:
 
 **$dd** - reference to domain of destination uri
 
-`It is R/W variable (you can assign values to it from routing logic)`
+@@red|It is R/W variable (you can assign values to it from routing logic)@@
 
 ### Diversion header URI - $di 
 
@@ -398,7 +390,7 @@ Examples:
 
 **$dp** - reference to port of destination uri
 
-`It is R/W variable (you can assign values to it from routing logic)`
+@@red|It is R/W variable (you can assign values to it from routing logic)@@
 
 ### Transport protocol of destination URI - $dP 
 
@@ -413,7 +405,7 @@ Examples:
 **$du** - reference to destination uri (outbound proxy to be used for sending the request)
 If loose_route() returns TRUE a destination uri is set according to the first Route header.
 
-`It is R/W variable (you can assign values to it from routing logic)`
+@@red|It is R/W variable (you can assign values to it from routing logic)@@
 
 ### Error class - $err.class 
 
@@ -547,7 +539,7 @@ The variable can be used in REQUEST and FAILURE routes.
 
 The accepted values are 0 for FALSE, pozitive non-zero for TRUE. The returned values are 0 for FALSE and 1 for TRUE.  
 
-NOTE: the *****/ALL index cannot be used here.
+> **Observation:** the */ALL index cannot be used here.
 ```c
 
    # creates a new branch
@@ -566,7 +558,7 @@ NOTE: the *****/ALL index cannot be used here.
 
 An attribute can have whatever name (no need to be pre-defined) and it can have a single value (at a time), string or integer.  
 
-NOTE: the *****/ALL index cannot be used here.
+> **Observation:** the */ALL index cannot be used here.
 ```c
 
    # creates a new branch
@@ -692,7 +684,7 @@ Example:
 
 **$rd** - reference to domain in request's URI
 
-`It is R/W variable (you can assign values to it routing script)`
+@@red|It is R/W variable (you can assign values to it routing script)@@
 
 ### Body of request/reply - $rb 
 
@@ -728,7 +720,7 @@ The variable receives an index, starting with 0, indicating the return value tha
 
 **$rp** - reference to port of R-URI
 
-`It is R/W variable (you can assign values to it routing script)`
+@@red|It is R/W variable (you can assign values to it routing script)@@
 
 ### Transport protocol of SIP request URI - $rP 
 
@@ -750,19 +742,19 @@ The variable receives an index, starting with 0, indicating the return value tha
 
 **$ru** - reference to request's URI
 
-`It is R/W variable (you can assign values to it routing script)`
+@@red|It is R/W variable (you can assign values to it routing script)@@
 
 ### Username in SIP Request's URI - $rU 
 
 **$rU** - reference to username in request's URI
 
-`It is R/W variable (you can assign values to it routing script)`
+@@red|It is R/W variable (you can assign values to it routing script)@@
 
 ### Q value of the SIP Request's URI - $ru_q 
 
 **$ru_q** - reference to q value of the R-URI
 
-`It is R/W variable (you can assign values to it routing script)`
+@@red|It is R/W variable (you can assign values to it routing script)@@
 
 ### SDP body - $sdp 
 

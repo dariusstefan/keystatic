@@ -4,8 +4,8 @@
 Targets the Astro + Starlight + Keystatic stack. The output uses only
 constructs Keystatic's MDX editor can round-trip:
   - vanilla Markdown for all prose/lists/headings/links/tables/code
-  - <Aside type="..."> / <Badge text="..." variant="..."> for components
-    (these must be registered in keystatic.config.ts via component())
+  - Markdown blockquotes for caution/observation notes
+  - @@color|text@@ markers for colored inline text
   - inline code (backticks) for anything containing braces, angle brackets,
     or other MDX-unsafe characters — no \\{ escapes, no &lt; entities
 """
@@ -68,18 +68,12 @@ def strip_nav_header(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Color span → Keystatic-safe MDX
+# Color span → Keystatic-safe Markdown
 # ---------------------------------------------------------------------------
 
 ASIDE_PHRASES = re.compile(r'TO BECOME OBSOLETE|DEPRECATED|OBSOLETE', re.IGNORECASE)
 
-# PMwiki color → Starlight Badge variant. Only used for short label-like content.
-COLOR_BADGE = {
-    "red":    "caution",
-    "green":  "tip",
-    "blue":   "note",
-    "orange": "caution",
-}
+SUPPORTED_COLORS = {"red", "green", "blue", "orange"}
 
 
 def html_inline_to_md(text: str) -> str:
@@ -111,31 +105,23 @@ def strip_markup(text: str) -> str:
 
 
 def color_span_to_mdx(color: str, content: str) -> str:
-    """Map a PMwiki %color%...%% span to MDX. Never emits raw <span>.
+    """Map a PMwiki %color%...%% span to Markdown-safe text.
 
     Rules:
-      - 'TO BECOME OBSOLETE' / 'DEPRECATED'  → <Aside type="caution">
-      - code-like ($foo, parens, brackets, <tag>) → `inline code`
-      - short label-like phrase, valid color    → <Badge text="..." variant="...">
-      - everything else                         → plain Markdown (color dropped)
+      - 'TO BECOME OBSOLETE' / 'DEPRECATED' → **Caution:** text
+      - supported colors                    → @@color[text]@@
+      - everything else                     → plain Markdown (color dropped)
     """
     content = content.strip()
     if not content:
         return ""
 
     if ASIDE_PHRASES.search(content):
-        return f'\n\n<Aside type="caution">{strip_markup(content)}</Aside>\n\n'
+        return f'**Caution:** {strip_markup(content)}'
 
-    is_code_like = bool(re.search(r'[$()\[\]<>{}]', content))
-    if is_code_like:
-        return f'`{strip_markup(content)}`'
-
-    variant = COLOR_BADGE.get(color.lower())
-    word_count = len(content.split())
-    if variant and 1 <= word_count <= 6 and not re.search(r'[<>&"]', content):
-        plain = re.sub(r'\*\*(.+?)\*\*', r'\1', content)
-        plain = re.sub(r'\*([^*\n]+?)\*', r'\1', plain)
-        return f'<Badge text="{plain}" variant="{variant}" />'
+    color = color.lower()
+    if color in SUPPORTED_COLORS:
+        return f'@@{color}|{strip_markup(content)}@@'
 
     # Default: color is decorative, drop it and keep prose as Markdown
     return html_inline_to_md(content)
@@ -246,7 +232,15 @@ def convert_line(line: str) -> str:
         return ""  # TOC, allVersions, etc.
 
     line = line.replace("\\\\", "  \n")
-    return convert_inline(line)
+    if line.strip().lower().startswith("note:"):
+        note = line.strip().split(":", 1)[1].strip()
+        note = re.sub(r"'''(.+?)'''", r"\1", note)
+        note = re.sub(r"''(.+?)''", r"\1", note)
+        return f"> **Observation:** {convert_inline(note)}"
+    converted = convert_inline(line)
+    if converted.startswith("**Caution:**"):
+        return f"> {converted}"
+    return converted
 
 
 def convert_list_item(line: str) -> str:
@@ -371,15 +365,19 @@ def escape_prose_line(line: str) -> str:
     """Wrap MDX-unsafe substrings in inline code, keeping existing code spans
     and registered JSX components untouched. No backslash escapes, no &lt; entities."""
     result: list[str] = []
-    # Split on inline code spans AND on JSX components (Aside, Badge, etc.)
+    # Split on inline code spans, color markers, and JSX components.
     segments = re.split(
-        r'(`[^`]*`|<[A-Z][A-Za-z0-9]*\s*/>|<[A-Z][A-Za-z0-9]*[^>]*?/>|<[A-Z][A-Za-z0-9]*[^>]*>|</[A-Z][A-Za-z0-9]*>)',
+        r'(`[^`]*`|@@(?:red|green|blue|orange)\|.*?@@|<[A-Z][A-Za-z0-9]*\s*/>|<[A-Z][A-Za-z0-9]*[^>]*?/>|<[A-Z][A-Za-z0-9]*[^>]*>|</[A-Z][A-Za-z0-9]*>)',
         line,
     )
     for seg in segments:
         if not seg:
             continue
-        if (seg.startswith("`") and seg.endswith("`")) or re.match(r'</?[A-Z]', seg):
+        if (
+            (seg.startswith("`") and seg.endswith("`"))
+            or re.match(r'@@(?:red|green|blue|orange)\|', seg)
+            or re.match(r'</?[A-Z]', seg)
+        ):
             result.append(seg)
             continue
 

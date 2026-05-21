@@ -9,12 +9,16 @@ import keystatic from '@keystatic/astro';
 import node from '@astrojs/node';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import remarkTextMarkers from './src/utils/remarkTextMarkers.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   site: 'https://www.opensips.org',
   adapter: node({ mode: 'standalone' }),
+  markdown: {
+    remarkPlugins: [remarkTextMarkers],
+  },
   security: {
     checkOrigin: false,
     allowedDomains: [{ hostname: 'web.opensips.org', protocol: 'https' }],
@@ -70,7 +74,9 @@ export default defineConfig({
       ],
     }),
     // Must come AFTER starlight() so astro-expressive-code (registered by Starlight) wraps MDX code blocks correctly.
-    mdx(),
+    mdx({
+      remarkPlugins: [remarkTextMarkers],
+    }),
   ],
   vite: {
     plugins: [tailwindcss()],
