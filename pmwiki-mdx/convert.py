@@ -119,6 +119,10 @@ def color_span_to_mdx(color: str, content: str) -> str:
     if ASIDE_PHRASES.search(content):
         return f'**Caution:** {strip_markup(content)}'
 
+    is_mdx_unsafe = bool(re.search(r'[<>{}]', content))
+    if is_mdx_unsafe:
+        return f'`{strip_markup(content)}`'
+
     color = color.lower()
     if color in SUPPORTED_COLORS:
         return f'@@{color}|{strip_markup(content)}@@'
@@ -383,6 +387,8 @@ def escape_prose_line(line: str) -> str:
 
         # Matched {...} pairs → inline code
         seg = re.sub(r'\{([^{}]*)\}', r'`{\1}`', seg)
+        # Any remaining lone braces are still MDX expression delimiters.
+        seg = re.sub(r'(?<!`)([{}])(?!`)', r'`\1`', seg)
 
         # <…> patterns: leave Markdown autolinks (http/mailto) and known HTML tags;
         # wrap protocol-style or unknown bare tags in backticks.
