@@ -12,7 +12,7 @@ Syntax:
 
 The complete syntax for a pseudo variable is:
 
-$(`<context>name(subname)[index]{transformation}`)
+`$(@@green|<context>@@name@@green|(subname)[index]{transformation})@@`
 
 The fields written in green are optional.
 The fields meaning is:
@@ -270,27 +270,6 @@ To get all branches, use the \* index - $(branch(uri)\[\*]).
 > @@yellow|Attention!@@ @@red|TO BECOME OBSOLETE@@, replaced by [$msg.branch.uri](#msg.branch.uri)
 
 Examples:
-
-```c
-
-   # creates the first branch
-   append_branch();
-   # creates the second branch
-   force_send_socket(udp:194.168.1.12:5060);
-   $du = "sip:194.168.4.10";
-   append_branch("sip:foo@bar.com","0.5");
-
-   # display branches
-   xlog("----- branch 0: $(branch(uri)[0]) , $(branch(q)[0]), $(branch(duri)[0]), $(branch(path)[0]), $(branch(flags)[0]), $(branch(socket)[0]) \n");
-   xlog("----- branch 1: $(branch(uri)[1]) , $(branch(q)[1]), $(branch(duri)[1]), $(branch(path)[1]), $(branch(flags)[1]), $(branch(socket)[1]) \n");
-
-   # do some changes over the branches
-   $branch(uri) = "sip:user@domain.ro";   # set URI for the first branch
-   $(branch(q)[0]) = 1000;  # set to 1.00 for the first branch
-   $(branch(socket)[1]) = NULL;  # reset the socket of the second branch
-   $branch(duri) = NULL;  # reset the destination URI or the first branch
-
-```
 
 @@red|It is R/W variable (you can assign values to it from routing logic)@@
 
