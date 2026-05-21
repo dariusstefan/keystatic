@@ -64,18 +64,41 @@ function splitColorMarkers(node, index, parent) {
   parent.children.splice(index, 1, ...replacement);
 }
 
-function replaceAnchorParagraph(node, index, parent) {
-  if (!parent || node.type !== 'paragraph' || node.children?.length !== 1) return;
+function getAnchorMarkerId(node) {
+  if (node?.type !== 'paragraph' || node.children?.length !== 1) return null;
 
   const child = node.children[0];
-  if (child.type !== 'text') return;
+  if (child.type !== 'text') return null;
 
-  const match = child.value.trim().match(ANCHOR_MARKER_RE);
-  if (!match) return;
+  return child.value.trim().match(ANCHOR_MARKER_RE)?.[1] ?? null;
+}
 
+function attachAnchorMarkersToHeadings(node) {
+  if (!node || !Array.isArray(node.children)) return;
+
+  for (let index = node.children.length - 2; index >= 0; index -= 1) {
+    const anchorId = getAnchorMarkerId(node.children[index]);
+    const next = node.children[index + 1];
+
+    if (!anchorId || next?.type !== 'heading') continue;
+
+    next.data = next.data || {};
+    next.data.hProperties = {
+      ...(next.data.hProperties || {}),
+      id: anchorId,
+    };
+    node.children.splice(index, 1);
+  }
+}
+
+function replaceAnchorParagraph(node, index, parent) {
+  if (!parent) return;
+
+  const anchorId = getAnchorMarkerId(node);
+  if (!anchorId) return;
   parent.children.splice(index, 1, {
     type: 'html',
-    value: `<span id="${escapeHtml(match[1])}" class="legacy-anchor" aria-hidden="true"></span>`,
+    value: `<span id="${escapeHtml(anchorId)}" class="legacy-anchor" aria-hidden="true"></span>`,
   });
 }
 
@@ -104,6 +127,8 @@ function replaceCodeBlockMarkers(node, index, parent) {
 
 function visit(node, parent = null) {
   if (!node || !Array.isArray(node.children)) return;
+
+  attachAnchorMarkersToHeadings(node);
 
   for (let index = node.children.length - 1; index >= 0; index -= 1) {
     const child = node.children[index];

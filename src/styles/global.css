@@ -266,8 +266,12 @@ starlight-toc nav a[href*="#"]:where([data-level="3"])::before {
 .sl-markdown-content .color-yellow { color: #b7791f; }
 
 .sl-markdown-content .legacy-anchor {
-  display: block;
-  scroll-margin-top: 5rem;
+  position: relative;
+  display: inline-block;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  scroll-margin-top: 0;
 }
 
 /* Overscroll bounce areas: match footer on home, match content elsewhere */
