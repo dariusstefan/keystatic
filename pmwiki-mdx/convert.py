@@ -338,9 +338,10 @@ def convert_line(line: str) -> str:
     if line.strip().startswith("$(") and re.search(r'%[a-zA-Z]+%', line):
         return f"`{code_color_markup_to_markers(line.strip())}`"
 
-    # Drop standalone anchor lines
-    if re.match(r'^\[\[#[\w.-]+\]\]$', line.strip()):
-        return ""
+    # Preserve standalone PMWiki anchors as source-friendly markers.
+    m = re.match(r'^\[\[#([\w.-]+)\]\]$', line.strip())
+    if m:
+        return f"@@anchor|{m.group(1)}@@"
     if re.match(r'^>>[^<]*<<$', line.strip()) or line.strip() == ">><<":
         return ""
 

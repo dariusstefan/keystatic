@@ -1,4 +1,5 @@
 const COLOR_MARKER_RE = /@@(red|green|blue|orange|yellow)\|(.+?)@@/g;
+const ANCHOR_MARKER_RE = /^@@anchor\|([A-Za-z0-9_.-]+)@@$/;
 
 function escapeHtml(value) {
   return value
@@ -63,6 +64,21 @@ function splitColorMarkers(node, index, parent) {
   parent.children.splice(index, 1, ...replacement);
 }
 
+function replaceAnchorParagraph(node, index, parent) {
+  if (!parent || node.type !== 'paragraph' || node.children?.length !== 1) return;
+
+  const child = node.children[0];
+  if (child.type !== 'text') return;
+
+  const match = child.value.trim().match(ANCHOR_MARKER_RE);
+  if (!match) return;
+
+  parent.children.splice(index, 1, {
+    type: 'html',
+    value: `<span id="${escapeHtml(match[1])}" class="legacy-anchor" aria-hidden="true"></span>`,
+  });
+}
+
 function replaceInlineCodeMarkers(node, index, parent) {
   COLOR_MARKER_RE.lastIndex = 0;
   if (!parent || node.type !== 'inlineCode' || !COLOR_MARKER_RE.test(node.value)) return;
@@ -92,6 +108,7 @@ function visit(node, parent = null) {
   for (let index = node.children.length - 1; index >= 0; index -= 1) {
     const child = node.children[index];
     visit(child, node);
+    replaceAnchorParagraph(child, index, node);
     replaceCodeBlockMarkers(child, index, node);
     replaceInlineCodeMarkers(child, index, node);
     splitColorMarkers(child, index, node);
