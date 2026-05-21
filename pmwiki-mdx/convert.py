@@ -433,7 +433,76 @@ _SAFE_HTML_TAGS = {'span', 'strong', 'em', 'a', 'br', 'code', 'aside', 'badge'}
 
 def post_process(text: str) -> str:
     text = re.sub(r'\n{3,}', '\n\n', text)
+    text = infer_missing_heading_anchors(text)
     return mdx_safety_pass(text).strip()
+
+
+def plain_markdown_text(text: str) -> str:
+    text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
+    text = re.sub(r'`([^`]+)`', r'\1', text)
+    text = re.sub(r'@@(?:red|green|blue|orange|yellow)\|(.+?)@@', r'\1', text)
+    text = re.sub(r'[*_~]+', '', text)
+    text = re.sub(r'<[^>]+>', '', text)
+    text = re.sub(r'\s+', ' ', text)
+    return text.strip()
+
+
+def normalized_heading_key(text: str) -> str:
+    text = plain_markdown_text(text).lower()
+    text = re.sub(r'[^a-z0-9]+', ' ', text)
+    return re.sub(r'\s+', ' ', text).strip()
+
+
+def infer_missing_heading_anchors(text: str) -> str:
+    """Attach old anchor ids when a page links to a matching heading.
+
+    Some PMWiki pages link to an anchor in prose (for example #varesc) but
+    don't include a standalone [[#varesc]] marker before the actual heading.
+    Matching the link label to a later heading preserves those old URLs without
+    requiring hand edits in the generated MDX.
+    """
+    lines = text.split("\n")
+    link_targets: dict[str, str | None] = {}
+    in_fence = False
+
+    for line in lines:
+        if re.match(r'^```', line):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+
+        for label, anchor_id in re.findall(r'\[([^\]]+)\]\(#([\w.-]+)\)', line):
+            key = normalized_heading_key(label)
+            if not key:
+                continue
+            if key in link_targets and link_targets[key] != anchor_id:
+                link_targets[key] = None
+            else:
+                link_targets[key] = anchor_id
+
+    out: list[str] = []
+    in_fence = False
+    for line in lines:
+        if re.match(r'^```', line):
+            in_fence = not in_fence
+            out.append(line)
+            continue
+        if in_fence:
+            out.append(line)
+            continue
+
+        heading = re.match(r'^(#{2,6})\s+(.+?)\s*$', line)
+        if heading:
+            key = normalized_heading_key(heading.group(2))
+            anchor_id = link_targets.get(key)
+            previous = out[-1].strip() if out else ""
+            if anchor_id and not re.match(r'^@@anchor\|[\w.-]+@@$', previous):
+                out.append(f"@@anchor|{anchor_id}@@")
+
+        out.append(line)
+
+    return "\n".join(out)
 
 
 def mdx_safety_pass(text: str) -> str:
