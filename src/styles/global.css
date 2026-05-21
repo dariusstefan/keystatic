@@ -134,8 +134,8 @@ h1#_top {
 
 /* Numbered headings and matching TOC counters */
 
-/* Prevent Starlight's section wrappers from creating new counter scopes */
-.sl-markdown-content section {
+/* Prevent Starlight's heading wrappers from creating new counter scopes */
+.sl-markdown-content .sl-heading-wrapper {
   counter-reset: none;
 }
 
