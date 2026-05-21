@@ -224,7 +224,7 @@ def color_span_to_mdx(color: str, content: str) -> str:
         return ""
 
     if ASIDE_PHRASES.search(content):
-        return f'@@yellow|Attention!@@ @@red|{strip_markup(content)}@@'
+        return f'**@@green|Attention!@@** @@red|{strip_markup(content)}@@'
 
     color = color.lower()
     content = strip_markup(content)
@@ -358,7 +358,7 @@ def convert_line(line: str) -> str:
         note = re.sub(r"''(.+?)''", r"\1", note)
         return f"> **Observation:** {convert_inline(note)}"
     converted = convert_inline(line)
-    if converted.startswith("@@yellow|Attention!@@"):
+    if converted.startswith("**@@green|Attention!@@**"):
         return f"> {converted}"
     return converted
 
