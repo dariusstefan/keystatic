@@ -83,6 +83,37 @@ def html_inline_to_md(text: str) -> str:
     return text
 
 
+def code_color_markup_to_markers(text: str) -> str:
+    """Preserve PMWiki color spans inside code-like snippets.
+
+    The returned string is meant to live inside Markdown code. The remark
+    plugin later turns the markers into colored spans inside <code>.
+    """
+    out: list[str] = []
+    color: str | None = None
+
+    for token in re.split(r'(%%|%[a-zA-Z]+%)', text):
+        if not token:
+            continue
+        if token == "%%":
+            color = None
+            continue
+
+        marker = re.fullmatch(r'%([a-zA-Z]+)%', token)
+        if marker:
+            next_color = marker.group(1).lower()
+            color = next_color if next_color in SUPPORTED_COLORS else None
+            continue
+
+        content = token.replace("'''", "").replace("''", "")
+        if color:
+            out.append(f"@@{color}|{content}@@")
+        else:
+            out.append(content)
+
+    return "".join(out)
+
+
 _EMPHASIS_TAGS = r'(?:em|strong|span|b|i|u|code|br|sub|sup|small|tt)'
 
 
@@ -222,6 +253,9 @@ def convert_line(line: str) -> str:
 
     if re.match(r'^[*#]+\s', line):
         return convert_list_item(line)
+
+    if line.strip().startswith("$(") and re.search(r'%[a-zA-Z]+%', line):
+        return f"`{code_color_markup_to_markers(line.strip())}`"
 
     # Drop standalone anchor lines
     if re.match(r'^\[\[#[\w.-]+\]\]$', line.strip()):

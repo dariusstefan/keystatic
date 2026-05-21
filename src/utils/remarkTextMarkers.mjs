@@ -15,10 +15,32 @@ function colorMarkerToHtml(color, value) {
   };
 }
 
+function colorMarkersToHtml(value) {
+  const parts = [];
+  let cursor = 0;
+
+  COLOR_MARKER_RE.lastIndex = 0;
+  for (const match of value.matchAll(COLOR_MARKER_RE)) {
+    if (match.index > cursor) {
+      parts.push(escapeHtml(value.slice(cursor, match.index)));
+    }
+
+    parts.push(`<span class="color-${match[1]}">${escapeHtml(match[2])}</span>`);
+    cursor = match.index + match[0].length;
+  }
+
+  if (cursor < value.length) {
+    parts.push(escapeHtml(value.slice(cursor)));
+  }
+
+  return parts.join('');
+}
+
 function splitColorMarkers(node, index, parent) {
   if (!parent || node.type !== 'text') return;
 
   const value = node.value;
+  COLOR_MARKER_RE.lastIndex = 0;
   const matches = [...value.matchAll(COLOR_MARKER_RE)];
   if (!matches.length) return;
 
@@ -41,12 +63,37 @@ function splitColorMarkers(node, index, parent) {
   parent.children.splice(index, 1, ...replacement);
 }
 
+function replaceInlineCodeMarkers(node, index, parent) {
+  COLOR_MARKER_RE.lastIndex = 0;
+  if (!parent || node.type !== 'inlineCode' || !COLOR_MARKER_RE.test(node.value)) return;
+  COLOR_MARKER_RE.lastIndex = 0;
+
+  parent.children.splice(index, 1, {
+    type: 'html',
+    value: `<code>${colorMarkersToHtml(node.value)}</code>`,
+  });
+}
+
+function replaceCodeBlockMarkers(node, index, parent) {
+  COLOR_MARKER_RE.lastIndex = 0;
+  if (!parent || node.type !== 'code' || !COLOR_MARKER_RE.test(node.value)) return;
+  COLOR_MARKER_RE.lastIndex = 0;
+
+  const language = node.lang ? ` class="language-${escapeHtml(node.lang)}"` : '';
+  parent.children.splice(index, 1, {
+    type: 'html',
+    value: `<pre><code${language}>${colorMarkersToHtml(node.value)}</code></pre>`,
+  });
+}
+
 function visit(node, parent = null) {
   if (!node || !Array.isArray(node.children)) return;
 
   for (let index = node.children.length - 1; index >= 0; index -= 1) {
     const child = node.children[index];
     visit(child, node);
+    replaceCodeBlockMarkers(child, index, node);
+    replaceInlineCodeMarkers(child, index, node);
     splitColorMarkers(child, index, node);
   }
 }
