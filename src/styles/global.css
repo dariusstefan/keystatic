@@ -134,24 +134,29 @@ h1#_top {
 
 /* Numbered headings and matching TOC counters */
 
-/* Prevent Starlight's heading wrappers from creating new counter scopes */
-.sl-markdown-content .sl-heading-wrapper {
-  counter-reset: none;
-}
-
 .sl-markdown-content {
   counter-reset: h2counter;
 }
-.sl-markdown-content h2 {
-  counter-increment: h2counter;
-  counter-reset: h3counter;
+
+/* Block any Starlight counter-reset on heading wrappers */
+.sl-markdown-content .sl-heading-wrapper {
+  counter-reset: none !important;
 }
+
+/* Drive counters from the wrappers (outside Starlight's reset target) */
+.sl-markdown-content .sl-heading-wrapper.level-h2 {
+  counter-increment: h2counter !important;
+  counter-reset: h3counter !important;
+}
+
+.sl-markdown-content .sl-heading-wrapper.level-h3 {
+  counter-increment: h3counter !important;
+}
+
 .sl-markdown-content h2::before {
   content: counter(h2counter) ". ";
 }
-.sl-markdown-content h3 {
-  counter-increment: h3counter;
-}
+
 .sl-markdown-content h3::before {
   content: counter(h2counter) "." counter(h3counter) " ";
 }
