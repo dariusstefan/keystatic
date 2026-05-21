@@ -162,6 +162,33 @@ h1#_top {
   content: counter(h2counter) "." counter(h3counter) " ";
 }
 
+.sl-markdown-content .sl-anchor-link {
+  display: none;
+}
+
+.sl-markdown-content .legacy-heading-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 0.85em;
+  block-size: 0.85em;
+  margin-inline-start: 0.3em;
+  color: var(--sl-color-text-accent);
+  opacity: 0;
+  text-decoration: none;
+  vertical-align: -0.1em;
+}
+
+.sl-markdown-content :is(h2, h3, h4, h5, h6):hover .legacy-heading-link,
+.sl-markdown-content .legacy-heading-link:focus-visible {
+  opacity: 1;
+}
+
+.sl-markdown-content .legacy-heading-link svg {
+  inline-size: 100%;
+  block-size: 100%;
+}
+
 starlight-toc nav {
   counter-reset: toc-h2;
 }
@@ -182,7 +209,7 @@ starlight-toc nav a[href*="#"]:where([data-level="3"])::before {
 /* Lists inside markdown content */
 .sl-markdown-content ul,
 .sl-markdown-content ol {
-  padding-left: 1.5rem;
+  padding-left: 0.75rem;
   margin-block: 0.875rem;
   display: flex;
   flex-direction: column;
@@ -190,36 +217,25 @@ starlight-toc nav a[href*="#"]:where([data-level="3"])::before {
 }
 
 .sl-markdown-content ul {
-  list-style: none;
+  list-style: disc;
 }
 
 .sl-markdown-content ul > li {
-  position: relative;
-  padding-left: 1.25rem;
+  padding-left: 0.25rem;
 }
 
-.sl-markdown-content ul > li::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.55em;
-  width: 0.4rem;
-  height: 0.4rem;
-  border-radius: 50%;
-  background-color: var(--sl-color-accent);
+.sl-markdown-content ul ul {
+  list-style: circle;
 }
 
-/* Nested ul: hollow circle */
-.sl-markdown-content ul ul > li::before {
-  background-color: transparent;
-  border: 2px solid var(--sl-color-accent);
+.sl-markdown-content ul ul ul {
+  list-style: square;
 }
 
-/* Double-nested ul: small square */
-.sl-markdown-content ul ul ul > li::before {
-  border-radius: 1px;
-  background-color: var(--sl-color-accent);
-  border: none;
+.sl-markdown-content ul::marker,
+.sl-markdown-content ul > li::marker {
+  color: var(--sl-color-accent);
+  font-weight: 600;
 }
 
 .sl-markdown-content ol {

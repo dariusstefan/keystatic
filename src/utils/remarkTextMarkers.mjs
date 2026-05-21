@@ -1,5 +1,7 @@
 const COLOR_MARKER_RE = /@@(red|green|blue|orange|yellow)\|(.+?)@@/g;
 const ANCHOR_MARKER_RE = /^@@anchor\|([A-Za-z0-9_.-]+)@@$/;
+const LINK_ICON =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 0 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 1 0-1.42-1.42Zm8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 0 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 1 0 1.42 1.42l3.88-3.89a4.49 4.49 0 0 0 0-6.33ZM8.83 15.17a1 1 0 0 0 1.1.22 1 1 0 0 0 .32-.22l4.92-4.92a1 1 0 0 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42Z"/></svg>';
 
 function escapeHtml(value) {
   return value
@@ -73,6 +75,25 @@ function getAnchorMarkerId(node) {
   return child.value.trim().match(ANCHOR_MARKER_RE)?.[1] ?? null;
 }
 
+function getPlainText(node) {
+  if (!node) return '';
+  if (typeof node.value === 'string') return node.value;
+  if (!Array.isArray(node.children)) return '';
+  return node.children.map(getPlainText).join('');
+}
+
+function addHeadingLink(heading, anchorId) {
+  if (heading.children?.some((child) => child.type === 'html' && child.value.includes('legacy-heading-link'))) {
+    return;
+  }
+
+  const label = escapeHtml(getPlainText(heading).trim() || anchorId);
+  heading.children.push({
+    type: 'html',
+    value: `<a class="legacy-heading-link" href="#${escapeHtml(anchorId)}" aria-label="Link to ${label}" data-pagefind-ignore="true">${LINK_ICON}</a>`,
+  });
+}
+
 function attachAnchorMarkersToHeadings(node) {
   if (!node || !Array.isArray(node.children)) return;
 
@@ -87,6 +108,7 @@ function attachAnchorMarkersToHeadings(node) {
       ...(next.data.hProperties || {}),
       id: anchorId,
     };
+    addHeadingLink(next, anchorId);
     node.children.splice(index, 1);
   }
 }
