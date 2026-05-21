@@ -35,7 +35,7 @@ const mdxComponents = {
         options: variantOptions,
         defaultValue: 'note',
       }),
-      children: fields.child({ kind: 'block', placeholder: 'Content…' }),
+      children: fields.child({ kind: 'inline', placeholder: 'Content…' }),
     },
     preview: ({ fields: f }: any) =>
       e('div', {
