@@ -133,6 +133,12 @@ h1#_top {
 }
 
 /* Numbered headings and matching TOC counters */
+
+/* Prevent Starlight's section wrappers from creating new counter scopes */
+.sl-markdown-content section {
+  counter-reset: none;
+}
+
 .sl-markdown-content {
   counter-reset: h2counter;
 }
