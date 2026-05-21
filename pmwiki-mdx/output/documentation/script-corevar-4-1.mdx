@@ -24,13 +24,13 @@ Ex: hdr(From), avp(name).
 - **context** - the context in which the pseudo0variable will be evaluated. Now there are 2 pv contexts: reply and request. The reply context can be used in the failure route to request for the pseudo-variable to be evaluated in the context of the reply message. The request context can be used if in a reply route is desired for the pv to be evaluated in the context of the corresponding request.
 
 Usage examples:
-- Only **name**: $ru 
-- **Name** and *'subname*: @@green|$hdr(Contact)@@
-- **Name** and **index**: @@green|$(ct[0])@@
-- **Name**, **subname** and **index**: $(avp(i:10)[2])
+- Only **name**: `@@green|$ru@@`
+- **Name** and *'subname*: `@@green|$hdr(Contact)@@`
+- **Name** and **index**: `@@green|$(ct[0])@@`
+- **Name**, **subname** and **index**: `@@green|$(avp(i:10)[2])@@`
 - **Context** 
-  - `$(<request>ru)` from a reply route will get the Request-URI from the request
-  - `$(<reply>hdr(Contact))` context can be used from failure route to access information from the reply 
+  - `@@green|$(<request>ru)@@` from a reply route will get the Request-URI from the request
+  - `@@green|$(<reply>hdr(Contact))@@` context can be used from failure route to access information from the reply 
 
 Types of variables:
 
@@ -281,7 +281,7 @@ Examples:
 
 ```
 
-@@red|It is R/W variable (you can assign values to it from routing logic)@@
+`@@red|It is R/W variable (you can assign values to it from routing logic)@@`
 
 ### Branch flag - $branch.flag 
 
@@ -372,7 +372,7 @@ Examples:
 
 **$dd** - reference to domain of destination uri
 
-@@red|It is R/W variable (you can assign values to it from routing logic)@@
+`@@red|It is R/W variable (you can assign values to it from routing logic)@@`
 
 ### Diversion header URI - $di 
 
@@ -390,7 +390,7 @@ Examples:
 
 **$dp** - reference to port of destination uri
 
-@@red|It is R/W variable (you can assign values to it from routing logic)@@
+`@@red|It is R/W variable (you can assign values to it from routing logic)@@`
 
 ### Transport protocol of destination URI - $dP 
 
@@ -405,7 +405,7 @@ Examples:
 **$du** - reference to destination uri (outbound proxy to be used for sending the request)
 If loose_route() returns TRUE a destination uri is set according to the first Route header.
 
-@@red|It is R/W variable (you can assign values to it from routing logic)@@
+`@@red|It is R/W variable (you can assign values to it from routing logic)@@`
 
 ### Error class - $err.class 
 
@@ -684,7 +684,7 @@ Example:
 
 **$rd** - reference to domain in request's URI
 
-@@red|It is R/W variable (you can assign values to it routing script)@@
+`@@red|It is R/W variable (you can assign values to it routing script)@@`
 
 ### Body of request/reply - $rb 
 
@@ -720,7 +720,7 @@ The variable receives an index, starting with 0, indicating the return value tha
 
 **$rp** - reference to port of R-URI
 
-@@red|It is R/W variable (you can assign values to it routing script)@@
+`@@red|It is R/W variable (you can assign values to it routing script)@@`
 
 ### Transport protocol of SIP request URI - $rP 
 
@@ -742,19 +742,19 @@ The variable receives an index, starting with 0, indicating the return value tha
 
 **$ru** - reference to request's URI
 
-@@red|It is R/W variable (you can assign values to it routing script)@@
+`@@red|It is R/W variable (you can assign values to it routing script)@@`
 
 ### Username in SIP Request's URI - $rU 
 
 **$rU** - reference to username in request's URI
 
-@@red|It is R/W variable (you can assign values to it routing script)@@
+`@@red|It is R/W variable (you can assign values to it routing script)@@`
 
 ### Q value of the SIP Request's URI - $ru_q 
 
 **$ru_q** - reference to q value of the R-URI
 
-@@red|It is R/W variable (you can assign values to it routing script)@@
+`@@red|It is R/W variable (you can assign values to it routing script)@@`
 
 ### SDP body - $sdp 
 

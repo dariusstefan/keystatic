@@ -150,13 +150,18 @@ def color_span_to_mdx(color: str, content: str) -> str:
     if ASIDE_PHRASES.search(content):
         return f'@@yellow|Attention!@@ @@red|{strip_markup(content)}@@'
 
+    color = color.lower()
+    content = strip_markup(content)
+    is_code_like = bool(re.search(r'[$()\[\]<>{}]', content))
+    if color in SUPPORTED_COLORS and is_code_like:
+        return f'`@@{color}|{content}@@`'
+
     is_mdx_unsafe = bool(re.search(r'[<>{}]', content))
     if is_mdx_unsafe:
-        return f'`{strip_markup(content)}`'
+        return f'`{content}`'
 
-    color = color.lower()
     if color in SUPPORTED_COLORS:
-        return f'@@{color}|{strip_markup(content)}@@'
+        return f'@@{color}|{content}@@'
 
     # Default: color is decorative, drop it and keep prose as Markdown
     return html_inline_to_md(content)
@@ -321,6 +326,9 @@ def convert_inline(text: str) -> str:
     def replace_color(m):
         return color_span_to_mdx(m.group(1), m.group(2))
     text = re.sub(r'%([a-zA-Z]+)%(.*?)%%', replace_color, text)
+
+    # Unclosed PMWiki color spans at the end of a line, e.g. "%green%$ru".
+    text = re.sub(r'%([a-zA-Z]+)%([^%\n]+)$', replace_color, text)
 
     # %key=value% directives (e.g. %color=#185662%) — drop wrapper, keep content
     text = re.sub(r'%[\w#=]+%(.*?)%%', r'\1', text)
