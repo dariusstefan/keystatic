@@ -1,8 +1,7 @@
 ---
 title: "Core Variables - 4.1"
-description: "Overview of OpenSIPS core variable types, syntax, usage, and behavior in routing scripts."
+description: "The OpenSIPS variables can be easily identified in the script as all their names (or notations) start with the $ sign."
 ---
-
 
 **OpenSIPS** provides multiple type of variables to be used in the routing script. The difference between the types of variables comes from (1) the visibility of the variable (when it is visible), (2) what the variable is attached to (where the variable resides), (3) read-write status of the variable (some types of the variables are read-only and (4) how multiple values (for the same variable are handled).
 
@@ -12,7 +11,7 @@ Syntax:
 
 The complete syntax for a pseudo variable is: 
 
-$(<span class="color-green"><em>&lt;context&gt;</em><strong>name</strong><em>(subname)[index]\{transformation\}</em></span>)
+$(`<context>name(subname)[index]{transformation}`)
 
 The fields written in green are optional.
 The fields meaning is:
@@ -26,12 +25,12 @@ Ex: hdr(From), avp(name).
 
 Usage examples:
 - Only **name**: $ru 
-- **Name** and *'subname*: <span class="color-green">$hdr(Contact)</span>
-- **Name** and **index**: <span class="color-green">$(ct[0])</span>
+- **Name** and *'subname*: `$hdr(Contact)`
+- **Name** and **index**: `$(ct[0])`
 - **Name**, **subname** and **index**: $(avp(i:10)[2])
 - **Context** 
-  - <span class="color-green">$(&lt;request&gt;ru)</span> from a reply route will get the Request-URI from the request
-  - <span class="color-green">$(&lt;reply&gt;hdr(Contact))</span> context can be used from failure route to access information from the reply 
+  - `$(<request>ru)` from a reply route will get the Request-URI from the request
+  - `$(<reply>hdr(Contact))` context can be used from failure route to access information from the reply 
 
 Types of variables:
 
@@ -288,7 +287,7 @@ Examples:
 
 ```
 
-<Badge text="It is R/W variable (you can assign values to it from routing logic)" variant="caution" />
+`It is R/W variable (you can assign values to it from routing logic)`
 
 ### Branch flag - $branch.flag 
 
@@ -381,7 +380,7 @@ Examples:
 
 **$dd** - reference to domain of destination uri
 
-<Badge text="It is R/W variable (you can assign values to it from routing logic)" variant="caution" />
+`It is R/W variable (you can assign values to it from routing logic)`
 
 ### Diversion header URI - $di 
 
@@ -399,7 +398,7 @@ Examples:
 
 **$dp** - reference to port of destination uri
 
-<Badge text="It is R/W variable (you can assign values to it from routing logic)" variant="caution" />
+`It is R/W variable (you can assign values to it from routing logic)`
 
 ### Transport protocol of destination URI - $dP 
 
@@ -414,7 +413,7 @@ Examples:
 **$du** - reference to destination uri (outbound proxy to be used for sending the request)
 If loose_route() returns TRUE a destination uri is set according to the first Route header.
 
-<Badge text="It is R/W variable (you can assign values to it from routing logic)" variant="caution" />
+`It is R/W variable (you can assign values to it from routing logic)`
 
 ### Error class - $err.class 
 
@@ -463,7 +462,6 @@ This function is very helpful if you are tracing and debugging only a specific p
 
 Example of usage:
 
-
 ```c
 log_level= -1 # errors only
 .....
@@ -475,6 +473,7 @@ log_level= -1 # errors only
   .......
 }
 ```
+
 ### SIP message buffer
 
 **$mb** - reference to SIP message buffer
@@ -693,7 +692,7 @@ Example:
 
 **$rd** - reference to domain in request's URI
 
-<Badge text="It is R/W variable (you can assign values to it routing script)" variant="caution" />
+`It is R/W variable (you can assign values to it routing script)`
 
 ### Body of request/reply - $rb 
 
@@ -729,7 +728,7 @@ The variable receives an index, starting with 0, indicating the return value tha
 
 **$rp** - reference to port of R-URI
 
-<Badge text="It is R/W variable (you can assign values to it routing script)" variant="caution" />
+`It is R/W variable (you can assign values to it routing script)`
 
 ### Transport protocol of SIP request URI - $rP 
 
@@ -751,19 +750,19 @@ The variable receives an index, starting with 0, indicating the return value tha
 
 **$ru** - reference to request's URI
 
-<Badge text="It is R/W variable (you can assign values to it routing script)" variant="caution" />
+`It is R/W variable (you can assign values to it routing script)`
 
 ### Username in SIP Request's URI - $rU 
 
 **$rU** - reference to username in request's URI
 
-<Badge text="It is R/W variable (you can assign values to it routing script)" variant="caution" />
+`It is R/W variable (you can assign values to it routing script)`
 
 ### Q value of the SIP Request's URI - $ru_q 
 
 **$ru_q** - reference to q value of the R-URI
 
-<Badge text="It is R/W variable (you can assign values to it routing script)" variant="caution" />
+`It is R/W variable (you can assign values to it routing script)`
 
 ### SDP body - $sdp 
 
@@ -954,17 +953,17 @@ The variable also offers detailed read-only access to various attributes/sub-fie
 
 ### SIP Headers - $hdr 
 
-**$(hdr(name)[N])** - represents the body of the N-th header identified by 'name'. If [N] is omitted then the body of the first header is printed. The first header is got when N=0, for the second N=1, a.s.o. To print the last header of that type, use -1, no other negative values are supported now. No white spaces are allowed inside the specifier (before \}, before or after \{, [, ] symbols). When N='*', all headers of that type are printed.
+**$(hdr(name)[N])** - represents the body of the N-th header identified by 'name'. If [N] is omitted then the body of the first header is printed. The first header is got when N=0, for the second N=1, a.s.o. To print the last header of that type, use -1, no other negative values are supported now. No white spaces are allowed inside the specifier (before }, before or after {, [, ] symbols). When N='*', all headers of that type are printed.
 
 The module should identify most of compact header names (the ones recognized by **OpenSIPS** which should be all at this moment), if not, the compact form has to be specified explicitly. It is recommended to use dedicated specifiers for headers (e.g., %ua for user agent header), if they are available -- they are faster.
 
-**$(hdr_name[N])** - returns the name of the N-th header. The first header name is obtained for N=0, the second for N=1, a.s.o. To print the last header name use -1, the second last -2 a.s.o. No white spaces are allowed inside the specifier (before \}, before or after \{, [, ] symbols). When N='*', all header names are printed.
+**$(hdr_name[N])** - returns the name of the N-th header. The first header name is obtained for N=0, the second for N=1, a.s.o. To print the last header name use -1, the second last -2 a.s.o. No white spaces are allowed inside the specifier (before }, before or after {, [, ] symbols). When N='*', all header names are printed.
 
 **$(hdrcnt(name))** -- returns number of headers of type given by 'name'. Uses same rules for specifying header names as **$hdr(name)** above. Many headers (e.g., Via, Path, Record-Route) may appear more than once in the message. This variable returns the number of headers of a given type. 
 
 Note that some headers (e.g., Path) may be joined together with commas and appear as a single header line. This variable counts the number of header lines, not header values. 
 
-For message fragment below, **$hdrcnt(Path)** will have value 2 and **$(hdr(Path)[0])** will have value **&lt;a.com&gt;**:
+For message fragment below, **$hdrcnt(Path)** will have value 2 and **$(hdr(Path)[0])** will have value **`<a.com>`**:
 ```c
 
     Path: <a.com>
@@ -972,7 +971,7 @@ For message fragment below, **$hdrcnt(Path)** will have value 2 and **$(hdr(Path
 
 ```
 
-For message fragment below, **$hdrcnt(Path)** will have value 1 and **$(hdr(Path)[0])** will have value **&lt;a.com&gt;,&lt;b.com&gt;**:
+For message fragment below, **$hdrcnt(Path)** will have value 1 and **$(hdr(Path)[0])** will have value **`<a.com>`,`<b.com>`**:
 ```c
 
     Path: <a.com>,<b.com>

@@ -1,11 +1,24 @@
 #!/usr/bin/env python3
-"""Convert PMwiki page files to MDX with YAML frontmatter (Astro + Starlight)."""
+"""Convert PMwiki page files to MDX with YAML frontmatter.
+
+Targets the Astro + Starlight + Keystatic stack. The output uses only
+constructs Keystatic's MDX editor can round-trip:
+  - vanilla Markdown for all prose/lists/headings/links/tables/code
+  - <Aside type="..."> / <Badge text="..." variant="..."> for components
+    (these must be registered in keystatic.config.ts via component())
+  - inline code (backticks) for anything containing braces, angle brackets,
+    or other MDX-unsafe characters — no \\{ escapes, no &lt; entities
+"""
 
 import re
 import sys
 from pathlib import Path
 from urllib.parse import unquote
 
+
+# ---------------------------------------------------------------------------
+# PMwiki file I/O
+# ---------------------------------------------------------------------------
 
 def parse_pmwiki_file(path: Path) -> dict:
     meta = {}
@@ -29,24 +42,11 @@ def decode_pmwiki_text(text: str) -> str:
 # ---------------------------------------------------------------------------
 
 def strip_false_conditionals(text: str) -> str:
-    """Remove (:if false:) ... (:ifend:) disabled blocks."""
     return re.sub(r'\(:if false:\).*?\(:ifend:\)', '', text, flags=re.DOTALL)
 
 
 def strip_nav_header(text: str) -> str:
-    """Remove the boilerplate header block at the top of each PMwiki page.
-
-    Typical structure:
-        !!!!! Breadcrumb -> [[...]] -> Page Title   ← h1 nav, Starlight does this
-        (:title Page Title:)                         ← directive
-        ----                                         ← rule
-        (:allVersions ...:)                          ← kept as <VersionNav> later
-        (blank lines, \\, etc.)
-        || Title banner row ||                       ← decorative, drop
-        || [[Prev]] || [[Next]] ||                   ← nav, Starlight does this
-        ----
-        (:toc-float ...:)                            ← TOC, Starlight does this
-    """
+    """Drop the PMwiki page header (breadcrumb, title directive, prev/next nav)."""
     lines = text.lstrip("\n").split("\n")
     i = 0
 
@@ -55,34 +55,25 @@ def strip_nav_header(text: str) -> str:
         return (
             s == ""
             or s == "\\\\"
-            or re.match(r'^-{4,}$', s)
-            or re.match(r'^\(:.*:\)$', s)
-            or (s.startswith("||") and ("Prev" in s or "Next" in s or re.search(r'\+.*\+', s)))
+            or bool(re.match(r'^-{4,}$', s))
+            or bool(re.match(r'^\(:.*:\)$', s))
+            or (s.startswith("||") and ("Prev" in s or "Next" in s or bool(re.search(r'\+.*\+', s))))
         )
 
-    # Skip the h1 breadcrumb line
     if lines and lines[0].startswith("!!!!!"):
         i = 1
-
-    # Skip all boilerplate lines until we hit real content
     while i < len(lines) and is_skippable(lines[i]):
         i += 1
-
     return "\n".join(lines[i:])
 
 
 # ---------------------------------------------------------------------------
-# Color → Badge/Aside mapping
+# Color span → Keystatic-safe MDX
 # ---------------------------------------------------------------------------
 
-CSS_COLOR = {
-    "red":    "#e53e3e",
-    "green":  "#2f855a",
-    "blue":   "#2b6cb0",
-    "orange": "#c05621",
-}
+ASIDE_PHRASES = re.compile(r'TO BECOME OBSOLETE|DEPRECATED|OBSOLETE', re.IGNORECASE)
 
-# PMwiki color → Starlight Badge variant (for prose labels)
+# PMwiki color → Starlight Badge variant. Only used for short label-like content.
 COLOR_BADGE = {
     "red":    "caution",
     "green":  "tip",
@@ -90,33 +81,64 @@ COLOR_BADGE = {
     "orange": "caution",
 }
 
-ASIDE_PHRASES = re.compile(
-    r'TO BECOME OBSOLETE|DEPRECATED|OBSOLETE',
-    re.IGNORECASE
-)
 
-
-def md_to_html_inline(text: str) -> str:
-    """Convert already-processed markdown inline markup to HTML for use inside HTML spans."""
-    text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
-    text = re.sub(r'\*([^*\n]+?)\*', r'<em>\1</em>', text)
+def html_inline_to_md(text: str) -> str:
+    """Convert inline HTML back to Markdown so we don't leak raw tags."""
+    text = re.sub(r'<strong>(.+?)</strong>', r'**\1**', text, flags=re.DOTALL)
+    text = re.sub(r'<em>(.+?)</em>', r'*\1*', text, flags=re.DOTALL)
     return text
 
 
-def color_span_to_mdx(color: str, content: str, decorative: bool = False) -> str:
+_EMPHASIS_TAGS = r'(?:em|strong|span|b|i|u|code|br|sub|sup|small|tt)'
+
+
+def strip_markup(text: str) -> str:
+    """Strip emphasis/color markup; preserve protocol-style <word> tokens as text."""
+    # Only strip known emphasis HTML tags, not arbitrary <word> (which may be content like <context>)
+    text = re.sub(rf'</?{_EMPHASIS_TAGS}(?:\s[^>]*)?>', '', text, flags=re.IGNORECASE)
+    # Decode HTML entities
+    text = (text.replace('&lt;', '<').replace('&gt;', '>')
+                .replace('&amp;', '&').replace('&nbsp;', ' '))
+    # Strip nested PMwiki color markers
+    text = re.sub(r'%[a-zA-Z#=0-9]+%', '', text)
+    text = text.replace('%%', '')
+    # Unescape \{ \}
+    text = re.sub(r'\\([{}])', r'\1', text)
+    # Drop emphasis markers
+    text = re.sub(r'\*+', '', text)
+    text = re.sub(r"'{2,}", '', text)
+    return text.strip()
+
+
+def color_span_to_mdx(color: str, content: str) -> str:
+    """Map a PMwiki %color%...%% span to MDX. Never emits raw <span>.
+
+    Rules:
+      - 'TO BECOME OBSOLETE' / 'DEPRECATED'  → <Aside type="caution">
+      - code-like ($foo, parens, brackets, <tag>) → `inline code`
+      - short label-like phrase, valid color    → <Badge text="..." variant="...">
+      - everything else                         → plain Markdown (color dropped)
+    """
     content = content.strip()
+    if not content:
+        return ""
+
     if ASIDE_PHRASES.search(content):
-        return f"\n\n<Aside type=\"caution\">{content}</Aside>\n\n"
-    if decorative:
-        # Use a CSS class (e.g. .color-green) — avoids JSX curly-brace syntax.
-        # Inner markdown converted to HTML since markdown doesn't render inside JSX.
-        css_class = f"color-{color.lower()}"
-        inner = md_to_html_inline(content)
-        return f'<span class="{css_class}">{inner}</span>'
+        return f'\n\n<Aside type="caution">{strip_markup(content)}</Aside>\n\n'
+
+    is_code_like = bool(re.search(r'[$()\[\]<>{}]', content))
+    if is_code_like:
+        return f'`{strip_markup(content)}`'
+
     variant = COLOR_BADGE.get(color.lower())
-    if not variant:
-        return content
-    return f'<Badge text="{content}" variant="{variant}" />'
+    word_count = len(content.split())
+    if variant and 1 <= word_count <= 6 and not re.search(r'[<>&"]', content):
+        plain = re.sub(r'\*\*(.+?)\*\*', r'\1', content)
+        plain = re.sub(r'\*([^*\n]+?)\*', r'\1', plain)
+        return f'<Badge text="{plain}" variant="{variant}" />'
+
+    # Default: color is decorative, drop it and keep prose as Markdown
+    return html_inline_to_md(content)
 
 
 # ---------------------------------------------------------------------------
@@ -128,14 +150,14 @@ def pmwiki_to_mdx(text: str) -> str:
     text = strip_nav_header(text)
 
     lines = text.split("\n")
-    out = []
+    out: list[str] = []
     i = 0
     while i < len(lines):
         line = lines[i]
 
-        # Code block: [@ ... @]  (may span multiple lines)
+        # Code block: [@ ... @]
         if line.strip().startswith("[@"):
-            code_lines = []
+            code_lines: list[str] = []
             rest = line.strip()[2:]
             if rest.endswith("@]"):
                 rest = rest[:-2]
@@ -147,7 +169,7 @@ def pmwiki_to_mdx(text: str) -> str:
                     i += 1
                 if i < len(lines):
                     last = lines[i].rstrip()
-                    code_lines.append(last[:-2])  # strip trailing @]
+                    code_lines.append(last[:-2])
             if rest and not code_lines:
                 code_lines = [rest]
             out.append("```c")
@@ -156,67 +178,74 @@ def pmwiki_to_mdx(text: str) -> str:
             i += 1
             continue
 
-        line = convert_line(line)
-        out.append(line)
+        # Table block: collect consecutive ||...|| rows and render with separator
+        if line.strip().startswith("||") and "||" in line.strip()[2:]:
+            rows: list[str] = []
+            while i < len(lines) and lines[i].strip().startswith("||"):
+                rows.append(lines[i])
+                i += 1
+            out.extend(render_table(rows))
+            continue
+
+        out.append(convert_line(line))
         i += 1
 
     result = "\n".join(out)
-    result = post_process(result)
-    return result
+    return post_process(result)
+
+
+def render_table(rows: list[str]) -> list[str]:
+    """Render a block of PMwiki table rows as a GFM Markdown table."""
+    parsed: list[list[str]] = []
+    for raw in rows:
+        s = raw.strip()
+        if s.startswith("||"):
+            s = s[2:]
+        if s.endswith("||"):
+            s = s[:-2]
+        cells = [convert_inline(c.strip()) for c in s.split("||")]
+        # Drop fully-empty rows (PMwiki spacers)
+        if any(c.strip() for c in cells):
+            parsed.append(cells)
+    if not parsed:
+        return []
+    width = max(len(r) for r in parsed)
+    parsed = [r + [""] * (width - len(r)) for r in parsed]
+    out = [
+        "| " + " | ".join(parsed[0]) + " |",
+        "| " + " | ".join(["---"] * width) + " |",
+    ]
+    for row in parsed[1:]:
+        out.append("| " + " | ".join(row) + " |")
+    return out
 
 
 def convert_line(line: str) -> str:
-    # PMwiki heading convention: more ! = deeper/smaller heading
-    # !!!!! = breadcrumb (stripped by strip_nav_header, map to h1 as fallback)
-    # !!!  = top-level page sections → h2
-    # !!!! = entries within sections → h3
-    # !!   = sub-sections → h3
-    # !    = deep sub-sub-sections → h4
+    # Headings — PMwiki uses ! count for level (! = deepest, !!!!! = top breadcrumb)
     for bangs, level in [("!!!!!", 1), ("!!!!", 3), ("!!!", 2), ("!!", 3), ("!", 4)]:
         if line.startswith(bangs):
             content = line[len(bangs):].strip()
-            content = convert_inline(content)
-            return f"{'#' * level} {content}"
+            return f"{'#' * level} {convert_inline(content)}"
 
-    # Horizontal rule
     if re.match(r'^-{4,}$', line.strip()):
         return "---"
 
-    # Table rows  || cell || cell ||
-    if line.strip().startswith("||"):
-        return convert_table_row(line)
-
-    # Bullet/numbered list (*, **, ***, #, ##, etc.)
     if re.match(r'^[*#]+\s', line):
         return convert_list_item(line)
 
-    # Standalone anchor lines [[#name]] — drop
+    # Drop standalone anchor lines
     if re.match(r'^\[\[#[\w.-]+\]\]$', line.strip()):
         return ""
-
-    # PMwiki block divs >>...<< — drop
-    if re.match(r'^>>[^<]*<<$', line.strip()):
-        return ""
-    if line.strip() in (">><<",):
+    if re.match(r'^>>[^<]*<<$', line.strip()) or line.strip() == ">><<":
         return ""
 
-    # Directives (:...:) — handle known ones, drop the rest
+    # Directives — we drop everything except known ones. <VersionNav> is dropped
+    # because there's no registered component for it.
     m = re.match(r'^\(:(\w+)\s*(.*?):\)$', line.strip())
     if m:
-        directive, args = m.group(1), m.group(2).strip()
-        if directive == "allVersions":
-            # e.g. (:allVersions Script-CoreVar 4.1:)
-            parts = args.split()
-            page = parts[0] if parts else ""
-            version = parts[1] if len(parts) > 1 else ""
-            return f'<VersionNav page="{page}" version="{version}" />'
-        if directive == "toc" or directive.startswith("toc"):
-            return ""  # Starlight generates TOC automatically
-        return ""
+        return ""  # TOC, allVersions, etc.
 
-    # Line break \\ at end → MD line break (two trailing spaces)
     line = line.replace("\\\\", "  \n")
-
     return convert_inline(line)
 
 
@@ -230,74 +259,45 @@ def convert_list_item(line: str) -> str:
     return f"{indent}- {convert_inline(line)}"
 
 
-def convert_table_row(line: str) -> str:
-    line = line.strip()
-    if line.startswith("||") and line.endswith("||"):
-        line = line[2:-2]
-    cells = line.split("||")
-    cells = [convert_inline(c.strip()) for c in cells]
-    return "| " + " | ".join(cells) + " |"
-
-
 def convert_inline(text: str) -> str:
-    # Bold: '''text''' → **text**
+    # Bold / italic
     text = re.sub(r"'''(.+?)'''", r"**\1**", text)
-    # Italic: ''text'' → *text*
     text = re.sub(r"''(.+?)''", r"*\1*", text)
 
-    # Anchor link icons [[#name|&#x1F517;]] — drop the icon, keep nothing
+    # Drop link-icon anchors
     text = re.sub(r'\[\[#[\w.-]+\|&#x1F517;\]\]', '', text)
 
-    # Wiki links with label: [[Page.Name|Label]] or [[#anchor|Label]]
     def wiki_link(m):
         page, label = m.group(1).strip(), m.group(2).strip()
         if page.startswith("#"):
             return f"[{label}]({page})"
-        if page.startswith("http://") or page.startswith("https://"):
+        if page.startswith(("http://", "https://")):
             return f"[{label}]({page})"
         return f"[{label}]({page_to_slug(page)})"
     text = re.sub(r'\[\[([^\]|]+)\|([^\]]+)\]\]', wiki_link, text)
 
-    # Wiki links without label
     def wiki_link_no_label(m):
         page = m.group(1).strip()
         if page.startswith("#"):
             return f"[{page[1:]}]({page})"
-        if page.startswith("http://") or page.startswith("https://"):
+        if page.startswith(("http://", "https://")):
             return f"<{page}>"
         return f"[{page}]({page_to_slug(page)})"
     text = re.sub(r'\[\[([^\]]+)\]\]', wiki_link_no_label, text)
 
-    # Color spans %color%text%% → Badge or Aside
-    # But if the span is inside a code-like context (contains $ or starts with $)
-    # or is a single short token, just strip the color — it's decorative syntax markup.
+    # Color spans %color%text%%
     def replace_color(m):
-        color, content = m.group(1), m.group(2)
-        stripped = content.strip()
-        is_decorative = (
-            not ASIDE_PHRASES.search(stripped)
-            and (
-                any(c in stripped for c in ("$", "''", "'''", "*<", "[+"))
-                or (len(stripped) < 30 and not re.search(r'\b(is|are|was|It)\b', stripped))
-            )
-        )
-        return color_span_to_mdx(color, stripped, decorative=is_decorative)
-    text = re.sub(r'%([\w]+)%(.*?)%%', replace_color, text)
-    # Handle %key=value% form (e.g. %color=#185662%) — just strip
+        return color_span_to_mdx(m.group(1), m.group(2))
+    text = re.sub(r'%([a-zA-Z]+)%(.*?)%%', replace_color, text)
+
+    # %key=value% directives (e.g. %color=#185662%) — drop wrapper, keep content
     text = re.sub(r'%[\w#=]+%(.*?)%%', r'\1', text)
-    # Leftover lone % markers
     text = re.sub(r'%[\w#=]+%', '', text)
     text = re.sub(r'%%', '', text)
 
-    # Standalone anchor refs [[#name]] → drop
     text = re.sub(r'\[\[#[\w.-]+\]\]', '', text)
-
-    # Superscript [+text+] → text
     text = re.sub(r'\[\+(.+?)\+\]', r'\1', text)
-
-    # Trailing \\ line break → two spaces
     text = re.sub(r'\\\\$', '  ', text)
-
     return text
 
 
@@ -305,138 +305,146 @@ def page_to_slug(page: str) -> str:
     return "/" + page.replace(".", "/").lower()
 
 
-def escape_mdx_prose(text: str) -> str:
-    """Escape characters that MDX's acorn parser misreads in prose content.
+# ---------------------------------------------------------------------------
+# MDX safety pass — wrap dangerous chars in inline code instead of escaping
+# ---------------------------------------------------------------------------
 
-    MDX 2+ treats { } as JS expressions and <word> as JSX tags outside of
-    fenced code blocks. We also detect 4-space-indented blocks (which MDX does
-    NOT treat as code, unlike CommonMark) and wrap them in fences.
-    """
-    lines = text.split("\n")
-    out = []
-    in_fence = False
-    fence_marker = ""
-
-    # First pass: detect indented-only code blocks and fence them.
-    # A run of lines all indented by 4+ spaces, surrounded by blank lines,
-    # and not already inside a fence → wrap with ```c ... ```.
-    fenced_lines = []
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-        # Track fences
-        if re.match(r'^```', line):
-            fenced_lines.append(line)
-            in_fence = not in_fence
-            i += 1
-            continue
-        if in_fence:
-            fenced_lines.append(line)
-            i += 1
-            continue
-
-        # Detect a block of 4-space-indented lines
-        if re.match(r'^    \S', line):
-            block = []
-            while i < len(lines) and (re.match(r'^    ', lines[i]) or lines[i].strip() == ""):
-                block.append(lines[i])
-                i += 1
-            # Strip trailing blank lines from block
-            while block and block[-1].strip() == "":
-                fenced_lines.append(block.pop())
-            if block:
-                fenced_lines.append("```c")
-                for bl in block:
-                    fenced_lines.append(bl[4:])  # dedent
-                fenced_lines.append("```")
-            continue  # i was already advanced by the while above
-        fenced_lines.append(line)
-        i += 1
-
-    lines = fenced_lines
-
-    # Second pass: escape { } and bare <tag> in prose (outside fenced blocks).
-    in_fence = False
-    for line in lines:
-        if re.match(r'^```', line):
-            in_fence = not in_fence
-            out.append(line)
-            continue
-        if in_fence:
-            out.append(line)
-            continue
-
-        # Don't escape inside inline code spans (`...`)
-        # Split on backtick pairs and only process outside them
-        line = escape_prose_line(line)
-        out.append(line)
-
-    return "\n".join(out)
-
-
-# HTML tags we generate ourselves — don't escape these
 _SAFE_HTML_TAGS = {'span', 'strong', 'em', 'a', 'br', 'code', 'aside', 'badge'}
 
 
+def post_process(text: str) -> str:
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return mdx_safety_pass(text).strip()
+
+
+def mdx_safety_pass(text: str) -> str:
+    """Detect indented-code blocks, fence them, then wrap unsafe chars in backticks
+    in prose (outside any fenced block)."""
+    lines = text.split("\n")
+    fenced: list[str] = []
+    in_fence = False
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if re.match(r'^```', line):
+            fenced.append(line)
+            in_fence = not in_fence
+            i += 1
+            continue
+        if in_fence:
+            fenced.append(line)
+            i += 1
+            continue
+        if re.match(r'^    \S', line):
+            block: list[str] = []
+            while i < len(lines) and (re.match(r'^    ', lines[i]) or lines[i].strip() == ""):
+                block.append(lines[i])
+                i += 1
+            trailing: list[str] = []
+            while block and block[-1].strip() == "":
+                trailing.insert(0, block.pop())
+            if block:
+                fenced.append("```c")
+                for bl in block:
+                    fenced.append(bl[4:])
+                fenced.append("```")
+            fenced.extend(trailing)
+            continue
+        fenced.append(line)
+        i += 1
+
+    out: list[str] = []
+    in_fence = False
+    for line in fenced:
+        if re.match(r'^```', line):
+            in_fence = not in_fence
+            out.append(line)
+            continue
+        if in_fence:
+            out.append(line)
+            continue
+        out.append(escape_prose_line(line))
+    return "\n".join(out)
+
+
 def escape_prose_line(line: str) -> str:
-    """Escape MDX-unsafe characters in a single prose line, skipping inline code and our own HTML."""
-    result = []
-    # Split on backtick code spans AND on our generated HTML tags/JSX components
-    # so we don't double-escape them.
-    # Pattern: backtick spans | opening tags with attrs | closing tags
-    segments = re.split(r'(`[^`]*`|<[A-Z][^>]*/>|<[A-Z][^>]*>|</[A-Z][^>]*>)', line)
+    """Wrap MDX-unsafe substrings in inline code, keeping existing code spans
+    and registered JSX components untouched. No backslash escapes, no &lt; entities."""
+    result: list[str] = []
+    # Split on inline code spans AND on JSX components (Aside, Badge, etc.)
+    segments = re.split(
+        r'(`[^`]*`|<[A-Z][A-Za-z0-9]*\s*/>|<[A-Z][A-Za-z0-9]*[^>]*?/>|<[A-Z][A-Za-z0-9]*[^>]*>|</[A-Z][A-Za-z0-9]*>)',
+        line,
+    )
     for seg in segments:
-        # Leave backtick code and JSX components (uppercase) untouched
+        if not seg:
+            continue
         if (seg.startswith("`") and seg.endswith("`")) or re.match(r'</?[A-Z]', seg):
             result.append(seg)
             continue
-        # Escape { and }
-        seg = seg.replace("{", r"\{").replace("}", r"\}")
-        # Escape bare <tag> / </tag> that look like SIP/protocol tags (NOT known HTML)
-        def escape_tag(m):
-            slash, tag = m.group(1), m.group(2)
-            if tag.lower() in _SAFE_HTML_TAGS:
-                return m.group(0)  # keep our HTML
-            return f'&lt;{slash}{tag}&gt;'
-        seg = re.sub(r'<(/?)([a-zA-Z][a-zA-Z0-9_.-]*)>', escape_tag, seg)
+
+        # Matched {...} pairs → inline code
+        seg = re.sub(r'\{([^{}]*)\}', r'`{\1}`', seg)
+
+        # <…> patterns: leave Markdown autolinks (http/mailto) and known HTML tags;
+        # wrap protocol-style or unknown bare tags in backticks.
+        def wrap_lt(m):
+            inner = m.group(1)
+            stripped = inner.lstrip('/').split(' ')[0].split(':')[0]
+            if re.match(r'/?(?:https?|mailto|ftp)$', inner.lstrip('/').split(':')[0], re.I):
+                return m.group(0)
+            if stripped.lower() in _SAFE_HTML_TAGS:
+                return m.group(0)
+            return f'`<{inner}>`'
+        seg = re.sub(r'<(/?[A-Za-z][A-Za-z0-9_.:@/-]*)>', wrap_lt, seg)
+
         result.append(seg)
     return "".join(result)
 
 
-def post_process(text: str) -> str:
-    # Collapse more than 2 consecutive blank lines
-    text = re.sub(r'\n{3,}', '\n\n', text)
-    text = escape_mdx_prose(text)
-    return text.strip()
+# ---------------------------------------------------------------------------
+# Description extraction + file output
+# ---------------------------------------------------------------------------
+
+def extract_description(body: str) -> str:
+    """First real prose paragraph, markup-stripped, truncated to ~160 chars."""
+    for para in re.split(r'\n\s*\n', body):
+        para = para.strip()
+        if not para:
+            continue
+        if para.startswith(('#', '```', '|', '<', '-', '*', '!', '>', '[')):
+            continue
+        plain = strip_markup(para)
+        plain = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', plain)
+        plain = re.sub(r'`([^`]+)`', r'\1', plain)
+        plain = re.sub(r'\s+', ' ', plain).strip()
+        if not plain:
+            continue
+        if len(plain) > 160:
+            plain = plain[:157].rstrip() + "..."
+        return plain
+    return ""
 
 
-# ---------------------------------------------------------------------------
-# File output
-# ---------------------------------------------------------------------------
+def yaml_quote(text: str) -> str:
+    return text.replace('\\', '\\\\').replace('"', '\\"').replace('\n', ' ')
+
 
 def convert_file(src: Path, dst: Path):
     meta = parse_pmwiki_file(src)
-
     raw_text = meta.get("text", "")
     decoded = decode_pmwiki_text(raw_text)
     body = pmwiki_to_mdx(decoded)
 
     title = meta.get("title", src.stem)
-    author = meta.get("author", "")
-    ctime = meta.get("ctime", "")
-    rev = meta.get("rev", "")
+    description = extract_description(body)
 
-    fm = ["---", f'title: "{title}"']
-    if author:
-        fm.append(f"author: {author}")
-    if ctime:
-        fm.append(f"ctime: {ctime}")
-    if rev:
-        fm.append(f"revision: {rev}")
-    fm.append("---")
-
-    # No import statements — components are registered globally in Keystatic config
-    # and as MDX components in astro.config.mjs for the Astro build.
+    fm = [
+        "---",
+        f'title: "{yaml_quote(title)}"',
+        f'description: "{yaml_quote(description)}"',
+        "---",
+    ]
     dst.parent.mkdir(parents=True, exist_ok=True)
     dst.write_text("\n".join(fm) + "\n\n" + body + "\n", encoding="utf-8")
     print(f"  {src.name} → {dst}")
