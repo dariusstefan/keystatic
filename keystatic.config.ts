@@ -1,6 +1,18 @@
 import { createElement } from 'react';
 import { config, fields, collection, singleton } from '@keystatic/core';
 
+const e = createElement;
+
+const mdxComponents = {
+  // HTML elements used as raw JSX in MDX
+  span:   ({ children, ...p }: any) => e('span', p, children),
+  em:     ({ children }: any) => e('em', null, children),
+  strong: ({ children }: any) => e('strong', null, children),
+  // Starlight content components
+  Aside: ({ type, children }: any) => e('div', { 'data-type': type ?? 'note' }, children),
+  Badge: ({ text, variant }: any) => e('span', { 'data-variant': variant }, text),
+};
+
 const mdxContent = () =>
   fields.mdx({
     label: 'Body',
@@ -10,6 +22,7 @@ const mdxContent = () =>
         publicPath: '/images/docs/',
       },
     },
+    components: mdxComponents,
   });
 
 export default config({
