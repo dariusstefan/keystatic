@@ -227,13 +227,13 @@ Examples:
 
 **$bf** - displays a list with the branch flags set for the current SIP request  
 
-> **Caution:** TO BECOME OBSOLETE, replaced by [$msg.branch.flags](#msg.branch.flags)
+> @@yellow|Attention!@@ @@red|TO BECOME OBSOLETE@@, replaced by [$msg.branch.flags](#msg.branch.flags)
 
 ### Branch - $branch 
 
 **$branch** - this variable is used for creating new branches by writing into it the value of a SIP URI.  
 
-> **Caution:** TO BECOME OBSOLETE, replaced by [$msg.branch.uri](#msg.branch.uri)
+> @@yellow|Attention!@@ @@red|TO BECOME OBSOLETE@@, replaced by [$msg.branch.uri](#msg.branch.uri)
 Examples:
 ```c
 
@@ -257,7 +257,7 @@ The variable accepts also index **$(branch(uri)[1])** for accessing a specific b
 
 To get all branches, use the * index - $(branch(uri)[*]).  
 
-> **Caution:** TO BECOME OBSOLETE, replaced by [$msg.branch.uri](#msg.branch.uri)  
+> @@yellow|Attention!@@ @@red|TO BECOME OBSOLETE@@, replaced by [$msg.branch.uri](#msg.branch.uri)  
 
 Examples:
 ```c
@@ -287,7 +287,7 @@ Examples:
 
 **$branch.flag(flag_name)[]** - this variable provides read/write access to the value of a single certain branch flag (identified by name). The values accepted for writing are 1 (set) and 0 (unset). The returned values are 1/"true" (set) and 0/"false" (unset). An index is accepted, in order to access the flag for a certain branch. By default the 0 (or current) branch accessed (for more on index, see the the [branch.fields](#branch.fields) variable) - note that "*" is not accepted.  
 
-> **Caution:** TO BECOME OBSOLETE, replaced by [$msg.branch.flag](#msg.branch.flag)
+> @@yellow|Attention!@@ @@red|TO BECOME OBSOLETE@@, replaced by [$msg.branch.flag](#msg.branch.flag)
 
 ```c
 

@@ -257,11 +257,12 @@ starlight-toc nav a[href*="#"]:where([data-level="3"])::before {
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Inline color markers: @@red|text@@, @@green|text@@, @@blue|text@@, @@orange|text@@ */
+/* Inline color markers: @@red|text@@, @@green|text@@, @@blue|text@@, @@orange|text@@, @@yellow|text@@ */
 .sl-markdown-content .color-green  { color: #2f855a; }
 .sl-markdown-content .color-red    { color: #e53e3e; }
 .sl-markdown-content .color-blue   { color: #2b6cb0; }
 .sl-markdown-content .color-orange { color: #c05621; }
+.sl-markdown-content .color-yellow { color: #b7791f; }
 
 /* Overscroll bounce areas: match footer on home, match content elsewhere */
 html:has(.home-splash) {

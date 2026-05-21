@@ -1,4 +1,4 @@
-const COLOR_MARKER_RE = /@@(red|green|blue|orange)\|(.+?)@@/g;
+const COLOR_MARKER_RE = /@@(red|green|blue|orange|yellow)\|(.+?)@@/g;
 
 function escapeHtml(value) {
   return value

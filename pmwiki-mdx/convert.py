@@ -73,7 +73,7 @@ def strip_nav_header(text: str) -> str:
 
 ASIDE_PHRASES = re.compile(r'TO BECOME OBSOLETE|DEPRECATED|OBSOLETE', re.IGNORECASE)
 
-SUPPORTED_COLORS = {"red", "green", "blue", "orange"}
+SUPPORTED_COLORS = {"red", "green", "blue", "orange", "yellow"}
 
 
 def html_inline_to_md(text: str) -> str:
@@ -108,7 +108,7 @@ def color_span_to_mdx(color: str, content: str) -> str:
     """Map a PMwiki %color%...%% span to Markdown-safe text.
 
     Rules:
-      - 'TO BECOME OBSOLETE' / 'DEPRECATED' → **Caution:** text
+      - 'TO BECOME OBSOLETE' / 'DEPRECATED' → Attention warning
       - supported colors                    → @@color[text]@@
       - everything else                     → plain Markdown (color dropped)
     """
@@ -117,7 +117,7 @@ def color_span_to_mdx(color: str, content: str) -> str:
         return ""
 
     if ASIDE_PHRASES.search(content):
-        return f'**Caution:** {strip_markup(content)}'
+        return f'@@yellow|Attention!@@ @@red|{strip_markup(content)}@@'
 
     is_mdx_unsafe = bool(re.search(r'[<>{}]', content))
     if is_mdx_unsafe:
@@ -242,7 +242,7 @@ def convert_line(line: str) -> str:
         note = re.sub(r"''(.+?)''", r"\1", note)
         return f"> **Observation:** {convert_inline(note)}"
     converted = convert_inline(line)
-    if converted.startswith("**Caution:**"):
+    if converted.startswith("@@yellow|Attention!@@"):
         return f"> {converted}"
     return converted
 
@@ -371,7 +371,7 @@ def escape_prose_line(line: str) -> str:
     result: list[str] = []
     # Split on inline code spans, color markers, and JSX components.
     segments = re.split(
-        r'(`[^`]*`|@@(?:red|green|blue|orange)\|.*?@@|<[A-Z][A-Za-z0-9]*\s*/>|<[A-Z][A-Za-z0-9]*[^>]*?/>|<[A-Z][A-Za-z0-9]*[^>]*>|</[A-Z][A-Za-z0-9]*>)',
+        r'(`[^`]*`|@@(?:red|green|blue|orange|yellow)\|.*?@@|<[A-Z][A-Za-z0-9]*\s*/>|<[A-Z][A-Za-z0-9]*[^>]*?/>|<[A-Z][A-Za-z0-9]*[^>]*>|</[A-Z][A-Za-z0-9]*>)',
         line,
     )
     for seg in segments:
@@ -379,7 +379,7 @@ def escape_prose_line(line: str) -> str:
             continue
         if (
             (seg.startswith("`") and seg.endswith("`"))
-            or re.match(r'@@(?:red|green|blue|orange)\|', seg)
+            or re.match(r'@@(?:red|green|blue|orange|yellow)\|', seg)
             or re.match(r'</?[A-Z]', seg)
         ):
             result.append(seg)
