@@ -1,6 +1,10 @@
 import { createElement } from 'react';
 import { config, fields, collection, singleton } from '@keystatic/core';
-import { Aside, Badge } from '@astrojs/starlight/components';
+const Aside = ({ type, children }: { type?: string; children?: unknown }) =>
+  createElement('aside', { 'data-type': type ?? 'note' }, children as any);
+
+const Badge = ({ text, variant }: { text?: string; variant?: string }) =>
+  createElement('span', { 'data-variant': variant ?? 'default' }, text);
 
 const mdxContent = () =>
   fields.mdx({
