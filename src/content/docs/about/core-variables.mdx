@@ -953,11 +953,11 @@ The variable also offers detailed read-only access to various attributes/sub-fie
 
 ### SIP Headers - $hdr 
 
-**$(hdr(name)[N])** - represents the body of the N-th header identified by 'name'. If [N] is omitted then the body of the first header is printed. The first header is got when N=0, for the second N=1, a.s.o. To print the last header of that type, use -1, no other negative values are supported now. No white spaces are allowed inside the specifier (before }, before or after {, [, ] symbols). When N='*', all headers of that type are printed.
+**$(hdr(name)[N])** - represents the body of the N-th header identified by 'name'. If [N] is omitted then the body of the first header is printed. The first header is got when N=0, for the second N=1, a.s.o. To print the last header of that type, use -1, no other negative values are supported now. No white spaces are allowed inside the specifier (before `}`, before or after `{`, `[`, `]` symbols). When N='*', all headers of that type are printed.
 
 The module should identify most of compact header names (the ones recognized by **OpenSIPS** which should be all at this moment), if not, the compact form has to be specified explicitly. It is recommended to use dedicated specifiers for headers (e.g., %ua for user agent header), if they are available -- they are faster.
 
-**$(hdr_name[N])** - returns the name of the N-th header. The first header name is obtained for N=0, the second for N=1, a.s.o. To print the last header name use -1, the second last -2 a.s.o. No white spaces are allowed inside the specifier (before }, before or after {, [, ] symbols). When N='*', all header names are printed.
+**$(hdr_name[N])** - returns the name of the N-th header. The first header name is obtained for N=0, the second for N=1, a.s.o. To print the last header name use -1, the second last -2 a.s.o. No white spaces are allowed inside the specifier (before `}`, before or after `{`, `[`, `]` symbols). When N='*', all header names are printed.
 
 **$(hdrcnt(name))** -- returns number of headers of type given by 'name'. Uses same rules for specifying header names as **$hdr(name)** above. Many headers (e.g., Via, Path, Record-Route) may appear more than once in the message. This variable returns the number of headers of a given type. 
 
