@@ -114,6 +114,82 @@ def code_color_markup_to_markers(text: str) -> str:
     return "".join(out)
 
 
+def code_variable_tokens(text: str) -> str:
+    """Wrap OpenSIPS variable-looking tokens in inline code.
+
+    Existing inline code and color markers are left untouched. Headings call
+    convert_inline(..., code_variables=False), so their variable names stay as
+    plain heading text.
+    """
+    segments = re.split(r'(`[^`]*`|@@(?:red|green|blue|orange|yellow)\|.*?@@)', text)
+    return "".join(_code_variable_tokens_segment(seg) for seg in segments if seg)
+
+
+def _code_variable_tokens_segment(text: str) -> str:
+    if (text.startswith("`") and text.endswith("`")) or re.match(r'@@(?:red|green|blue|orange|yellow)\|', text):
+        return text
+
+    out: list[str] = []
+    i = 0
+    while i < len(text):
+        if text[i] != "$":
+            out.append(text[i])
+            i += 1
+            continue
+
+        end = _scan_variable_token(text, i)
+        if end == i:
+            out.append(text[i])
+            i += 1
+            continue
+
+        out.append(f"`{text[i:end]}`")
+        i = end
+
+    coded = "".join(out)
+    coded = re.sub(r'\*\*(`[^`]+`)\*\*', r'\1', coded)
+    return coded
+
+
+def _scan_variable_token(text: str, start: int) -> int:
+    i = start + 1
+    if i >= len(text):
+        return start
+
+    if text[i] == "(":
+        return _scan_balanced(text, start, "(", ")")
+
+    if not re.match(r'[A-Za-z_]', text[i]):
+        return start
+
+    while i < len(text) and re.match(r'[A-Za-z0-9_.]', text[i]):
+        i += 1
+
+    if i < len(text) and text[i] == "(":
+        i = _scan_balanced(text, i - 1, "(", ")")
+
+    while i < len(text) and text[i] == "[":
+        i = _scan_balanced(text, i - 1, "[", "]")
+
+    return i
+
+
+def _scan_balanced(text: str, before_open: int, open_char: str, close_char: str) -> int:
+    i = before_open + 1
+    depth = 0
+    while i < len(text):
+        if text[i] == open_char:
+            depth += 1
+        elif text[i] == close_char:
+            depth -= 1
+            if depth == 0:
+                return i + 1
+        elif depth == 0 and text[i].isspace():
+            return i
+        i += 1
+    return i
+
+
 _EMPHASIS_TAGS = r'(?:em|strong|span|b|i|u|code|br|sub|sup|small|tt)'
 
 
@@ -251,7 +327,7 @@ def convert_line(line: str) -> str:
     for bangs, level in [("!!!!!", 1), ("!!!!", 3), ("!!!", 2), ("!!", 3), ("!", 4)]:
         if line.startswith(bangs):
             content = line[len(bangs):].strip()
-            return f"{'#' * level} {convert_inline(content)}"
+            return f"{'#' * level} {convert_inline(content, code_variables=False)}"
 
     if re.match(r'^-{4,}$', line.strip()):
         return "---"
@@ -296,7 +372,7 @@ def convert_list_item(line: str) -> str:
     return f"{indent}- {convert_inline(line)}"
 
 
-def convert_inline(text: str) -> str:
+def convert_inline(text: str, code_variables: bool = True) -> str:
     # Bold / italic
     text = re.sub(r"'''(.+?)'''", r"**\1**", text)
     text = re.sub(r"''(.+?)''", r"*\1*", text)
@@ -338,6 +414,8 @@ def convert_inline(text: str) -> str:
     text = re.sub(r'\[\[#[\w.-]+\]\]', '', text)
     text = re.sub(r'\[\+(.+?)\+\]', r'\1', text)
     text = re.sub(r'\\\\$', '  ', text)
+    if code_variables:
+        text = code_variable_tokens(text)
     return text
 
 
