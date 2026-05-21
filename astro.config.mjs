@@ -5,6 +5,38 @@ import tailwindcss from '@tailwindcss/vite';
 import icon from 'astro-icon';
 import react from '@astrojs/react';
 import mdx from '@astrojs/mdx';
+
+/** Injects Starlight component imports into every MDX file at compile time,
+ *  so the files on disk stay import-free (required for Keystatic compatibility). */
+function remarkInjectStarlightComponents() {
+  return function (tree) {
+    const alreadyImported = tree.children.some(
+      (node) => node.type === 'mdxjsEsm' && node.value?.includes('@astrojs/starlight/components')
+    );
+    if (alreadyImported) return;
+
+    tree.children.unshift({
+      type: 'mdxjsEsm',
+      value: "import { Aside, Badge } from '@astrojs/starlight/components'",
+      data: {
+        estree: {
+          type: 'Program',
+          sourceType: 'module',
+          body: [
+            {
+              type: 'ImportDeclaration',
+              specifiers: [
+                { type: 'ImportSpecifier', imported: { type: 'Identifier', name: 'Aside' }, local: { type: 'Identifier', name: 'Aside' } },
+                { type: 'ImportSpecifier', imported: { type: 'Identifier', name: 'Badge' }, local: { type: 'Identifier', name: 'Badge' } },
+              ],
+              source: { type: 'Literal', value: '@astrojs/starlight/components', raw: "'@astrojs/starlight/components'" },
+            },
+          ],
+        },
+      },
+    });
+  };
+}
 import keystatic from '@keystatic/astro';
 import node from '@astrojs/node';
 import path from 'node:path';
@@ -70,7 +102,7 @@ export default defineConfig({
       ],
     }),
     // Must come AFTER starlight() so astro-expressive-code (registered by Starlight) wraps MDX code blocks correctly.
-    mdx(),
+    mdx({ remarkPlugins: [remarkInjectStarlightComponents] }),
   ],
   vite: {
     plugins: [tailwindcss()],
