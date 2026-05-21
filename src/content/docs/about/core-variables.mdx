@@ -15,7 +15,7 @@ Syntax:
 
 The complete syntax for a pseudo variable is: 
 
-$(*<context>***name***(subname)[index]{transformation}*)
+$(*&lt;context&gt;***name***(subname)[index]\{transformation\}*)
 
 The fields written in green are optional.
 The fields meaning is:
@@ -33,8 +33,8 @@ Usage examples:
 - **Name** and **index**: $(ct[0])
 - **Name**, **subname** and **index**: $(avp(i:10)[2])
 - **Context** 
-  - $(<request>ru) from a reply route will get the Request-URI from the request
-  - $(<reply>hdr(Contact)) context can be used from failure route to access information from the reply 
+  - $(&lt;request&gt;ru) from a reply route will get the Request-URI from the request
+  - $(&lt;reply&gt;hdr(Contact)) context can be used from failure route to access information from the reply 
 
 Types of variables:
 
@@ -466,16 +466,18 @@ This function is very helpful if you are tracing and debugging only a specific p
 
 Example of usage:
 
-    log_level= -1 # errors only
-    .....
-    {
-      ......
-      $log_level = 4; # set the debug level of the current process to DBG
-      uac_replace_from(....);
-      $log_level = NULL; # reset the log level of the current process to its default level
-      .......
-    }
 
+```c
+log_level= -1 # errors only
+.....
+{
+  ......
+  $log_level = 4; # set the debug level of the current process to DBG
+  uac_replace_from(....);
+  $log_level = NULL; # reset the log level of the current process to its default level
+  .......
+}
+```
 ## SIP message buffer
 
 **$mb** - reference to SIP message buffer
@@ -955,17 +957,17 @@ The variable also offers detailed read-only access to various attributes/sub-fie
 
 ## SIP Headers - $hdr 
 
-**$(hdr(name)[N])** - represents the body of the N-th header identified by 'name'. If [N] is omitted then the body of the first header is printed. The first header is got when N=0, for the second N=1, a.s.o. To print the last header of that type, use -1, no other negative values are supported now. No white spaces are allowed inside the specifier (before }, before or after {, [, ] symbols). When N='*', all headers of that type are printed.
+**$(hdr(name)[N])** - represents the body of the N-th header identified by 'name'. If [N] is omitted then the body of the first header is printed. The first header is got when N=0, for the second N=1, a.s.o. To print the last header of that type, use -1, no other negative values are supported now. No white spaces are allowed inside the specifier (before \}, before or after \{, [, ] symbols). When N='*', all headers of that type are printed.
 
 The module should identify most of compact header names (the ones recognized by **OpenSIPS** which should be all at this moment), if not, the compact form has to be specified explicitly. It is recommended to use dedicated specifiers for headers (e.g., %ua for user agent header), if they are available -- they are faster.
 
-**$(hdr_name[N])** - returns the name of the N-th header. The first header name is obtained for N=0, the second for N=1, a.s.o. To print the last header name use -1, the second last -2 a.s.o. No white spaces are allowed inside the specifier (before }, before or after {, [, ] symbols). When N='*', all header names are printed.
+**$(hdr_name[N])** - returns the name of the N-th header. The first header name is obtained for N=0, the second for N=1, a.s.o. To print the last header name use -1, the second last -2 a.s.o. No white spaces are allowed inside the specifier (before \}, before or after \{, [, ] symbols). When N='*', all header names are printed.
 
 **$(hdrcnt(name))** -- returns number of headers of type given by 'name'. Uses same rules for specifying header names as **$hdr(name)** above. Many headers (e.g., Via, Path, Record-Route) may appear more than once in the message. This variable returns the number of headers of a given type. 
 
 Note that some headers (e.g., Path) may be joined together with commas and appear as a single header line. This variable counts the number of header lines, not header values. 
 
-For message fragment below, **$hdrcnt(Path)** will have value 2 and **$(hdr(Path)[0])** will have value **<a.com>**:
+For message fragment below, **$hdrcnt(Path)** will have value 2 and **$(hdr(Path)[0])** will have value **&lt;a.com&gt;**:
 ```c
 
     Path: <a.com>
@@ -973,7 +975,7 @@ For message fragment below, **$hdrcnt(Path)** will have value 2 and **$(hdr(Path
 
 ```
 
-For message fragment below, **$hdrcnt(Path)** will have value 1 and **$(hdr(Path)[0])** will have value **<a.com>,<b.com>**:
+For message fragment below, **$hdrcnt(Path)** will have value 1 and **$(hdr(Path)[0])** will have value **&lt;a.com&gt;,&lt;b.com&gt;**:
 ```c
 
     Path: <a.com>,<b.com>
