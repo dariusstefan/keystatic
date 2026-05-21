@@ -228,7 +228,7 @@ def color_span_to_mdx(color: str, content: str) -> str:
 
     color = color.lower()
     content = strip_markup(content)
-    is_code_like = bool(re.search(r'[$()\[\]<>{}]', content))
+    is_code_like = bool(re.search(r'[$\[\]<>{}]', content))
     if color in SUPPORTED_COLORS and is_code_like:
         return f'`@@{color}|{content}@@`'
 
