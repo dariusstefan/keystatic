@@ -15,6 +15,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   site: 'https://www.opensips.org',
   adapter: node({ mode: 'standalone' }),
+  security: {
+    checkOrigin: false,
+    allowedDomains: [{ hostname: 'web.opensips.org', protocol: 'https' }],
+  },
   image: {
     service: { entrypoint: 'astro/assets/services/noop' },
   },
@@ -47,6 +51,7 @@ export default defineConfig({
             { label: 'Versions', slug: 'about/versions' },
             { label: 'Related software', slug: 'about/related-software' },
             { label: 'Contact', slug: 'contact' },
+	    { label: 'Core Variables', slug: 'about/core-variables' }
           ],
         },
         {

@@ -1,3 +1,4 @@
+import { createElement } from 'react';
 import { config, fields, collection, singleton } from '@keystatic/core';
 
 const mdxContent = () =>
@@ -18,7 +19,15 @@ export default config({
   },
 
   ui: {
-    brand: { name: 'opensips.org' },
+    brand: {
+      name: ' ',
+      mark: ({ colorScheme }: { colorScheme: 'light' | 'dark' }) =>
+        createElement('img', {
+          src: colorScheme === 'dark' ? '/opensips-dark.png' : '/opensips-logo.png',
+          alt: 'OpenSIPS',
+          height: 24,
+        }),
+    },
   },
 
   collections: {
