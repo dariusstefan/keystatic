@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 import icon from 'astro-icon';
 import react from '@astrojs/react';
 import mdx from '@astrojs/mdx';
+import { Aside, Badge } from '@astrojs/starlight/components';
 import keystatic from '@keystatic/astro';
 import node from '@astrojs/node';
 import path from 'node:path';
@@ -70,7 +71,7 @@ export default defineConfig({
       ],
     }),
     // Must come AFTER starlight() so astro-expressive-code (registered by Starlight) wraps MDX code blocks correctly.
-    mdx(),
+    mdx({ components: { Aside, Badge } }),
   ],
   vite: {
     plugins: [tailwindcss()],

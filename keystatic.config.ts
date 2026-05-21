@@ -1,5 +1,6 @@
 import { createElement } from 'react';
 import { config, fields, collection, singleton } from '@keystatic/core';
+import { Aside, Badge } from '@astrojs/starlight/components';
 
 const mdxContent = () =>
   fields.mdx({
@@ -10,6 +11,7 @@ const mdxContent = () =>
         publicPath: '/images/docs/',
       },
     },
+    components: { Aside, Badge },
   });
 
 export default config({
