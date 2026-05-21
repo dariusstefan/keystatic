@@ -257,6 +257,12 @@ starlight-toc nav a[href*="#"]:where([data-level="3"])::before {
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Utility color classes for MDX content */
+.color-green  { color: #2f855a; }
+.color-red    { color: #e53e3e; }
+.color-blue   { color: #2b6cb0; }
+.color-orange { color: #c05621; }
+
 /* Overscroll bounce areas: match footer on home, match content elsewhere */
 html:has(.home-splash) {
   background-color: var(--sl-color-bg-nav);

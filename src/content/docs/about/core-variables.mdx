@@ -15,7 +15,7 @@ Syntax:
 
 The complete syntax for a pseudo variable is: 
 
-$(*&lt;context&gt;***name***(subname)[index]\{transformation\}*)
+$(<span class="color-green"><em>&lt;context&gt;</em><strong>name</strong><em>(subname)[index]\{transformation\}</em></span>)
 
 The fields written in green are optional.
 The fields meaning is:
@@ -29,12 +29,12 @@ Ex: hdr(From), avp(name).
 
 Usage examples:
 - Only **name**: $ru 
-- **Name** and *'subname*: $hdr(Contact)
-- **Name** and **index**: $(ct[0])
+- **Name** and *'subname*: <span class="color-green">$hdr(Contact)</span>
+- **Name** and **index**: <span class="color-green">$(ct[0])</span>
 - **Name**, **subname** and **index**: $(avp(i:10)[2])
 - **Context** 
-  - $(&lt;request&gt;ru) from a reply route will get the Request-URI from the request
-  - $(&lt;reply&gt;hdr(Contact)) context can be used from failure route to access information from the reply 
+  - <span class="color-green">$(&lt;request&gt;ru)</span> from a reply route will get the Request-URI from the request
+  - <span class="color-green">$(&lt;reply&gt;hdr(Contact))</span> context can be used from failure route to access information from the reply 
 
 Types of variables:
 
