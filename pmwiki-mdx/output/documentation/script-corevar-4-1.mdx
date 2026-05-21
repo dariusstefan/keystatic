@@ -15,47 +15,47 @@ The complete syntax for a pseudo variable is:
 
 The fields written in green are optional.
 The fields meaning is:
-- **name**(compulsory) - the pseudo-variable name(type).  
+* **name**(compulsory) - the pseudo-variable name(type).  
 Ex: pvar, avp, ru, DLG_status, etc.
-- **subname** - the identifier of a certain pv from the given type.  
+* **subname** - the identifier of a certain pv from the given type.  
 Ex: hdr(From), avp(name).
-- **index** - a pv can store more than one value - it can refer to a list of values. You can access a certain value from the list if you specify its index. You can also specify indexes with negative values, -1 means the last inserted, -2 the value before the previous inserted one.
-- **transformation** - a series of processing actions can be applied on pseudo-variable. You can find the whole list of possible transformations [here](/documentation/script-tran). The transformations can be cascaded, using the output of one transformation as the input of another.     
-- **context** - the context in which the pseudo0variable will be evaluated. Now there are 2 pv contexts: reply and request. The reply context can be used in the failure route to request for the pseudo-variable to be evaluated in the context of the reply message. The request context can be used if in a reply route is desired for the pv to be evaluated in the context of the corresponding request.
+* **index** - a pv can store more than one value - it can refer to a list of values. You can access a certain value from the list if you specify its index. You can also specify indexes with negative values, -1 means the last inserted, -2 the value before the previous inserted one.
+* **transformation** - a series of processing actions can be applied on pseudo-variable. You can find the whole list of possible transformations [here](/documentation/script-tran). The transformations can be cascaded, using the output of one transformation as the input of another.     
+* **context** - the context in which the pseudo0variable will be evaluated. Now there are 2 pv contexts: reply and request. The reply context can be used in the failure route to request for the pseudo-variable to be evaluated in the context of the reply message. The request context can be used if in a reply route is desired for the pv to be evaluated in the context of the corresponding request.
 
 Usage examples:
-- Only **name**: `@@green|$ru@@`
-- **Name** and *'subname*: `@@green|$hdr(Contact)@@`
-- **Name** and **index**: `@@green|$(ct[0])@@`
-- **Name**, **subname** and **index**: `@@green|$(avp(i:10)[2])@@`
-- **Context** 
-  - `@@green|$(<request>ru)@@` from a reply route will get the Request-URI from the request
-  - `@@green|$(<reply>hdr(Contact))@@` context can be used from failure route to access information from the reply 
+* Only **name**: `@@green|$ru@@`
+* **Name** and *'subname*: `@@green|$hdr(Contact)@@`
+* **Name** and **index**: `@@green|$(ct[0])@@`
+* **Name**, **subname** and **index**: `@@green|$(avp(i:10)[2])@@`
+* **Context** 
+  * `@@green|$(<request>ru)@@` from a reply route will get the Request-URI from the request
+  * `@@green|$(<reply>hdr(Contact))@@` context can be used from failure route to access information from the reply 
 
 Types of variables:
 
-- [**script variables**](#varscript) - as the name says, these variables are strictly bound to the script routes. The variables are visible only in the routing blocks - they are not message or transaction related, but they are process related (script variables will be inherited by script routes executed by the same **OpenSIPS** process).  
+* [**script variables**](#varscript) - as the name says, these variables are strictly bound to the script routes. The variables are visible only in the routing blocks - they are not message or transaction related, but they are process related (script variables will be inherited by script routes executed by the same **OpenSIPS** process).  
 Script variables are read write and they can have integer or string values. A script variable can only hold a single value. A new assignment (or write operation) will overwrite the existing value.
 
-- [**AVP - Attribute Value Pair**](#varavps) - the AVPs are dynamic variables (as name) that can be created - the AVPS are linked to a singular message or transaction (if stateful processing is used). A message or a transaction will initially (when received or created) have an empty list of AVPS attached to it. During the routing script, the script directly or functions called from script may create new AVPS that will automatically attached to the message/transaction. The AVPS will be visible in all routes where any message (reply or request) of the transaction will be processed - branch_route , failure_route, onreply_route (for this last route you need to enable the TM parameter *onreply_avp_mode*).  
+* [**AVP - Attribute Value Pair**](#varavps) - the AVPs are dynamic variables (as name) that can be created - the AVPS are linked to a singular message or transaction (if stateful processing is used). A message or a transaction will initially (when received or created) have an empty list of AVPS attached to it. During the routing script, the script directly or functions called from script may create new AVPS that will automatically attached to the message/transaction. The AVPS will be visible in all routes where any message (reply or request) of the transaction will be processed - branch_route , failure_route, onreply_route (for this last route you need to enable the TM parameter *onreply_avp_mode*).  
 AVPs are read write and an existing AVP can be even deleted (removed). An AVP may contain multiple values - a new assignment (or write operation) will add a new value to the AVP; the values are kept in "last added first to be used" order (stack).  
 
 A special index **append** is defined to allow you to add a new value at the end of the list (at the bottom of the stack) - `$(avp(name)[append])` = "last value";
 
-- [**pseudo variables**](#varpv) - pseudo-variables (or PV) provide access to information from the processed SIP message (headers, RURI, transport level info, a.s.o) or from **OpenSIPS** inners (time values, process PID, return code of a function). Depending of what info they provide, the PVs are either bound to the message, either to nothing  (global). Most of the PVs are read-only and only several allow write operations. A PV may return several values or only one, depending of the referred info (if can have multiple values or not).  
+* [**pseudo variables**](#varpv) - pseudo-variables (or PV) provide access to information from the processed SIP message (headers, RURI, transport level info, a.s.o) or from **OpenSIPS** inners (time values, process PID, return code of a function). Depending of what info they provide, the PVs are either bound to the message, either to nothing  (global). Most of the PVs are read-only and only several allow write operations. A PV may return several values or only one, depending of the referred info (if can have multiple values or not).  
 Standard PV is read-only and returns a single value (if not otherwise documented).
 
-- [**escape sequences**](#varesc) - escape sequences used to format the strings; they are actually not variables, but rather formatters.
+* [**escape sequences**](#varesc) - escape sequences used to format the strings; they are actually not variables, but rather formatters.
 
 ## Script variables 
 
 **Naming**: `$var(name)` 
 
 **Hints**:
-- if you want to start using a script variable in a route, better initialize it with same value (or reset it), otherwise you may inherit a value from a previous route that was executed by the same process.
-- script variables are faster than AVPs, as they directly reference a memory location.
-- the value of script variables persists over a **OpenSIPS** process.
-- a script variable can only hold one value.
+* if you want to start using a script variable in a route, better initialize it with same value (or reset it), otherwise you may inherit a value from a previous route that was executed by the same process.
+* script variables are faster than AVPs, as they directly reference a memory location.
+* the value of script variables persists over a **OpenSIPS** process.
+* a script variable can only hold one value.
 
 Example of usage:
 
@@ -82,13 +82,13 @@ Setting a variable to NULL is actually initializing the value to integer '0'. Sc
 When using the index "N" you can force the AVP to return a certain value (the N-th value). If no index is given, the first value will be returned.
 
 **Hints**:
-- to enable AVPs in onreply_route, use "modparam("tm", "onreply_avp_mode", 1)"
-- if multiple values are used for a single AVP, the values are index in revert order than added
-- AVPs are part of the transaction context, so they will be visible everywhere where the transaction is present.
-- the value of an AVP can be deleted
+* to enable AVPs in onreply_route, use "modparam("tm", "onreply_avp_mode", 1)"
+* if multiple values are used for a single AVP, the values are index in revert order than added
+* AVPs are part of the transaction context, so they will be visible everywhere where the transaction is present.
+* the value of an AVP can be deleted
 
 Example of usage:
-- Transaction persistence example
+* Transaction persistence example
 ```c
 
 # enable avps in onreply route
@@ -112,7 +112,7 @@ onreply_route[1] {
 
 ```
 
-- Multiple values example
+* Multiple values example
 ```c
 
 $avp(my_arr) = "one";
@@ -151,8 +151,8 @@ The **AVPOPS** module provides a lot of useful functions to operate AVPs (like c
 **Naming**: `$name`
 
 **Hints**:
-- the PV tokens can be given as parameters to different script functions and they will be replaced with a value before the execution of the function.
-- most of PVs are made available by **OpenSIPS** core, but there are also module exporting PV (to make available info specific to that module) - check the modules documentation.
+* the PV tokens can be given as parameters to different script functions and they will be replaced with a value before the execution of the function.
+* most of PVs are made available by **OpenSIPS** core, but there are also module exporting PV (to make available info specific to that module) - check the modules documentation.
 
 Predefined (provided by core) PVs are listed in alphabetical order.
 
@@ -247,12 +247,12 @@ Examples:
 ### Branch fields - $branch.fields 
 
 `$branch()` - this variable provides read/write access to all fields/attributes of an already existing branch (prior created with append_branch() ). The fields of the branch are:
-- uri - the RURI of the branch  (string value)
-- duri - destination URI of the branch (outbound proxy of the branch)  (string value)
-- q - q value of the branch (int value)
-- path - the PATH string for this branch (string value)
-- flags - the branch flags of this branch (int value)
-- socket - the local socket to be used for relaying this branch (string value)
+* uri - the RURI of the branch  (string value)
+* duri - destination URI of the branch (outbound proxy of the branch)  (string value)
+* q - q value of the branch (int value)
+* path - the PATH string for this branch (string value)
+* flags - the branch flags of this branch (int value)
+* socket - the local socket to be used for relaying this branch (string value)
 The variable accepts also index `$(branch(uri)[1])` for accessing a specific branch (multiple branches can be defined at a moment). The index starts from 0 (first branch). If the index is negative, it is considered the n-th branch from the end ( index -1 means the last branch).  
 
 To get all branches, use the * index - `$(branch(uri)[*])`.  
@@ -341,32 +341,32 @@ Examples:
 ### Contact instance - $ct 
 
 `$ct` - reference to contact instance/body from the contact header. A contact instance is  display_name + URI + contact_params. As a Contact header may contain multiple Contact instances and a message may contain multiple Contact headers, an index was added to the `$ct` variable:
-- `$ct` -first contact instance from message
-- `$(ct[n])` - the n-th contact instance form the beginning of message, starting with index 0
-- `$(ct[-n])` - the n-th contact instance form the end of the message, starting with index -1 (the last contact instance)
+* `$ct` -first contact instance from message
+* `$(ct[n])` - the n-th contact instance form the beginning of message, starting with index 0
+* `$(ct[-n])` - the n-th contact instance form the end of the message, starting with index -1 (the last contact instance)
 
 ### Fields of a contact instance - $ct.fields 
 
 `$ct.fields()` - reference to the fields of a contact instance/body (see above). Supported fields are:
-- name - display name
-- uri - contact uri
-- q  - q param (value only)
-- expires - expires param (value only) 
-- methods - methods param (value only)
-- received - received param (value only)
-- params - all params (including names)
+* name - display name
+* uri - contact uri
+* q  - q param (value only)
+* expires - expires param (value only) 
+* methods - methods param (value only)
+* received - received param (value only)
+* params - all params (including names)
 
 Examples:
-- `$ct.fields(uri)` - the URI of the first contact instance
-- `$(ct.fields(name)[1])` - the display name of the second contact instance
+* `$ct.fields(uri)` - the URI of the first contact instance
+* `$(ct.fields(name)[1])` - the display name of the second contact instance
 
 ### Content-Type - $cT 
 
 `$cT` - reference to body of Content-Type header and also the content-type headers inside a multi-part body
-- `$cT` - the main Content-Type of the message; the one inside the headers
-- `$(cT[n])` - the **n**-th Content-Type inside a multi-part body from the beginning of message, starting with index 0
-- `$(cT[-n])` - the **n**-th Content-Type inside a multi-part body from the end of the message, starting with index -1 (the last contact instance)
-- `$(cT[*])` - all the Content-Type headers including the main one and the ones from the multi-part body
+* `$cT` - the main Content-Type of the message; the one inside the headers
+* `$(cT[n])` - the **n**-th Content-Type inside a multi-part body from the beginning of message, starting with index 0
+* `$(cT[-n])` - the **n**-th Content-Type inside a multi-part body from the end of the message, starting with index -1 (the last contact instance)
+* `$(cT[*])` - all the Content-Type headers including the main one and the ones from the multi-part body
 
 ### Domain of destination URI - $dd 
 
@@ -689,12 +689,12 @@ Example:
 ### Body of request/reply - $rb 
 
 `$rb` - reference to the body or a body part of the SIP message
-- `$rb` - the whole body of the message (with all the parts)
-- `$(rb[*])` - same as `$rb`
-- `$(rb[n])` - the n-th body belonging to a multi-part body from the beginning of message, starting with index 0
-- `$(rb[-n])` - the n-th body belonging to a multi-part body from the end of the message, starting with index -1 (the last contact instance)
-- `$rb(application/sdp)`   - get the first SDP body part
-- `$(rb(application/isup)[-1])`  - get the last ISUP body part
+* `$rb` - the whole body of the message (with all the parts)
+* `$(rb[*])` - same as `$rb`
+* `$(rb[n])` - the n-th body belonging to a multi-part body from the beginning of message, starting with index 0
+* `$(rb[-n])` - the n-th body belonging to a multi-part body from the end of the message, starting with index -1 (the last contact instance)
+* `$rb(application/sdp)`   - get the first SDP body part
+* `$(rb(application/isup)[-1])`  - get the last ISUP body part
 
 ### Returned code - $rc 
 
@@ -866,14 +866,14 @@ $sdp.line([$var(line_idx)]) = $var(data); # re-write the line
   
 
 The variable also offers detailed read-only access to various attributes/sub-fields of the socket, as  `$socket_in()`. The sub-fields of the socket are:
-- ip - the IP part of the socket
-- port - the port part of the socket
-- proto - the name of the protocol of the socket (as "UDP", "TPC", etc)
-- advertised_ip - the advertised IP part of the socket (it may be NULL if no advertising is done on this particlar socket)
-- advertised_port - the advertised part part of the socket (it may be NULL if no advertising is done on this particlar socket)
-- tag - the socket internal tag/alias 
-- anycast - if the socket uses an anycast IP or not (returns 0 if not, 1 if yes)
-- af - the address family of the socket's IP. It's value is "INET" if IPv4 or "INET6" if IPv6.
+* ip - the IP part of the socket
+* port - the port part of the socket
+* proto - the name of the protocol of the socket (as "UDP", "TPC", etc)
+* advertised_ip - the advertised IP part of the socket (it may be NULL if no advertising is done on this particlar socket)
+* advertised_port - the advertised part part of the socket (it may be NULL if no advertising is done on this particlar socket)
+* tag - the socket internal tag/alias 
+* anycast - if the socket uses an anycast IP or not (returns 0 if not, 1 if yes)
+* af - the address family of the socket's IP. It's value is "INET" if IPv4 or "INET6" if IPv6.
 For more details on the meaning of these sub-fields, please also read about the [socket definition](/documentation/script-coreparameters-4-1#toc66).
 
 ### Socket outbound - $socket_out 
@@ -975,30 +975,30 @@ Note that both examples above are semantically equivalent but the variables take
 ### Route Name (Full) - $route 
 `$route` - Access route names of the current route call stack.  Usage examples (assuming a route call stack of "route > route[A] > route[B]"):
 
-- `$route` and `$(route[0])` both return **"route[B]"** (current route)
-- `$(route[1])` returns **"route[A]"** (parent route)
-- `$(route[2])` returns **"route"** (previous-parent route)
-- `$(route[-1])` returns **"route"** (topmost route)
-- `$(route[-2])` returns **"route[A]"** (next-topmost route)
-- `$(route[-3])` returns **"route[B]"** (next-next-topmost route)
-- `$(route[3])` and `$(route[-4])` both return **NULL** (index out of bounds)
-- `$(route[*])` returns **"route > route[A] > route[B]"** (entire call stack)
+* `$route` and `$(route[0])` both return **"route[B]"** (current route)
+* `$(route[1])` returns **"route[A]"** (parent route)
+* `$(route[2])` returns **"route"** (previous-parent route)
+* `$(route[-1])` returns **"route"** (topmost route)
+* `$(route[-2])` returns **"route[A]"** (next-topmost route)
+* `$(route[-3])` returns **"route[B]"** (next-next-topmost route)
+* `$(route[3])` and `$(route[-4])` both return **NULL** (index out of bounds)
+* `$(route[*])` returns **"route > route[A] > route[B]"** (entire call stack)
 
 ### Route Type - $route.type 
 `$route.type` - Access the type of the current route.  May be indexed, using positive or negative indexes.
 
-- `$route.type` and `$(route.type[0])` both return current route type
-- `$(route.type[1])` returns parent route type
-- `$(route.type[-1])` returns topmost route type
-- `$(route.type[-2])` returns next-topmost route type
+* `$route.type` and `$(route.type[0])` both return current route type
+* `$(route.type[1])` returns parent route type
+* `$(route.type[-1])` returns topmost route type
+* `$(route.type[-2])` returns next-topmost route type
 
 ### Route Name - $route.name 
 `$route.name` - Access the name of the current route.  May be indexed, using positive or negative indexes.
 
-- `$route.name` and `$(route.name[0])` both return current route name
-- `$(route.name[1])` returns parent route name
-- `$(route.name[-1])` returns topmost route name
-- `$(route.name[-2])` returns next-topmost route name
+* `$route.name` and `$(route.name[0])` both return current route name
+* `$(route.name[1])` returns parent route name
+* `$(route.name[-1])` returns topmost route name
+* `$(route.name[-2])` returns next-topmost route name
 
 ### Current script line and file  - $cfg_line 
 `$cfg_line` - Holds the current line from the script of the action being executed, useful for logging purposes   
@@ -1031,15 +1031,15 @@ These sequences are exported, and mainly used, by xlog module to print messages 
 
 Colors could be:
 
-- x : default color of the terminal
-- s : Black
-- r : Red
-- g : Green
-- y : Yellow
-- b : Blue
-- p : Purple
-- c : Cyan
-- w : White 
+* x : default color of the terminal
+* s : Black
+* r : Red
+* g : Green
+* y : Yellow
+* b : Blue
+* p : Purple
+* c : Cyan
+* w : White 
 
 ### Examples
 

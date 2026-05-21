@@ -330,7 +330,7 @@ def convert_line(line: str) -> str:
             return f"{'#' * level} {convert_inline(content, code_variables=False)}"
 
     if re.match(r'^-{4,}$', line.strip()):
-        return "---"
+        return "\n---\n"
 
     if re.match(r'^[*#]+\s', line):
         return convert_list_item(line)
@@ -369,7 +369,7 @@ def convert_list_item(line: str) -> str:
         line = line[1:]
     line = line.lstrip()
     indent = "  " * (depth - 1)
-    return f"{indent}- {convert_inline(line)}"
+    return f"{indent}* {convert_inline(line)}"
 
 
 def convert_inline(text: str, code_variables: bool = True) -> str:
