@@ -89,6 +89,46 @@ function isActive(href: string) {
     if (panel?.hasAttribute('hidden')) panel.removeAttribute('hidden');
     else panel?.setAttribute('hidden', '');
   });
+
+  const setupTocIndicator = () => {
+    const nav = document.querySelector('starlight-toc nav');
+    if (!nav || nav.querySelector('.toc-active-indicator')) return;
+
+    const indicator = document.createElement('span');
+    indicator.className = 'toc-active-indicator';
+    indicator.setAttribute('aria-hidden', 'true');
+    nav.append(indicator);
+
+    const updateIndicator = () => {
+      const active =
+        nav.querySelector('a[aria-current]') ||
+        nav.querySelector('a.current') ||
+        nav.querySelector('a.is-current');
+
+      if (!(active instanceof HTMLElement)) {
+        indicator.toggleAttribute('data-visible', false);
+        return;
+      }
+
+      const navRect = nav.getBoundingClientRect();
+      const activeRect = active.getBoundingClientRect();
+      indicator.style.transform = `translateY(${activeRect.top - navRect.top}px)`;
+      indicator.style.height = `${activeRect.height}px`;
+      indicator.toggleAttribute('data-visible', true);
+    };
+
+    updateIndicator();
+    new MutationObserver(updateIndicator).observe(nav, {
+      attributes: true,
+      subtree: true,
+      attributeFilter: ['aria-current', 'class'],
+    });
+    window.addEventListener('resize', updateIndicator);
+    document.addEventListener('scroll', updateIndicator, { passive: true });
+  };
+
+  setupTocIndicator();
+  document.addEventListener('astro:page-load', setupTocIndicator);
 </script>
 
 <style>
