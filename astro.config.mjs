@@ -89,11 +89,12 @@ export default defineConfig({
       include: ['react', 'react-dom', '@keystatic/core'],
     },
     build: {
+      // keystatic-page chunk is 2.5 MB but only loads on /keystatic/* admin routes
+      chunkSizeWarningLimit: 3000,
       rollupOptions: {
         output: {
           manualChunks(id) {
             if (!id.includes('node_modules')) return;
-            if (id.includes('@keystatic')) return 'keystatic';
             if (id.includes('react-dom') || id.includes('react/')) return 'react-vendor';
             if (id.includes('@astrojs/starlight')) return 'starlight';
           },
