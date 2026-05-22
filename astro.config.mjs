@@ -85,5 +85,20 @@ export default defineConfig({
         '~': path.resolve(__dirname, './src'),
       },
     },
+    optimizeDeps: {
+      include: ['react', 'react-dom', '@keystatic/core'],
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return;
+            if (id.includes('@keystatic')) return 'keystatic';
+            if (id.includes('react-dom') || id.includes('react/')) return 'react-vendor';
+            if (id.includes('@astrojs/starlight')) return 'starlight';
+          },
+        },
+      },
+    },
   },
 });
