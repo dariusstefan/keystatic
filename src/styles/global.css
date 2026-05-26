@@ -158,6 +158,11 @@ h1#_top,
   padding-inline: 2rem;
 }
 
+main:has(.home-splash) h1#_top,
+main:has(.home-splash) .sl-markdown-content {
+  padding-inline: 0;
+}
+
 /* Page title */
 h1#_top {
   font-size: 1.75rem;
