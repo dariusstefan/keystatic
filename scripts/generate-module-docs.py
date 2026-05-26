@@ -236,7 +236,7 @@ def generate_redirects(verbose: bool) -> int:
             if target:
                 out = CONTENT_DIR / slug / f"{module}.md"
                 out.write_text(
-                    f"---\ntitle: ''\nredirect: /modules/{target}/{module}\nsidebar:\n  hidden: true\n---\n",
+                    f"---\ntitle: ''\nhead:\n  - tag: meta\n    attrs:\n      http-equiv: refresh\n      content: '0; url=/modules/{target}/{module}'\nsidebar:\n  hidden: true\n---\n",
                     "utf-8",
                 )
                 count += 1
