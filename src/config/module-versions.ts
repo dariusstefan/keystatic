@@ -9,8 +9,6 @@ export const VERSIONS: Version[] = [
   { branch: '4.0', label: '4.0' },
   { branch: '3.6', label: '3.6' },
   { branch: '3.5', label: '3.5' },
-  { branch: '3.4', label: '3.4' },
-  { branch: '3.3', label: '3.3' },
 ];
 
 export const LATEST_VERSION = VERSIONS.find((v) => v.isLatest)!;
