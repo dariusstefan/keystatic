@@ -1,6 +1,7 @@
 ---
+import { getCollection } from 'astro:content';
 import VersionSelector from '~/components/modules/VersionSelector.astro';
-import { LATEST_VERSION, slugToBranch } from '~/config/module-versions';
+import { VERSIONS, LATEST_VERSION, slugToBranch, branchToSlug } from '~/config/module-versions';
 
 const PAGE_TITLE_ID = '_top';
 
@@ -9,9 +10,9 @@ const isModulePage = id.startsWith('modules/');
 
 let moduleName: string | undefined;
 let version: string | undefined;
+let availableVersions = VERSIONS;
 
 if (isModulePage) {
-  // id examples: 'modules/acc' (latest) | 'modules/acc/3.5' (versioned)
   const rest = id.slice('modules/'.length);
   const slash = rest.indexOf('/');
   if (slash === -1) {
@@ -21,13 +22,25 @@ if (isModulePage) {
     moduleName = rest.slice(0, slash);
     version = slugToBranch(rest.slice(slash + 1));
   }
+
+  if (moduleName) {
+    const allDocs = await getCollection('docs');
+    const hasLatest = allDocs.some((e) => e.id === `modules/${moduleName}`);
+    const versionedSlugs = allDocs
+      .filter((e) => e.id.startsWith(`modules/${moduleName}/`))
+      .map((e) => e.id.slice(`modules/${moduleName}/`.length));
+
+    availableVersions = VERSIONS.filter((v) =>
+      v.isLatest ? hasLatest : versionedSlugs.includes(branchToSlug(v.branch))
+    );
+  }
 }
 ---
 
 <h1 id={PAGE_TITLE_ID}>{Astro.locals.starlightRoute.entry.data.title}</h1>
 
 {isModulePage && moduleName && version && (
-  <VersionSelector module={moduleName} version={version} />
+  <VersionSelector module={moduleName} version={version} versions={availableVersions} />
 )}
 
 <style>

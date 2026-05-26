@@ -1,18 +1,19 @@
 ---
-import { VERSIONS, getModuleUrl } from '~/config/module-versions';
+import { type Version, VERSIONS, getModuleUrl } from '~/config/module-versions';
 
 interface Props {
   module: string;
   version: string;
+  versions?: Version[];
 }
 
-const { module, version } = Astro.props;
+const { module, version, versions = VERSIONS } = Astro.props;
 ---
 
 <nav class="version-selector not-content" aria-label="Version">
   <span class="vs-label">Version</span>
   <ul class="vs-list" role="list">
-    {VERSIONS.map((v) => {
+    {versions.map((v) => {
       const isCurrent = v.branch === version;
       return (
         <li>
