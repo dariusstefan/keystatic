@@ -74,7 +74,7 @@ def _normalize_title_in_md(md: str) -> str:
     rest = md[end + 3:]
     fm = re.sub(
         r'^(title:\s*)(.+)$',
-        lambda m: m.group(1) + _normalize_title(m.group(2)),
+        lambda m: m.group(1) + '"' + _normalize_title(m.group(2)).replace('"', '\\"') + '"',
         fm, flags=re.MULTILINE,
     )
     return fm + rest
