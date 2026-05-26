@@ -32,6 +32,12 @@ jobs:
           USER: ${{ secrets.DEPLOY_USER }}
           PORT: ${{ secrets.DEPLOY_PORT }}
         run: |
+          set -euo pipefail
+          : "${HOST:?DEPLOY_HOST secret is not set}"
+          : "${PORT:?DEPLOY_PORT secret is not set}"
+          : "${USER:?DEPLOY_USER secret is not set}"
+          : "${DEPLOY_KEY:?DEPLOY_SSH_KEY secret is not set}"
+
           mkdir -p ~/.ssh
           echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
