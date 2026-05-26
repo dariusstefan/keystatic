@@ -8,7 +8,7 @@ server_dir="/opt/opensips-astro"
 # Load env so PUBLIC_ vars are available at build time (baked into the JS bundle)
 set -a; source /etc/opensips-keystatic.env; set +a
 
-./node_modules/.bin/astro build
+NODE_OPTIONS=--max-old-space-size=2560 ./node_modules/.bin/astro build
 
 release="$dir/releases/$(date +%Y%m%d%H%M%S)"
 
