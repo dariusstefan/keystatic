@@ -1,0 +1,42 @@
+---
+import { PAGE_TITLE_ID } from '@astrojs/starlight/constants';
+import VersionSelector from '~/components/modules/VersionSelector.astro';
+import { LATEST_VERSION } from '~/config/module-versions';
+
+const { id } = Astro.locals.starlightRoute;
+const isModulePage = id.startsWith('modules/');
+
+let moduleName: string | undefined;
+let version: string | undefined;
+
+if (isModulePage) {
+  // id examples: 'modules/acc' (latest) | 'modules/acc/3.5' (versioned)
+  const rest = id.slice('modules/'.length);
+  const slash = rest.indexOf('/');
+  if (slash === -1) {
+    moduleName = rest;
+    version = LATEST_VERSION.branch;
+  } else {
+    moduleName = rest.slice(0, slash);
+    version = rest.slice(slash + 1);
+  }
+}
+---
+
+<h1 id={PAGE_TITLE_ID}>{Astro.locals.starlightRoute.entry.data.title}</h1>
+
+{isModulePage && moduleName && version && (
+  <VersionSelector module={moduleName} version={version} />
+)}
+
+<style>
+  @layer starlight.core {
+    h1 {
+      margin-top: 1rem;
+      font-size: var(--sl-text-h1);
+      line-height: var(--sl-line-height-headings);
+      font-weight: 600;
+      color: var(--sl-color-white);
+    }
+  }
+</style>

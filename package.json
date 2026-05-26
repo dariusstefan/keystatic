@@ -7,7 +7,11 @@
     "start": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "generate:modules": "python3 scripts/generate-module-docs.py",
+    "generate:modules:all": "python3 scripts/generate-module-docs.py --all-versions",
+    "populate:fork": "python3 scripts/populate-fork.py",
+    "populate:fork:dry": "python3 scripts/populate-fork.py --dry-run"
   },
   "dependencies": {
     "@astrojs/markdoc": "^1.0.5",

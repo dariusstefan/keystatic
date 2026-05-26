@@ -39,6 +39,7 @@ export default defineConfig({
         Header: './src/components/overrides/Header.astro',
         Footer: './src/components/overrides/Footer.astro',
         ThemeSelect: './src/components/overrides/ThemeSelect.astro',
+        PageTitle: './src/components/overrides/PageTitle.astro',
       },
       social: [
         { icon: 'github', label: 'GitHub', href: 'https://github.com/OpenSIPS/opensips' },
@@ -47,29 +48,8 @@ export default defineConfig({
       ],
       sidebar: [
         {
-          label: 'About',
-          items: [
-            { label: 'About OpenSIPS', slug: 'about' },
-            { label: "Who's using OpenSIPS", slug: 'about/whos-using' },
-            { label: 'Features', slug: 'about/features' },
-            { label: 'Versions', slug: 'about/versions' },
-            { label: 'Related software', slug: 'about/related-software' },
-            { label: 'Contact', slug: 'contact' },
-            { label: 'Core Variables', slug: 'about/core-variables' },
-          ],
-        },
-        {
-          label: 'Downloads',
-          items: [{ label: 'Get OpenSIPS', slug: 'downloads' }],
-        },
-        {
-          label: 'Development',
-          items: [{ label: 'Overview', slug: 'development' }],
-          collapsed: true,
-        },
-        {
-          label: 'Training',
-          items: [{ label: 'Trainings', slug: 'training' }],
+          label: 'Modules',
+          autogenerate: { directory: 'modules' },
         },
       ],
     }),

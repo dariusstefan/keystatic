@@ -1,7 +1,11 @@
 # build output
 dist/
+
+# generated module docs (run `npm run generate:modules` to rebuild)
+src/content/docs/modules/
 # generated types
 .astro/
+opensips/
 
 # dependencies
 node_modules/
