@@ -191,6 +191,62 @@ def generate_version(slug: str, branch: str, verbose: bool) -> tuple[int, int]:
 
 
 # ---------------------------------------------------------------------------
+# Redirect stubs for missing version/module combinations
+# ---------------------------------------------------------------------------
+
+def generate_redirects(verbose: bool) -> int:
+    """For each version folder, create redirect .md files for modules that
+    exist in other versions but not this one, pointing to the nearest version
+    (by index in VERSIONS) that does have the module."""
+
+    slugs = [v["slug"] for v in VERSIONS]
+
+    # Build a map of slug → set of module names actually generated
+    version_modules: dict[str, set[str]] = {}
+    for slug in slugs:
+        d = CONTENT_DIR / slug
+        if d.exists():
+            version_modules[slug] = {p.stem for p in d.glob("*.md")}
+
+    if len(version_modules) < 2:
+        return 0  # nothing to cross-reference
+
+    all_modules: set[str] = set().union(*version_modules.values())
+    count = 0
+
+    for i, slug in enumerate(slugs):
+        if slug not in version_modules:
+            continue
+        for module in all_modules:
+            if module in version_modules[slug]:
+                continue  # already exists
+
+            # Find the nearest version (by index distance) that has the module
+            target: str | None = None
+            for delta in range(1, len(slugs)):
+                newer = i - delta
+                older = i + delta
+                if newer >= 0 and slugs[newer] in version_modules and module in version_modules[slugs[newer]]:
+                    target = slugs[newer]
+                    break
+                if older < len(slugs) and slugs[older] in version_modules and module in version_modules[slugs[older]]:
+                    target = slugs[older]
+                    break
+
+            if target:
+                out = CONTENT_DIR / slug / f"{module}.md"
+                out.write_text(
+                    f"---\ntitle: ''\nredirect: /modules/{target}/{module}\nsidebar:\n  hidden: true\n---\n",
+                    "utf-8",
+                )
+                count += 1
+                if verbose:
+                    print(f"  {slug}/{module} → {target}/{module}")
+
+    return count
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
@@ -238,6 +294,11 @@ def main() -> None:
         print(f"\n[{v['slug']}] — from {FORK}/{v['branch']} on GitHub")
         ok, failed = generate_version(v["slug"], v["branch"], verbose)
         print(f"  → {ok} OK, {failed} missing")
+
+    if to_fetch:
+        print("\n[redirects] generating stubs for missing version/module combinations")
+        n = generate_redirects(verbose)
+        print(f"  → {n} redirects created")
 
     print("\nDone.")
 
