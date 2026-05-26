@@ -199,7 +199,7 @@ h1#_top {
 /* Numbered headings and matching TOC counters */
 
 .sl-markdown-content {
-  counter-reset: h2counter;
+  counter-reset: h2counter h3counter h4counter;
 }
 
 /* Block any Starlight counter-reset on heading wrappers */
@@ -215,6 +215,11 @@ h1#_top {
 
 .sl-markdown-content .sl-heading-wrapper.level-h3 {
   counter-increment: h3counter !important;
+  counter-reset: h4counter !important;
+}
+
+.sl-markdown-content .sl-heading-wrapper.level-h4 {
+  counter-increment: h4counter !important;
 }
 
 .sl-markdown-content h2::before {
@@ -223,6 +228,10 @@ h1#_top {
 
 .sl-markdown-content h3::before {
   content: counter(h2counter) "." counter(h3counter) " ";
+}
+
+.sl-markdown-content h4::before {
+  content: counter(h2counter) "." counter(h3counter) "." counter(h4counter) " ";
 }
 
 .sl-markdown-content .sl-anchor-link {
