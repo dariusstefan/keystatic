@@ -1,7 +1,8 @@
 ---
-import { PAGE_TITLE_ID } from '@astrojs/starlight/constants';
 import VersionSelector from '~/components/modules/VersionSelector.astro';
 import { LATEST_VERSION } from '~/config/module-versions';
+
+const PAGE_TITLE_ID = '_top';
 
 const { id } = Astro.locals.starlightRoute;
 const isModulePage = id.startsWith('modules/');
