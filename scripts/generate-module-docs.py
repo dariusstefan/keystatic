@@ -53,6 +53,35 @@ def _fetch_readme(branch: str, module: str) -> str | None:
         return None
 
 
+def _normalize_title(raw: str) -> str:
+    """Normalize a module doc title to consistent 'Name Module' format."""
+    t = raw.strip().replace('_', ' ')
+    if not re.search(r'\bmodule\b', t, re.IGNORECASE):
+        t = t + ' Module'
+    # Capitalize words that are entirely lowercase (preserves B2B, CGRateS, etc.)
+    words = t.split()
+    words = [w.capitalize() if w.islower() else w for w in words]
+    return ' '.join(words)
+
+
+def _normalize_title_in_md(md: str) -> str:
+    """Rewrite the title field in YAML frontmatter using _normalize_title."""
+    if not md.startswith("---"):
+        return md
+    try:
+        end = md.index("---", 3)
+    except ValueError:
+        return md
+    fm = md[:end + 3]
+    rest = md[end + 3:]
+    fm = re.sub(
+        r'^(title:\s*)(.+)$',
+        lambda m: m.group(1) + _normalize_title(m.group(2)),
+        fm, flags=re.MULTILINE,
+    )
+    return fm + rest
+
+
 def _add_sidebar_hidden(md: str) -> str:
     """Insert sidebar.hidden into existing YAML frontmatter."""
     if not md.startswith("---"):
@@ -75,7 +104,7 @@ def generate_latest_local(module_names: list[str], verbose: bool) -> tuple[int, 
         if not src.exists():
             failed += 1
             continue
-        (CONTENT_DIR / f"{name}.md").write_text(src.read_text("utf-8"), "utf-8")
+        (CONTENT_DIR / f"{name}.md").write_text(_normalize_title_in_md(src.read_text("utf-8")), "utf-8")
         if verbose:
             print(f"  {name}")
         ok += 1
@@ -113,7 +142,7 @@ def generate_latest_remote(verbose: bool) -> tuple[int, int]:
             if md is None:
                 failed += 1
                 continue
-            (CONTENT_DIR / f"{name}.md").write_text(md, "utf-8")
+            (CONTENT_DIR / f"{name}.md").write_text(_normalize_title_in_md(md), "utf-8")
             ok += 1
             if verbose:
                 print(f"  {name}")
@@ -128,7 +157,7 @@ def generate_version(module_names: list[str], branch: str, verbose: bool) -> tup
         md = _fetch_readme(branch, name)
         if md is None:
             return name, None
-        return name, _add_sidebar_hidden(md)
+        return name, _normalize_title_in_md(_add_sidebar_hidden(md))
 
     with ThreadPoolExecutor(max_workers=20) as pool:
         futures = {pool.submit(process, n): n for n in module_names}
