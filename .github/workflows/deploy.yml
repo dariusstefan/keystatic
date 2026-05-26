@@ -41,9 +41,14 @@ jobs:
           mkdir -p ~/.ssh
           echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p "$PORT" -H "$HOST" >> ~/.ssh/known_hosts
 
-          SSH_OPTS="-i ~/.ssh/deploy_key -p $PORT -o ConnectTimeout=10"
+          echo "Testing TCP connectivity to $HOST:$PORT..."
+          nc -zv -w 5 "$HOST" "$PORT" || echo "TCP connection failed — firewall may be blocking this runner's IP"
+
+          echo "Running ssh-keyscan..."
+          ssh-keyscan -T 5 -p "$PORT" -H "$HOST" >> ~/.ssh/known_hosts || echo "ssh-keyscan failed"
+
+          SSH_OPTS="-i ~/.ssh/deploy_key -p $PORT -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new"
 
           rsync -az --delete -e "ssh $SSH_OPTS" \
             dist/client/ "$USER@$HOST:/tmp/astro-deploy/client/"
