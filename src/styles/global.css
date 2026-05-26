@@ -181,6 +181,21 @@ h1#_top {
   font-weight: 600;
 }
 
+.sl-markdown-content h4 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.sl-markdown-content h5 {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.sl-markdown-content h6 {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 /* Numbered headings and matching TOC counters */
 
 .sl-markdown-content {
