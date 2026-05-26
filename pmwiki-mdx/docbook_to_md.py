@@ -199,8 +199,8 @@ def _inline_child(elem) -> str:
     elif tag == "ulink":
         url = elem.get("url", "")
         txt = inner.strip() or url
-        if url and "://" not in url and "/" not in url and not url.startswith("#"):
-            url = f"/modules/{url}"
+        # bare module name: leave as-is so it resolves as a sibling URL,
+        # e.g. "aaa_radius" from /modules/devel/aaa_diameter → /modules/devel/aaa_radius
         result = f"[{txt}]({url})"
     elif tag == "xref":
         linkend = elem.get("linkend", "")
