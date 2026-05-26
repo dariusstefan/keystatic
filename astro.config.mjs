@@ -49,7 +49,7 @@ export default defineConfig({
       sidebar: [
         {
           label: 'Modules',
-          autogenerate: { directory: 'modules' },
+          items: [{ autogenerate: { directory: 'modules' } }],
         },
       ],
     }),
