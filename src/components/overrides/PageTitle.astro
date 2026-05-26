@@ -1,46 +1,39 @@
 ---
 import { getCollection } from 'astro:content';
 import VersionSelector from '~/components/modules/VersionSelector.astro';
-import { VERSIONS, LATEST_VERSION, slugToBranch, branchToSlug } from '~/config/module-versions';
+import { VERSIONS } from '~/config/module-versions';
 
 const PAGE_TITLE_ID = '_top';
 
 const { id } = Astro.locals.starlightRoute;
-const isModulePage = id.startsWith('modules/');
+const parts = id.split('/');
+// Module pages have the form: modules/<version-slug>/<module-name>
+const isModulePage = parts[0] === 'modules' && parts.length === 3;
 
 let moduleName: string | undefined;
-let version: string | undefined;
+let currentSlug: string | undefined;
 let availableVersions = VERSIONS;
 
 if (isModulePage) {
-  const rest = id.slice('modules/'.length);
-  const slash = rest.indexOf('/');
-  if (slash === -1) {
-    moduleName = rest;
-    version = LATEST_VERSION.branch;
-  } else {
-    moduleName = rest.slice(0, slash);
-    version = slugToBranch(rest.slice(slash + 1));
-  }
+  currentSlug = parts[1];
+  moduleName = parts[2];
 
-  if (moduleName) {
-    const allDocs = await getCollection('docs');
-    const hasLatest = allDocs.some((e) => e.id === `modules/${moduleName}`);
-    const versionedSlugs = allDocs
-      .filter((e) => e.id.startsWith(`modules/${moduleName}/`))
-      .map((e) => e.id.slice(`modules/${moduleName}/`.length));
+  const allDocs = await getCollection('docs');
+  const availableSlugs = allDocs
+    .filter((e) => {
+      const p = e.id.split('/');
+      return p[0] === 'modules' && p.length === 3 && p[2] === moduleName;
+    })
+    .map((e) => e.id.split('/')[1]);
 
-    availableVersions = VERSIONS.filter((v) =>
-      v.isLatest ? hasLatest : versionedSlugs.includes(branchToSlug(v.branch))
-    );
-  }
+  availableVersions = VERSIONS.filter((v) => availableSlugs.includes(v.slug));
 }
 ---
 
 <h1 id={PAGE_TITLE_ID}>{Astro.locals.starlightRoute.entry.data.title}</h1>
 
-{isModulePage && moduleName && version && (
-  <VersionSelector module={moduleName} version={version} versions={availableVersions} />
+{isModulePage && moduleName && currentSlug && (
+  <VersionSelector module={moduleName} currentSlug={currentSlug} versions={availableVersions} />
 )}
 
 <style>

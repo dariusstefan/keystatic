@@ -3,30 +3,30 @@ import { type Version, VERSIONS, getModuleUrl } from '~/config/module-versions';
 
 interface Props {
   module: string;
-  version: string;
+  currentSlug: string;
   versions?: Version[];
 }
 
-const { module, version, versions = VERSIONS } = Astro.props;
-const current = versions.find((v) => v.branch === version);
+const { module, currentSlug, versions = VERSIONS } = Astro.props;
+const current = versions.find((v) => v.slug === currentSlug);
 ---
 
 <nav class="version-selector not-content" aria-label="Version">
   <span class="vs-label">Version</span>
   <details class="vs-dropdown">
     <summary class="vs-trigger">
-      {current?.label ?? version}
+      {current?.label ?? currentSlug}
       <svg class="vs-chevron" width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
         <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </summary>
     <ul class="vs-list" role="list">
       {versions.map((v) => {
-        const isCurrent = v.branch === version;
+        const isCurrent = v.slug === currentSlug;
         return (
           <li>
             <a
-              href={getModuleUrl(module, v.branch)}
+              href={getModuleUrl(module, v.slug)}
               class:list={['vs-item', { 'vs-item--active': isCurrent }]}
               aria-current={isCurrent ? 'page' : undefined}
             >

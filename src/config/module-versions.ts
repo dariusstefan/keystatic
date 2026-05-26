@@ -1,28 +1,25 @@
 export interface Version {
   branch: string;
+  slug: string;
   label: string;
   isLatest?: boolean;
 }
 
 export const VERSIONS: Version[] = [
-  { branch: 'master', label: 'master (dev)', isLatest: true },
-  { branch: '4.0', label: '4.0' },
-  { branch: '3.6', label: '3.6' },
-  { branch: '3.5', label: '3.5' },
+  { branch: 'master', slug: 'devel', label: 'master (dev)', isLatest: true },
+  { branch: '4.0',    slug: '4-0',   label: '4.0' },
+  { branch: '3.6',    slug: '3-6',   label: '3.6' },
+  { branch: '3.5',    slug: '3-5',   label: '3.5' },
+  { branch: '3.4',    slug: '3-4',   label: '3.4' },
+  { branch: '3.3',    slug: '3-3',   label: '3.3' },
 ];
 
 export const LATEST_VERSION = VERSIONS.find((v) => v.isLatest)!;
 
-export function branchToSlug(branch: string): string {
-  return branch.replace(/\./g, '-');
+export function getModuleUrl(module: string, slug: string): string {
+  return `/modules/${slug}/${module}`;
 }
 
-export function slugToBranch(slug: string): string {
-  // Find the version whose slug matches (e.g. "4-0" → "4.0")
-  return VERSIONS.find((v) => branchToSlug(v.branch) === slug)?.branch ?? slug;
-}
-
-export function getModuleUrl(module: string, branch: string): string {
-  const v = VERSIONS.find((v) => v.branch === branch);
-  return v?.isLatest ? `/modules/${module}` : `/modules/${module}/${branchToSlug(branch)}`;
+export function slugToVersion(slug: string): Version | undefined {
+  return VERSIONS.find((v) => v.slug === slug);
 }
