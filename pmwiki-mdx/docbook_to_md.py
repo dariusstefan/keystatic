@@ -318,7 +318,7 @@ class _Emitter:
     def _get_title(self, elem) -> str:
         for child in elem:
             if (child.tag or "").lower() == "title":
-                return _inline(child).strip()
+                return _inline(child).strip().replace('`', '')
         return ""
 
     # Tags that, when found inside a <para>, must be emitted as blocks rather
