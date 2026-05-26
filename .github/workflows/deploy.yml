@@ -1,0 +1,65 @@
+name: Build & Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch module docs (all versions)
+        run: npm run generate:modules:all
+
+      - name: Build
+        run: npm run build
+
+      - name: Deploy to server
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+
+          SSH_OPTS="-i ~/.ssh/deploy_key -o ConnectTimeout=10"
+
+          rsync -az --delete -e "ssh $SSH_OPTS" \
+            dist/client/ "$USER@$HOST:/tmp/astro-deploy/client/"
+          rsync -az --delete -e "ssh $SSH_OPTS" \
+            dist/server/ "$USER@$HOST:/tmp/astro-deploy/server/"
+
+          ssh $SSH_OPTS "$USER@$HOST" bash << 'ENDSSH'
+            set -e
+            dir="/var/www/html/opensips.org"
+            server_dir="/opt/opensips-astro"
+
+            release="$dir/releases/$(date +%Y%m%d%H%M%S)"
+            mkdir -p "$release"
+            rsync -a --delete /tmp/astro-deploy/client/ "$release/"
+
+            mkdir -p "$server_dir/server"
+            rsync -a --delete /tmp/astro-deploy/server/ "$server_dir/server/"
+            ln -sfn /var/www/html/opensips.org/src/node_modules "$server_dir/server/node_modules"
+
+            rm -rf "$dir/current"
+            ln -sfn "$release" "$dir/current"
+
+            systemctl restart opensips-astro
+            nginx -t
+            systemctl reload nginx
+          ENDSSH
