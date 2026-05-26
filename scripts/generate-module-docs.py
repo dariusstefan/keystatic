@@ -55,11 +55,11 @@ def _fetch_readme(branch: str, module: str) -> str | None:
 
 
 def _normalize_title(raw: str) -> str:
-    """Normalize a module doc title to consistent lowercase 'name module' format."""
+    """Normalize a module doc title: capitalize first letter, lowercase 'module'."""
     t = raw.strip().strip('"\'').lower()
     if not re.search(r'\bmodule\b', t):
         t = t + ' module'
-    return t
+    return t[0].upper() + t[1:] if t else t
 
 
 def _normalize_title_in_md(md: str) -> str:
