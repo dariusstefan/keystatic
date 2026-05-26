@@ -30,13 +30,17 @@ def run(cmd, cwd=None, check=True, capture=False):
     result = subprocess.run(
         cmd, cwd=cwd,
         stdout=subprocess.PIPE if capture else None,
-        stderr=subprocess.PIPE if capture else None,
+        stderr=subprocess.PIPE,  # always capture stderr for error reporting
         text=True,
     )
     if check and result.returncode != 0:
         stderr = result.stderr.strip() if result.stderr else ""
         print(f"  [ERROR] exit {result.returncode}: {stderr}")
         sys.exit(1)
+    elif result.stderr and result.stderr.strip():
+        # Print stderr even on success (git often uses stderr for progress)
+        for line in result.stderr.strip().splitlines():
+            print(f"  {line}")
     return result
 
 
@@ -109,12 +113,26 @@ def commit_and_push(branch: str, dry_run: bool):
     )
     if status.returncode == 0:
         print("  Nothing new to commit")
-        # Still push in case the remote is behind
     else:
         run(
             ["git", "commit", "-m", "docs: add generated README.md files"],
             cwd=OPENSIPS_DIR,
         )
+
+    # Fetch remote branch and rebase on top of it (handles fork being ahead of local)
+    fetch_result = subprocess.run(
+        ["git", "fetch", REMOTE, branch],
+        cwd=OPENSIPS_DIR, capture_output=True, text=True,
+    )
+    if fetch_result.returncode == 0:
+        # Check if remote branch exists and has commits we don't have
+        behind = subprocess.run(
+            ["git", "log", "--oneline", f"HEAD..{REMOTE}/{branch}"],
+            cwd=OPENSIPS_DIR, capture_output=True, text=True,
+        )
+        if behind.stdout.strip():
+            print(f"  Remote has {len(behind.stdout.strip().splitlines())} extra commits, rebasing...")
+            run(["git", "rebase", f"{REMOTE}/{branch}"], cwd=OPENSIPS_DIR)
 
     run(["git", "push", REMOTE, f"HEAD:{branch}"], cwd=OPENSIPS_DIR)
 
