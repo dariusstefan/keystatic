@@ -30,13 +30,14 @@ jobs:
           DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           HOST: ${{ secrets.DEPLOY_HOST }}
           USER: ${{ secrets.DEPLOY_USER }}
+          PORT: ${{ secrets.DEPLOY_PORT }}
         run: |
           mkdir -p ~/.ssh
           echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+          ssh-keyscan -p "$PORT" -H "$HOST" >> ~/.ssh/known_hosts
 
-          SSH_OPTS="-i ~/.ssh/deploy_key -o ConnectTimeout=10"
+          SSH_OPTS="-i ~/.ssh/deploy_key -p $PORT -o ConnectTimeout=10"
 
           rsync -az --delete -e "ssh $SSH_OPTS" \
             dist/client/ "$USER@$HOST:/tmp/astro-deploy/client/"
