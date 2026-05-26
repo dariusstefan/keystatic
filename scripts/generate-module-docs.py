@@ -59,7 +59,7 @@ def _normalize_title(raw: str) -> str:
     t = raw.strip().strip('"\'').lower()
     if not re.search(r'\bmodule\b', t):
         t = t + ' module'
-    return ' '.join(w if w == 'module' else w.capitalize() for w in t.split())
+    return ' '.join(w if w == 'module' else w.upper() for w in t.split())
 
 
 def _normalize_title_in_md(md: str) -> str:
