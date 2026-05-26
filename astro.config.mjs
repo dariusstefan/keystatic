@@ -35,6 +35,7 @@ export default defineConfig({
       logo: { src: './src/assets/images/opensips.png', replacesTitle: true },
       customCss: ['./src/styles/global.css'],
       favicon: '/favicon.png',
+      tableOfContents: { minHeadingLevel: 2, maxHeadingLevel: 4 },
       components: {
         Header: './src/components/overrides/Header.astro',
         Footer: './src/components/overrides/Footer.astro',
