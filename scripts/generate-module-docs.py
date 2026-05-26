@@ -188,6 +188,11 @@ def main() -> None:
     verbose = not args.quiet
     other_versions = [v for v in VERSIONS if not v.get("is_latest")]
 
+    import shutil
+    if CONTENT_DIR.exists():
+        shutil.rmtree(CONTENT_DIR)
+        print(f"Cleared {CONTENT_DIR}")
+
     if MODULES_DIR.exists():
         module_names = sorted(p.name for p in MODULES_DIR.iterdir() if p.is_dir())
         print(f"Generating docs for {len(module_names)} modules...")
