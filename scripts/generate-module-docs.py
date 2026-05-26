@@ -56,7 +56,8 @@ def _fetch_readme(branch: str, module: str) -> str | None:
 
 def _normalize_title(raw: str) -> str:
     """Normalize a module doc title to consistent lowercase 'name module' format."""
-    t = raw.strip().lower().replace('_', ' ')
+    t = raw.strip().lower()
+    t = re.sub(r':\s+', ' - ', t)  # colons break YAML; replace with dash
     if not re.search(r'\bmodule\b', t):
         t = t + ' module'
     return t
@@ -74,7 +75,7 @@ def _normalize_title_in_md(md: str) -> str:
     rest = md[end + 3:]
     fm = re.sub(
         r'^(title:\s*)(.+)$',
-        lambda m: m.group(1) + '"' + _normalize_title(m.group(2)).replace('"', '\\"') + '"',
+        lambda m: m.group(1) + _normalize_title(m.group(2)),
         fm, flags=re.MULTILINE,
     )
     return fm + rest
