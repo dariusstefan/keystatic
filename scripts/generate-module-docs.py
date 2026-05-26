@@ -139,7 +139,7 @@ def generate_version(module_names: list[str], branch: str, verbose: bool) -> tup
                 continue
             out_dir = CONTENT_DIR / name
             out_dir.mkdir(parents=True, exist_ok=True)
-            (out_dir / f"{branch}.md").write_text(md, "utf-8")
+            (out_dir / f"{branch.replace('.', '-')}.md").write_text(md, "utf-8")
             ok += 1
             if verbose:
                 print(f"  {name}@{branch}")

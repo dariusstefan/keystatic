@@ -1,6 +1,6 @@
 ---
 import VersionSelector from '~/components/modules/VersionSelector.astro';
-import { LATEST_VERSION } from '~/config/module-versions';
+import { LATEST_VERSION, slugToBranch } from '~/config/module-versions';
 
 const PAGE_TITLE_ID = '_top';
 
@@ -19,7 +19,7 @@ if (isModulePage) {
     version = LATEST_VERSION.branch;
   } else {
     moduleName = rest.slice(0, slash);
-    version = rest.slice(slash + 1);
+    version = slugToBranch(rest.slice(slash + 1));
   }
 }
 ---
