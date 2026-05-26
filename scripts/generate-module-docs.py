@@ -11,6 +11,7 @@ Usage:
 """
 
 import argparse
+import re
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
