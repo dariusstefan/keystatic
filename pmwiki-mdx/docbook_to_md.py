@@ -269,6 +269,10 @@ class _Emitter:
 
         if tag in ("toc", "index", "bookinfo", "title"):
             return
+        elif tag == "anchor":
+            anchor_id = elem.get("id", "")
+            if anchor_id:
+                self._add(f'<span id="{anchor_id}" class="legacy-anchor"></span>')
         elif tag == "book":
             for child in elem:
                 self._block(child, depth)
@@ -307,10 +311,12 @@ class _Emitter:
     # -- block handlers ------------------------------------------------------
 
     def _section(self, elem, depth: int) -> None:
+        section_id = elem.get("id", "")
         title_txt = self._get_title(elem)
         if title_txt:
             level = min(depth + 1, 6)
-            self._add(f'\n{"#" * level} {title_txt}\n')
+            id_suffix = f" {{#{section_id}}}" if section_id else ""
+            self._add(f'\n{"#" * level} {title_txt}{id_suffix}\n')
         for child in elem:
             if (child.tag or "").lower() != "title":
                 self._block(child, depth + 1)
