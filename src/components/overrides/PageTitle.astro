@@ -62,7 +62,7 @@ if (isModulePage) {
 
       // Build new <li> elements by cloning the template structure
       const newItems = sidebarModules.map(({ module, title }) => {
-        const href = `/modules/${currentSlug}/${module}`;
+        const href = `${window.location.origin}/modules/${currentSlug}/${module}`;
         const li = templateLi.cloneNode(true);
         const a = li.querySelector('a');
         if (!a) return li;
