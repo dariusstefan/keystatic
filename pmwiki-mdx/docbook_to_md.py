@@ -218,7 +218,7 @@ def _inline_child(elem) -> str:
     elif tag in ("para", "simpara"):
         result = inner.strip()
     elif tag in ("programlisting", "screen"):
-        result = f"\n```\n{(elem.text or '').rstrip()}\n```\n"
+        result = f"\n```c\n{(elem.text or '').rstrip()}\n```\n"
     else:
         result = inner
 
@@ -379,15 +379,17 @@ class _Emitter:
 
         flush_pending()
 
-    def _code(self, elem) -> None:
+    def _code(self, elem, title: str = "") -> None:
         code = (elem.text or "").strip("\n")
-        lang = ""
         if any(kw in code for kw in (
             "loadmodule", "modparam", "route {", "route{",
             "is_method(", "xlog(", "t_relay(", "sl_send_reply(",
         )):
             lang = "opensips"
-        self._add(f"\n```{lang}\n{code}\n```\n")
+        else:
+            lang = "c"
+        title_attr = f' title="{title}"' if title else ""
+        self._add(f"\n```{lang}{title_attr}\n{code}\n```\n")
 
     def _ulist(self, elem, depth: int) -> None:
         items = [
@@ -481,10 +483,13 @@ class _Emitter:
 
     def _example(self, elem, depth: int) -> None:
         title_txt = self._get_title(elem)
-        if title_txt:
-            self._add(f"\n**Example: {title_txt}**\n")
         for child in elem:
-            if (child.tag or "").lower() != "title":
+            ctag = (child.tag or "").lower()
+            if ctag == "title":
+                continue
+            if ctag in ("programlisting", "screen", "literallayout"):
+                self._code(child, title=title_txt or "")
+            else:
                 self._block(child, depth)
 
     def _qandaset(self, elem, depth: int) -> None:
