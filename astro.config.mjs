@@ -15,7 +15,8 @@ import remarkHeadingId from 'remark-heading-id';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  site: 'https://www.opensips.org',
+  site: 'https://web.opensips.org',
+  prefetch: false,
   adapter: node({ mode: 'standalone' }),
   markdown: {
     remarkPlugins: [remarkTextMarkers, remarkHeadingId],
