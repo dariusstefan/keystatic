@@ -395,7 +395,7 @@ main:has(.site-footer) {
 }
 
 /* Expressive-code: bold title */
-.expressive-code .frame figcaption.header .tab {
-  font-weight: 700;
+.expressive-code .frame .title {
+  font-weight: 700 !important;
 }
 
