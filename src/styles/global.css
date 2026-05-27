@@ -394,7 +394,10 @@ main:has(.site-footer) {
   padding-bottom: 0;
 }
 
-/* Expressive-code: bold title text */
+/* Expressive-code: bold title text, hide frame top border (green indicator is enough) */
 .expressive-code .frame .title {
   font-weight: 700;
+}
+.expressive-code .frame {
+  border-top: none;
 }
