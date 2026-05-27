@@ -394,3 +394,10 @@ main:has(.site-footer) {
   padding-bottom: 0;
 }
 
+/* Expressive-code: full-width bold title bar, no tab box */
+.expressive-code .frame figcaption.header .tab {
+  flex: 1;
+  border-radius: 0 !important;
+  font-weight: 700;
+}
+
