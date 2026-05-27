@@ -381,13 +381,7 @@ class _Emitter:
 
     def _code(self, elem, title: str = "") -> None:
         code = (elem.text or "").strip("\n")
-        if any(kw in code for kw in (
-            "loadmodule", "modparam", "route {", "route{",
-            "is_method(", "xlog(", "t_relay(", "sl_send_reply(",
-        )):
-            lang = "opensips"
-        else:
-            lang = "c"
+        lang = "c"
         title_attr = f' title="{title}"' if title else ""
         self._add(f"\n```{lang}{title_attr}\n{code}\n```\n")
 
