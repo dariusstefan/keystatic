@@ -37,6 +37,8 @@ export default defineConfig({
       expressiveCode: {
         styleOverrides: {
           frames: {
+            editorTabBarBorderColor: 'transparent',
+            editorActiveTabBorderColor: 'transparent',
             editorActiveTabIndicatorBottomColor: ({ theme }) => theme.colors['tab.activeBorderTop'] ?? theme.colors['tab.activeBorder'],
           },
         },
