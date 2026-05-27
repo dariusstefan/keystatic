@@ -34,17 +34,6 @@ export default defineConfig({
     keystatic(),
     starlight({
       pagefind: false,
-      expressiveCode: {
-        styleOverrides: {
-          frames: {
-            editorActiveTabIndicatorTopColor: 'transparent',
-            editorActiveTabIndicatorBottomColor: 'transparent',
-            editorActiveTabBorderColor: 'transparent',
-            editorTabBarBorderColor: 'transparent',
-            editorActiveTabBackground: 'transparent',
-          },
-        },
-      },
       title: 'OpenSIPS',
       logo: { src: './src/assets/images/opensips.png', replacesTitle: true },
       customCss: ['./src/styles/global.css'],
