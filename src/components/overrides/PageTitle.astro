@@ -13,14 +13,12 @@ const isModulePage = parts[0] === 'modules' && parts.length === 3;
 let moduleName: string | undefined;
 let currentSlug: string | undefined;
 let availableVersions = VERSIONS;
-let sidebarModules: { module: string; title: string }[] = [];
 
 if (isModulePage) {
   currentSlug = parts[1];
   moduleName = parts[2];
 
   const allDocs = await getCollection('docs');
-
   const availableSlugs = allDocs
     .filter((e) => {
       const p = e.id.split('/');
@@ -29,17 +27,6 @@ if (isModulePage) {
     .map((e) => e.id.split('/')[1]);
 
   availableVersions = VERSIONS.filter((v) => availableSlugs.includes(v.slug));
-
-  // Build the full module list for the current version (for sidebar rebuilding)
-  if (currentSlug !== 'devel') {
-    sidebarModules = allDocs
-      .filter((e) => {
-        const p = e.id.split('/');
-        return p[0] === 'modules' && p.length === 3 && p[1] === currentSlug && !!e.data.title;
-      })
-      .map((e) => ({ module: e.id.split('/')[2], title: e.data.title }))
-      .sort((a, b) => a.module.localeCompare(b.module));
-  }
 }
 ---
 
@@ -49,18 +36,20 @@ if (isModulePage) {
   <VersionSelector module={moduleName} currentSlug={currentSlug} versions={availableVersions} />
 )}
 
-{isModulePage && currentSlug && currentSlug !== 'devel' && sidebarModules.length > 0 && (
-  <script define:vars={{ currentSlug, sidebarModules }}>
-    function rebuildSidebar() {
-      // Find any sidebar link pointing to /modules/ to locate the container
+{isModulePage && currentSlug && currentSlug !== 'devel' && (
+  <link rel="preload" as="fetch" href={`/sidebar/${currentSlug}.json`} crossorigin="anonymous" />
+  <script define:vars={{ currentSlug }}>
+    async function rebuildSidebar() {
+      const res = await fetch(`/sidebar/${currentSlug}.json`);
+      if (!res.ok) return;
+      const sidebarModules = await res.json();
+
       const templateLink = document.querySelector('nav a[href*="/modules/devel/"]');
       if (!templateLink) return;
-
       const templateLi = templateLink.closest('li');
       const container = templateLi?.parentElement;
       if (!container || !templateLi) return;
 
-      // Build new <li> elements by cloning the template structure
       const newItems = sidebarModules.map(({ module, title }) => {
         const href = `${window.location.origin}/modules/${currentSlug}/${module}`;
         const li = templateLi.cloneNode(true);
@@ -69,8 +58,8 @@ if (isModulePage) {
         a.setAttribute('href', href);
         a.textContent = title;
         const isCurrent =
-          window.location.pathname === href ||
-          window.location.pathname === `${href}/`;
+          window.location.pathname === `/modules/${currentSlug}/${module}` ||
+          window.location.pathname === `/modules/${currentSlug}/${module}/`;
         if (isCurrent) {
           a.setAttribute('aria-current', 'page');
         } else {
