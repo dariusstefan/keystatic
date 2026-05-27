@@ -382,7 +382,11 @@ class _Emitter:
     def _code(self, elem, title: str = "") -> None:
         code = (elem.text or "").strip("\n")
         lang = "c"
-        title_attr = f' title="{title.replace(chr(34), chr(39))}"' if title else ""
+        if title:
+            safe = " ".join(title.split()).replace('"', "'")
+            title_attr = f' title="{safe}"'
+        else:
+            title_attr = ""
         self._add(f"\n```{lang}{title_attr}\n{code}\n```\n")
 
     def _ulist(self, elem, depth: int) -> None:
