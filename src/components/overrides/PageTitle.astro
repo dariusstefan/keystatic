@@ -22,7 +22,7 @@ if (isModulePage) {
   const availableSlugs = allDocs
     .filter((e) => {
       const p = e.id.split('/');
-      return p[0] === 'modules' && p.length === 3 && p[2] === moduleName && !!e.data.title;
+      return p[0] === 'modules' && p.length === 3 && p[2] === moduleName && !e.data.sidebar?.hidden;
     })
     .map((e) => e.id.split('/')[1]);
 

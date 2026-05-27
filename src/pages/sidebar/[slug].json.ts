@@ -14,7 +14,7 @@ export const GET: APIRoute = async ({ params }) => {
   const modules = allDocs
     .filter((e) => {
       const p = e.id.split('/');
-      return p[0] === 'modules' && p.length === 3 && p[1] === slug && !!e.data.title;
+      return p[0] === 'modules' && p.length === 3 && p[1] === slug && !e.data.sidebar?.hidden;
     })
     .map((e) => ({ module: e.id.split('/')[2], title: e.data.title }))
     .sort((a, b) => a.module.localeCompare(b.module));
