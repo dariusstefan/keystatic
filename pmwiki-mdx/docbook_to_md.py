@@ -410,6 +410,8 @@ class _Emitter:
 
     def _listitem_text(self, elem, depth: int) -> str:
         parts: list[str] = []
+        if elem.text and elem.text.strip():
+            parts.append(elem.text.strip())
         for child in elem:
             ctag = (child.tag or "").lower()
             if ctag in ("para", "simpara"):
