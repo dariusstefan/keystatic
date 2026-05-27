@@ -2,10 +2,14 @@
 """Generate Starlight Markdown pages for all OpenSIPS modules.
 
 Content layout:
-  src/content/docs/modules/devel/<module>.md   ← master branch (sidebar visible)
-  src/content/docs/modules/4-0/<module>.md     ← 4.0 branch  (sidebar hidden)
-  src/content/docs/modules/3-6/<module>.md     ← 3.6 branch  (sidebar hidden)
+  src/content/docs/modules/devel/<module>.md   ← master branch
+  src/content/docs/modules/4-0/<module>.md     ← 4.0 branch
+  src/content/docs/modules/3-6/<module>.md     ← 3.6 branch
   ... etc.
+
+Redirect stubs (sidebar: hidden: true, empty title) are written for
+version/module combinations that have no real content, pointing to the
+nearest version that does.
 
 Module names are discovered per-branch from the GitHub API, so modules
 that were renamed or removed between versions are handled correctly.
