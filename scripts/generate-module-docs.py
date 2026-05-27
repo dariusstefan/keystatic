@@ -173,7 +173,7 @@ def generate_version(slug: str, branch: str, verbose: bool) -> tuple[int, int]:
         md = _fetch_readme(branch, name)
         if md is None:
             return name, None
-        return name, _normalize_title_in_md(_add_sidebar_hidden(md))
+        return name, _normalize_title_in_md(md)
 
     with ThreadPoolExecutor(max_workers=20) as pool:
         futures = {pool.submit(process, n): n for n in module_names}
