@@ -66,7 +66,7 @@ if (isModulePage) {
         const li = templateLi.cloneNode(true);
         const a = li.querySelector('a');
         if (!a) return li;
-        a.href = href;
+        a.setAttribute('href', href);
         a.textContent = title;
         const isCurrent =
           window.location.pathname === href ||
