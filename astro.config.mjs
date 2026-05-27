@@ -33,6 +33,7 @@ export default defineConfig({
     react(),
     keystatic(),
     starlight({
+      pagefind: false,
       title: 'OpenSIPS',
       logo: { src: './src/assets/images/opensips.png', replacesTitle: true },
       customCss: ['./src/styles/global.css'],
