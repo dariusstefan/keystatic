@@ -393,3 +393,8 @@ main:has(.home-splash) .sl-markdown-content h3::before {
 main:has(.site-footer) {
   padding-bottom: 0;
 }
+
+/* Expressive-code: bold title text */
+.expressive-code .frame .title {
+  font-weight: 700;
+}
