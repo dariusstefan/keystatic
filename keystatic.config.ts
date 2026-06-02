@@ -23,7 +23,7 @@ export default config({
     tutorials: collection({
       label: 'Tutorials',
       slugField: 'title',
-      path: 'src/content/docs/documentation/tutorials-*',
+      path: 'src/content/docs/documentation/*',
       format: { contentField: 'content' },
       schema: {
         title: fields.slug({ name: { label: 'Title' } }),
