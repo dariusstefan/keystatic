@@ -84,6 +84,10 @@ if (isModulePage) {
       });
 
       container.replaceChildren(...newItems);
+
+      // Open the parent <details> so the Modules group is expanded
+      const details = container.closest('details');
+      if (details) details.open = true;
     }
 
     rebuildSidebar();

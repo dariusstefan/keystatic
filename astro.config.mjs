@@ -77,7 +77,7 @@ export default defineConfig({
         {
           label: 'Modules',
           collapsed: true,
-          items: [{ autogenerate: { directory: 'modules/devel', collapsed: true } }],
+          items: [{ autogenerate: { directory: 'modules/devel' } }],
         },
       ],
     }),
