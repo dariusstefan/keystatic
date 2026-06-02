@@ -196,10 +196,30 @@ h1#_top {
   font-weight: 600;
 }
 
-/* Numbered headings — numbers set via JS into data-num, displayed via ::before */
-.sl-markdown-content h2[data-num]::before { content: attr(data-num) ". "; }
-.sl-markdown-content h3[data-num]::before { content: attr(data-num) " "; }
-.sl-markdown-content h4[data-num]::before { content: attr(data-num) " "; }
+/* Numbered headings — all counter operations on wrapper divs (same DOM level) */
+.sl-markdown-content {
+  counter-reset: h2counter;
+}
+.sl-markdown-content .sl-heading-wrapper.level-h2 {
+  counter-increment: h2counter;
+  counter-reset: h3counter;
+}
+.sl-markdown-content .sl-heading-wrapper.level-h3 {
+  counter-increment: h3counter;
+  counter-reset: h4counter;
+}
+.sl-markdown-content .sl-heading-wrapper.level-h4 {
+  counter-increment: h4counter;
+}
+.sl-markdown-content h2::before {
+  content: counter(h2counter) ". ";
+}
+.sl-markdown-content h3::before {
+  content: counter(h2counter) "." counter(h3counter) " ";
+}
+.sl-markdown-content h4::before {
+  content: counter(h2counter) "." counter(h3counter) "." counter(h4counter) " ";
+}
 
 .sl-markdown-content .sl-anchor-link {
   display: none;

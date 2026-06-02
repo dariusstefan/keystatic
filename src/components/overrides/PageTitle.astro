@@ -91,27 +91,6 @@ if (isModulePage) {
   </script>
 )}
 
-<script>
-  function numberHeadings() {
-    const content = document.querySelector('.sl-markdown-content');
-    if (!content) return;
-    let h2 = 0, h3 = 0, h4 = 0;
-    content.querySelectorAll('h2, h3, h4').forEach((el) => {
-      if (el.tagName === 'H2') {
-        h2++; h3 = 0; h4 = 0;
-        el.setAttribute('data-num', `${h2}.`);
-      } else if (el.tagName === 'H3') {
-        h3++; h4 = 0;
-        el.setAttribute('data-num', `${h2}.${h3}`);
-      } else {
-        h4++;
-        el.setAttribute('data-num', `${h2}.${h3}.${h4}`);
-      }
-    });
-  }
-  document.addEventListener('DOMContentLoaded', numberHeadings);
-  document.addEventListener('astro:after-swap', numberHeadings);
-</script>
 
 <style>
   @layer starlight.core {
