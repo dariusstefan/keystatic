@@ -202,14 +202,22 @@ h1#_top {
   counter-reset: h2counter h3counter h4counter;
 }
 
+/* counter-reset must be on the wrapper divs (siblings of each other),
+   not on the heading elements inside them (which are not siblings) */
+.sl-markdown-content .sl-heading-wrapper.level-h2 {
+  counter-reset: h3counter h4counter;
+}
+
+.sl-markdown-content .sl-heading-wrapper.level-h3 {
+  counter-reset: h4counter;
+}
+
 .sl-markdown-content h2 {
   counter-increment: h2counter;
-  counter-reset: h3counter h4counter;
 }
 
 .sl-markdown-content h3 {
   counter-increment: h3counter;
-  counter-reset: h4counter;
 }
 
 .sl-markdown-content h4 {
