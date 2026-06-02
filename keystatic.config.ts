@@ -31,7 +31,7 @@ export default config({
         subtitleHref: fields.url({ label: 'Subtitle URL', validation: { isRequired: false } }),
         author: fields.text({ label: 'Author', validation: { isRequired: false } }),
         description: fields.text({ label: 'Description', multiline: true, validation: { isRequired: false } }),
-        content: fields.mdx({ label: 'Content' }),
+        content: fields.text({ label: 'Content', multiline: true }),
       },
     }),
   },
