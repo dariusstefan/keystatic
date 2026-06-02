@@ -619,7 +619,7 @@ def convert_module(module_dir: Path, global_entities: dict) -> str | None:
     fm += "---\n"
 
     license_section = (
-        "\n## License\n\n"
+        "\n### License\n\n"
         "All documentation files (i.e. .md extension) are licensed under the "
         "Creative Common License 4.0\n"
     )
