@@ -32,6 +32,21 @@ if (isModulePage) {
 
 <h1 id={PAGE_TITLE_ID}>{Astro.locals.starlightRoute.entry.data.title}</h1>
 
+{Astro.locals.starlightRoute.entry.data.subtitle && Astro.locals.starlightRoute.entry.data.subtitleHref && (
+  <p class="page-subtitle">
+    <span class="page-subtitle-label">View module:</span>{' '}
+    <a href={Astro.locals.starlightRoute.entry.data.subtitleHref}>{Astro.locals.starlightRoute.entry.data.subtitle}</a>
+  </p>
+)}
+
+{Astro.locals.starlightRoute.entry.data.subtitle && !Astro.locals.starlightRoute.entry.data.subtitleHref && (
+  <p class="page-subtitle">{Astro.locals.starlightRoute.entry.data.subtitle}</p>
+)}
+
+{Astro.locals.starlightRoute.entry.data.author && (
+  <p class="page-author">{Astro.locals.starlightRoute.entry.data.author}</p>
+)}
+
 {isModulePage && moduleName && currentSlug && (
   <VersionSelector module={moduleName} currentSlug={currentSlug} versions={availableVersions} />
 )}
@@ -76,6 +91,28 @@ if (isModulePage) {
   </script>
 )}
 
+<script is:inline>
+  function numberHeadings() {
+    const content = document.querySelector('.sl-markdown-content');
+    if (!content) return;
+    let h2 = 0, h3 = 0, h4 = 0;
+    content.querySelectorAll('h2, h3, h4').forEach((el) => {
+      if (el.tagName === 'H2') {
+        h2++; h3 = 0; h4 = 0;
+        el.setAttribute('data-num', `${h2}.`);
+      } else if (el.tagName === 'H3') {
+        h3++; h4 = 0;
+        el.setAttribute('data-num', `${h2}.${h3}`);
+      } else {
+        h4++;
+        el.setAttribute('data-num', `${h2}.${h3}.${h4}`);
+      }
+    });
+  }
+  numberHeadings();
+  document.addEventListener('astro:after-swap', numberHeadings);
+</script>
+
 <style>
   @layer starlight.core {
     h1 {
@@ -85,5 +122,29 @@ if (isModulePage) {
       font-weight: 600;
       color: var(--sl-color-white);
     }
+  }
+
+  .page-subtitle {
+    margin-top: 0.4rem;
+    margin-bottom: 0;
+    padding-inline: 2rem;
+    font-size: var(--sl-text-lg);
+    font-weight: 400;
+    color: var(--sl-color-gray-2);
+    line-height: 1.4;
+  }
+
+  .page-subtitle-label {
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-base);
+  }
+
+  .page-author {
+    margin-top: 0.6rem;
+    margin-bottom: 0;
+    padding-inline: 2rem;
+    font-size: var(--sl-text-sm);
+    font-weight: 600;
+    color: var(--sl-color-gray-3);
   }
 </style>

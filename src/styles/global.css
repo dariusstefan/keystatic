@@ -196,45 +196,10 @@ h1#_top {
   font-weight: 600;
 }
 
-/* Numbered headings */
-
-.sl-markdown-content {
-  counter-reset: h2counter h3counter h4counter;
-}
-
-/* counter-reset must be on the wrapper divs (siblings of each other),
-   not on the heading elements inside them (which are not siblings) */
-.sl-markdown-content .sl-heading-wrapper.level-h2 {
-  counter-reset: h3counter h4counter;
-}
-
-.sl-markdown-content .sl-heading-wrapper.level-h3 {
-  counter-reset: h4counter;
-}
-
-.sl-markdown-content h2 {
-  counter-increment: h2counter;
-}
-
-.sl-markdown-content h3 {
-  counter-increment: h3counter;
-}
-
-.sl-markdown-content h4 {
-  counter-increment: h4counter;
-}
-
-.sl-markdown-content h2::before {
-  content: counter(h2counter) ". ";
-}
-
-.sl-markdown-content h3::before {
-  content: counter(h2counter) "." counter(h3counter) " ";
-}
-
-.sl-markdown-content h4::before {
-  content: counter(h2counter) "." counter(h3counter) "." counter(h4counter) " ";
-}
+/* Numbered headings — numbers set via JS into data-num, displayed via ::before */
+.sl-markdown-content h2[data-num]::before { content: attr(data-num) ". "; }
+.sl-markdown-content h3[data-num]::before { content: attr(data-num) " "; }
+.sl-markdown-content h4[data-num]::before { content: attr(data-num) " "; }
 
 .sl-markdown-content .sl-anchor-link {
   display: none;
