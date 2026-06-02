@@ -344,6 +344,8 @@ class _Emitter:
         if not has_block:
             text = _inline(elem).strip()
             if text:
+                if "Documentation Copyrights" in text or text.startswith("©") or text.startswith("Copyright"):
+                    return
                 self._add(f"\n{text}\n")
             return
 
