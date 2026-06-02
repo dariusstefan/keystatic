@@ -52,8 +52,32 @@ export default defineConfig({
       ],
       sidebar: [
         {
+          label: 'Documentation',
+          collapsed: true,
+          items: [
+            { label: 'OpenSIPS Tools', slug: 'documentation/tools' },
+            { label: 'Advanced Tutorials', slug: 'documentation/tutorials' },
+            { label: 'Tips and FAQ', slug: 'documentation/tipsfaq' },
+            {
+              label: 'Troubleshooting',
+              collapsed: true,
+              items: [
+                { label: 'Overview', slug: 'documentation/troubleshooting' },
+                { label: 'OpenSIPS Does Not Start', slug: 'documentation/troubleshooting-doesnotstart' },
+                { label: 'OpenSIPS Crashes', slug: 'documentation/troubleshooting-crash' },
+                { label: 'Out Of Memory', slug: 'documentation/troubleshooting-outofmem' },
+                { label: 'Increasing Memory', slug: 'documentation/troubleshooting-increasemem' },
+              ],
+            },
+            {
+              label: 'Version Migration', slug: 'documentation/migration'
+            },
+          ],
+        },
+        {
           label: 'Modules',
-          items: [{ autogenerate: { directory: 'modules/devel' } }],
+          collapsed: true,
+          items: [{ autogenerate: { directory: 'modules/devel', collapsed: true } }],
         },
       ],
     }),
