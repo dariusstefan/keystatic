@@ -91,7 +91,7 @@ if (isModulePage) {
   </script>
 )}
 
-<script is:inline>
+<script>
   function numberHeadings() {
     const content = document.querySelector('.sl-markdown-content');
     if (!content) return;
@@ -109,7 +109,7 @@ if (isModulePage) {
       }
     });
   }
-  numberHeadings();
+  document.addEventListener('DOMContentLoaded', numberHeadings);
   document.addEventListener('astro:after-swap', numberHeadings);
 </script>
 
