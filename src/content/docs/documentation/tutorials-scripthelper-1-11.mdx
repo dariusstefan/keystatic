@@ -9,7 +9,7 @@ description: "The purpose of this new module is to help you @@blue|start in an e
 
 The purpose of this new module is to help you @@blue|start in an easy way with the OpenSIPS script@@. @@blue|The learning curve gets milder@@ as the beginners can start with a simplified format of the script - the idea is to @@blue|shift the main focus on routing the SIP initial requests@@ (which define the service logic), while transparently handling a lot of "standard" SIP scripting logic, in order to both save script coding time and mitigate potential SIP scripting errors. This tutorial offers both a brief overview on the features of the new module and an example script.
 
-### Current features
+## Current features
 
 As stated in the [documentation](http://www.opensips.org/html/docs/modules/1.12.x/script_helper.html), the module currently features:
 * **transparent handling of SIP sequential requests**
@@ -25,7 +25,7 @@ As stated in the [documentation](http://www.opensips.org/html/docs/modules/1.12.
 
 Future directions for the module include adding authentication and NAT support.
 
-### Example script
+## Example script
 
 SIP logic provided:
 * initial and sequential SIP request routing (using the script helper)
@@ -35,13 +35,9 @@ SIP logic provided:
   
 
  Table: @@green|**Scripting examples**@@
-<table>
-<thead><tr>
-<th>With Script Helper</th>
-<th>Classic Script</th>
-</tr></thead>
-<tbody><tr>
-<td><pre><code>{`####### Global Parameters #########
+### With Script Helper
+```c
+####### Global Parameters #########
 
 debug = 3
 
@@ -70,10 +66,10 @@ mpath = "/usr/local/lib/opensips/modules/"
 
 loadmodule "signaling.so"                                                                 
 
-## Stateless module
+#### Stateless module
 loadmodule "sl.so"
 
-## Transaction Module
+#### Transaction Module
 loadmodule "tm.so"
 modparam("tm", "fr_timeout", 10)
 modparam("tm", "fr_inv_timeout", 40)
@@ -84,7 +80,7 @@ modparam("rr", "append_fromtag", 0)
 loadmodule "maxfwd.so"
 loadmodule "sipmsgops.so"
 
-## FIFO Management Interface
+#### FIFO Management Interface
 loadmodule "mi_fifo.so"
 modparam("mi_fifo", "fifo_name", "/tmp/opensips_fifo")
 
@@ -115,8 +111,8 @@ modparam("script_helper", "create_dialog_flags", "PpB")
 
 route [my_seq_route]
 {
-    xlog("---- Sequential request handler ---- \\n");
-    xlog("$rm | Call-ID: $ci | FT: $ft | TT: $tt\\n");
+    xlog("---- Sequential request handler ---- \n");
+    xlog("$rm | Call-ID: $ci | FT: $ft | TT: $tt\n");
 }
 
 # main request routing logic
@@ -133,7 +129,7 @@ route
 
     if (!uri == myself)
     {
-        append_hf("P-hint: outbound\\r\\n");
+        append_hf("P-hint: outbound\r\n");
         route(relay);
     }
 
@@ -191,8 +187,12 @@ failure_route [failed_call]
         t_on_failure("failed_call");
         t_relay();
     }
-}`}</code></pre></td>
-<td><pre><code>{`####### Global Parameters #########
+}
+```
+
+### Classic Script
+```c
+####### Global Parameters #########
 
 debug = 3
 
@@ -221,10 +221,10 @@ mpath = "/usr/local/lib/opensips/modules/"
 
 loadmodule "signaling.so"                                                                 
 
-## Stateless module
+#### Stateless module
 loadmodule "sl.so"
 
-## Transaction Module
+#### Transaction Module
 loadmodule "tm.so"
 modparam("tm", "fr_timeout", 10)
 modparam("tm", "fr_inv_timeout", 40)
@@ -235,7 +235,7 @@ modparam("rr", "append_fromtag", 0)
 loadmodule "maxfwd.so"
 loadmodule "sipmsgops.so"
 
-## FIFO Management Interface
+#### FIFO Management Interface
 loadmodule "mi_fifo.so"
 modparam("mi_fifo", "fifo_name", "/tmp/opensips_fifo")
 
@@ -281,8 +281,8 @@ route
                 record_route();
             }
 
-            xlog("---- Sequential request handler ---- \\n");
-            xlog("$rm | Call-ID: $ci | FT: $ft | TT: $tt\\n");
+            xlog("---- Sequential request handler ---- \n");
+            xlog("$rm | Call-ID: $ci | FT: $ft | TT: $tt\n");
 
             # route it out to whatever destination was set by loose_route()
             # in $du (destination URI).
@@ -328,7 +328,7 @@ route
 
     if (!uri == myself)
     {
-        append_hf("P-hint: outbound\\r\\n");
+        append_hf("P-hint: outbound\r\n");
         route(relay);
     }
 
@@ -389,6 +389,5 @@ failure_route [failed_call]
         t_on_failure("failed_call");
         t_relay();
     }
-}`}</code></pre></td>
-</tr></tbody>
-</table>
+}
+```

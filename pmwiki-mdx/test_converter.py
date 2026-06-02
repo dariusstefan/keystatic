@@ -418,9 +418,9 @@ class TestTables:
         assert "| Module | Name |" in result
         assert "! Module" not in result
 
-    def test_table_with_code_cell_becomes_html_table(self):
+    def test_table_with_code_cell_becomes_gfm_table_with_inline_code(self):
         # A table whose last column holds a multi-line [@...@] code example →
-        # rendered as an HTML table with <pre><code> in the last cell.
+        # rendered as a GFM table with the code collapsed to a single inline code span.
         src = (
             "||Value source||Value type||Example||\n"
             "||Inline URI ||\"uri\" ||[@\n"
@@ -428,29 +428,27 @@ class TestTables:
             "@]||"
         )
         result = pmwiki_to_mdx(src)
-        assert "<table>" in result
-        assert "<th>Value source</th>" in result
-        assert "<td>Inline URI</td>" in result
-        assert "<td>\"uri\"</td>" in result
-        assert "<destination>sip:x</destination>" in result
+        assert "| Value source |" in result
+        assert "| Inline URI |" in result
+        assert "`<destination>sip:x</destination>`" in result
         assert "[@" not in result and "@]" not in result
-        assert "| Value source |" not in result  # not a broken GFM table
+        assert "<table>" not in result
 
-    def test_code_comparison_table_becomes_html_table(self):
+    def test_code_comparison_table_becomes_sections(self):
         # A 2-column table whose cells hold multi-line [@...@] code becomes
-        # an HTML table (GFM can't put multi-line code in a cell).
+        # sequential labeled sections with fenced code blocks.
         text = (
             "||border=1\n"
             "|| '''With Helper''' || '''Classic''' ||\n"
             "||%block black% [@\nloadmodule \"a.so\"\n@]||[@\nloadmodule \"b.so\"\n@]||"
         )
         result = pmwiki_to_mdx(text)
-        assert "<table>" in result
-        assert "<th>With Helper</th>" in result and "<th>Classic</th>" in result
+        assert "With Helper" in result and "Classic" in result
         assert 'loadmodule "a.so"' in result
         assert 'loadmodule "b.so"' in result
         assert "[@" not in result and "@]" not in result
         assert "||" not in result
+        assert result.count("```") == 4  # two fenced blocks
 
     def test_table_attribute_line_dropped(self):
         text = "|| border=1 cellpadding=4\n|| A || B ||\n|| 1 || 2 ||"

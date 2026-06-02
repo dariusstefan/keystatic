@@ -439,53 +439,22 @@ def pmwiki_to_mdx(text: str) -> str:
     return post_process(result)
 
 
-def _html_escape(text: str) -> str:
-    return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-
-
-def _js_template_escape(text: str) -> str:
-    """Escape text for use inside a JS template literal `...`."""
-    return text.replace('\\', '\\\\').replace('`', '\\`').replace('${', '\\${')
-
-
-def _md_to_html(text: str) -> str:
-    """Convert Markdown inline markup (as produced by convert_inline) to HTML
-    for use inside HTML table cells. Plain text parts are HTML-escaped so that
-    tags like <destination> in prose don't become JSX elements."""
-    _PAT = re.compile(
-        r'(`[^`]+`)'                                       # inline code
-        r'|(\*\*(?:[^*]|\*(?!\*))+?\*\*)'                 # bold
-        r'|(\*[^*]+?\*)'                                   # italic
-        r'|(@@(?:red|green|blue|orange|yellow)\|.+?@@)'   # color spans
-        r'|(\[[^\]]+\]\([^)]+\))',                         # links
-    )
-    result: list[str] = []
-    last = 0
-    for m in _PAT.finditer(text):
-        result.append(_html_escape(text[last:m.start()]))
-        seg = m.group(0)
-        if seg.startswith('`'):
-            result.append(f'<code>{_html_escape(seg[1:-1])}</code>')
-        elif seg.startswith('**'):
-            result.append(f'<strong>{_md_to_html(seg[2:-2])}</strong>')
-        elif seg.startswith('*'):
-            result.append(f'<em>{_md_to_html(seg[1:-1])}</em>')
-        elif seg.startswith('@@'):
-            cm = re.match(r'@@(red|green|blue|orange|yellow)\|(.+)@@$', seg)
-            if cm:
-                result.append(f'<span class="color-{cm.group(1)}">{_html_escape(cm.group(2))}</span>')
-        else:
-            lm = re.match(r'\[([^\]]+)\]\(([^)]+)\)', seg)
-            if lm:
-                result.append(f'<a href="{_html_escape(lm.group(2))}">{_html_escape(lm.group(1))}</a>')
-        last = m.end()
-    result.append(_html_escape(text[last:]))
-    return ''.join(result)
+def _code_to_inline(code: str) -> str:
+    """Collapse multi-line code to a single inline code span for use in a GFM table cell."""
+    single = ' '.join(line.strip() for line in code.splitlines() if line.strip())
+    if not single:
+        return ''
+    # Escape pipe characters so they don't break the GFM table
+    single = single.replace('|', r'\|')
+    # Use double backticks if the content itself contains backticks
+    if '`' in single:
+        return f'`` {single} ``'
+    return f'`{single}`'
 
 
 def render_table_with_code(region: list[str]) -> list[str]:
-    """Render a PMwiki table whose rows carry a multi-line [@...@] code block in
-    the last cell as an HTML table (GFM tables cannot hold multi-line code)."""
+    """Render a PMwiki table whose last cell holds a multi-line [@...@] code block
+    as a standard GFM table, collapsing the code to a single inline code span."""
     k = 0
     # Skip attribute lines (|| border=1 etc.)
     while k < len(region) and re.match(r'^\|\|\s*\w+=', region[k].strip()):
@@ -521,51 +490,48 @@ def render_table_with_code(region: list[str]) -> list[str]:
             cells = [c.strip() for c in row.strip().strip("|").split("||") if c.strip()]
             rows.append((cells, None))
             k += 1
-    # Emit HTML table
-    out: list[str] = ['<table>']
-    if headers:
-        out.append('<thead><tr>')
-        for h in headers:
-            out.append(f'<th>{_md_to_html(h)}</th>')
-        out.append('</tr></thead>')
-    out.append('<tbody>')
+    # Build GFM table rows
+    table_rows: list[list[str]] = []
     for cells, code in rows:
-        out.append('<tr>')
-        for c in cells:
-            out.append(f'<td>{_md_to_html(convert_inline(c))}</td>')
+        row_cells = [convert_inline(c) for c in cells]
         if code is not None:
-            out.append(f'<td><pre><code>{{`{_js_template_escape(code)}`}}</code></pre></td>')
-        out.append('</tr>')
-    out.append('</tbody>')
-    out.append('</table>')
+            row_cells.append(_code_to_inline(code))
+        table_rows.append(row_cells)
+    if not table_rows and not headers:
+        return []
+    all_rows = ([headers] if headers else []) + table_rows
+    width = max(len(r) for r in all_rows)
+    all_rows = [r + [''] * (width - len(r)) for r in all_rows]
+    out = [
+        '| ' + ' | '.join(all_rows[0]) + ' |',
+        '| ' + ' | '.join(['---'] * width) + ' |',
+    ]
+    for row in all_rows[1:]:
+        out.append('| ' + ' | '.join(row) + ' |')
     return out
 
 
 def render_code_comparison(headers: list[str], block_lines: list[str]) -> list[str]:
-    """Render a PMwiki side-by-side code-comparison table as an HTML table."""
+    """Render a PMwiki side-by-side code-comparison table as sequential labeled
+    sections with fenced code blocks (GFM tables cannot hold multi-line code)."""
     text = "\n".join(block_lines)
     cols = re.split(r'@\]\s*\|\|\s*\[@', text)
-    col_codes: list[str] = []
-    for col in cols:
+    out: list[str] = []
+    for k, col in enumerate(cols):
         col = re.sub(r'^\s*\|\|\s*(?:%[^%\n]+%\s*)?\[@', '', col)
         col = re.sub(r'@\]\s*\|\|\s*$', '', col)
         col = re.sub(r'@\]\s*$', '', col)
         col = col.replace('@][@', '\n\n')
-        col_codes.append(col.strip('\n'))
-    out: list[str] = ['<table>']
-    if headers:
-        out.append('<thead><tr>')
-        for h in headers:
-            out.append(f'<th>{_md_to_html(h)}</th>')
-        out.append('</tr></thead>')
-    out.append('<tbody><tr>')
-    for code in col_codes:
+        code = col.strip('\n')
         if not code.strip():
-            out.append('<td></td>')
             continue
-        out.append(f'<td><pre><code>{{`{_js_template_escape(code)}`}}</code></pre></td>')
-    out.append('</tr></tbody>')
-    out.append('</table>')
+        label = headers[k] if k < len(headers) else f"Column {k + 1}"
+        lang = detect_language(code.split('\n'))
+        out.append(f"###### {label}")
+        out.append(f"```{lang}")
+        out.append(code)
+        out.append("```")
+        out.append("")
     return out
 
 
@@ -1044,7 +1010,6 @@ def mdx_safety_pass(text: str) -> str:
     lines = text.split("\n")
     fenced: list[str] = []
     in_fence = False
-    in_html_block_p1 = False
     i = 0
     while i < len(lines):
         line = lines[i]
@@ -1055,15 +1020,6 @@ def mdx_safety_pass(text: str) -> str:
             continue
         if in_fence:
             fenced.append(line)
-            i += 1
-            continue
-        # Track HTML table blocks — skip indented-code detection inside them.
-        if re.match(r'^<table\b', line, re.IGNORECASE):
-            in_html_block_p1 = True
-        if in_html_block_p1:
-            fenced.append(line)
-            if re.match(r'^</table>', line, re.IGNORECASE):
-                in_html_block_p1 = False
             i += 1
             continue
         if line.startswith('    ') and line.strip():
@@ -1087,7 +1043,6 @@ def mdx_safety_pass(text: str) -> str:
 
     out: list[str] = []
     in_fence = False
-    in_html_block = False
     for line in fenced:
         if re.match(r'^```', line):
             in_fence = not in_fence
@@ -1095,15 +1050,6 @@ def mdx_safety_pass(text: str) -> str:
             continue
         if in_fence:
             out.append(line)
-            continue
-        # HTML table blocks must pass through verbatim — escape_prose_line would
-        # wrap lowercase tags like <table>, <td> in backticks.
-        if re.match(r'^<table\b', line, re.IGNORECASE):
-            in_html_block = True
-        if in_html_block:
-            out.append(line)
-            if re.match(r'^</table>', line, re.IGNORECASE):
-                in_html_block = False
             continue
         out.append(escape_prose_line(line))
     return "\n".join(out)

@@ -129,36 +129,11 @@ The destination value can be provided in more ways
 ```
 
 @@orange|Table:@@**Scenario destination node structure**
-<table>
-<thead><tr>
-<th>Value source</th>
-<th>Value type</th>
-<th>Example</th>
-</tr></thead>
-<tbody>
-<tr>
-<td>Inline URI</td>
-<td>"uri"</td>
-<td><pre><code>{`<destination>
-   <value type="uri">sip:ms@opensips.org</value>
-</destination>`}</code></pre></td>
-</tr>
-<tr>
-<td>Parameter.The value node content is a number and represents the number of the parameter.</td>
-<td>"param"</td>
-<td><pre><code>{`<destination>
-   <value type="param">1</value>
-</destination>`}</code></pre></td>
-</tr>
-<tr>
-<td>Initial destination.Used when the bridging is based on a received message. The destination will be that from the message.</td>
-<td>"initial"</td>
-<td><pre><code>{`<destination>
-   <value type="initial"></value>
-</destination>`}</code></pre></td>
-</tr>
-</tbody>
-</table>
+| Value source | Value type | Example |
+| --- | --- | --- |
+| Inline URI | "uri" | `<destination> <value type="uri">sip:ms@opensips.org</value> </destination>` |
+| Parameter.The value node content is a number and represents the number of the parameter. | "param" | `<destination> <value type="param">1</value> </destination>` |
+| Initial destination.Used when the bridging is based on a received message. The destination will be that from the message. | "initial" | `<destination> <value type="initial"></value> </destination>` |
 
 The client entity can also have a **type** subnode. The only defined value for this node is **'message**'. If type node with message value is present, it means that the client will be created using the info from received SIP message: the body, the caller URI, some SIP headers(Accept, Supported, Content-Type). Defining this node does not mean that the destination will be taken from this message and still a destination node must be defined. 
 
@@ -168,13 +143,9 @@ Below there are two examples of scenario init parts, one that creates entities b
 which the dialog is initiated by the b2bua that puts two entities in contact.
 
 @@orange|Table:@@**Scenario init node examples**
-<table>
-<thead><tr>
-<th>Script scenario</th>
-<th>Extern Scenario</th>
-</tr></thead>
-<tbody><tr>
-<td><pre><code>{`<init>
+#### Script scenario
+```text
+<init>
    <bridge>
       <server>
          <id>server1</id>
@@ -193,8 +164,12 @@ which the dialog is initiated by the b2bua that puts two entities in contact.
    </bridge>
 
    <state>1</state>
-</init>`}</code></pre></td>
-<td><pre><code>{`<init>
+</init>
+```
+
+##### Extern Scenario
+```text
+<init>
      <bridge>
           <client>
                <id>client1</id>
@@ -215,9 +190,8 @@ which the dialog is initiated by the b2bua that puts two entities in contact.
      </bridge>
  
      <state>1</state>
-</init>`}</code></pre></td>
-</tr></tbody>
-</table>
+</init>
+```
 
 ### Rules section
 The rules have two parts:
@@ -269,50 +243,12 @@ In this first version there are four possible actions, with the possibility to e
 
 @@orange|Table:@@**Scenario rules node structure**
 
-<table>
-<thead><tr>
-<th>Node name</th>
-<th>Description</th>
-<th>Example</th>
-</tr></thead>
-<tbody>
-<tr>
-<td>send_reply</td>
-<td>This node tells the B2BUA to send a reply to the sender of the current message. A code and reason sub node must be defined.</td>
-<td><pre><code>{`<send_reply>
-  <code>200</code>
-  <reason>OK</reason>
-</send_reply>`}</code></pre></td>
-</tr>
-<tr>
-<td>delete_entity</td>
-<td>The delete_entity node specifies to the B2B Logic that the current entity which has received the message can be deleted.</td>
-<td><pre><code>{`<delete_entity/>`}</code></pre></td>
-</tr>
-<tr>
-<td>bridge</td>
-<td>A bridge action means putting two end points in contact. The syntax is the same as the on for the bridge node in the init part. The only difference here is that the entities can be also existing ones. If a new entity is defined a destination node must be present. Note that there is also a lifetime node. It defines the maximum duration of the media session and it is used to track blocked scenario instantiations. If the lifetime expires, the B2BUA will send BYE messages to both ends and delete the record. This parameter is not compulsory and should be defined when a maximum lifetime value is known(most likely in the case of recorded messages played by media servers).</td>
-<td><pre><code>{`<bridge>
- <client>
-   <id>client1</id>
- </client>
- <client>
-   <id>client3</id>
-   <destination>
-     <value type="param">
-     3</value>
- </destination>
- </client>
- <lifetime>79800</lifetime>
-</bridge>`}</code></pre></td>
-</tr>
-<tr>
-<td>state</td>
-<td>Specifies the state the scenario instantiation will enter after the action will be executed.</td>
-<td><pre><code>{`<state>2</state>`}</code></pre></td>
-</tr>
-</tbody>
-</table>
+| Node name | Description | Example |
+| --- | --- | --- |
+| send_reply | This node tells the B2BUA to send a reply to the sender of the current message. A code and reason sub node must be defined. | `<send_reply> <code>200</code> <reason>OK</reason> </send_reply>` |
+| delete_entity | The delete_entity node specifies to the B2B Logic that the current entity which has received the message can be deleted. | `<delete_entity/>` |
+| bridge | A bridge action means putting two end points in contact. The syntax is the same as the on for the bridge node in the init part. The only difference here is that the entities can be also existing ones. If a new entity is defined a destination node must be present. Note that there is also a lifetime node. It defines the maximum duration of the media session and it is used to track blocked scenario instantiations. If the lifetime expires, the B2BUA will send BYE messages to both ends and delete the record. This parameter is not compulsory and should be defined when a maximum lifetime value is known(most likely in the case of recorded messages played by media servers). | `<bridge> <client> <id>client1</id> </client> <client> <id>client3</id> <destination> <value type="param"> 3</value> </destination> </client> <lifetime>79800</lifetime> </bridge>` |
+| state | Specifies the state the scenario instantiation will enter after the action will be executed. | `<state>2</state>` |
 
 Bellow is an action example:
 
