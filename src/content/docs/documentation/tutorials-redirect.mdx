@@ -1,0 +1,45 @@
+---
+title: "SIP Redirect"
+description: "You will need to load the exec.so module so you can run external scripts"
+---
+
+You will need to load the exec.so module so you can run external scripts
+
+```c
+
+loadmodule "exec.so"
+
+```
+
+In this snippet I am restricting by IP address and by a IP range. You will notice that I used a regular expression to determine the IP range 192.168.0.0/16.
+You will also notice in this example the use of the function [exec_dest()](http://www.opensips.org/html/docs/modules/1.4.x/exec.html#id228172). This function calls an external script and assumes that the script returns a SIP URI. Then sets the "Contact" header to the returned SIP URI. You can also use pseudo variables in the exec_dset() function. In this example `$tU` (To Username) and `$fU` (From Username) are used.
+
+```text
+
+route {
+    if ( src_ip == 10.x.x.x || src_ip =~ "^192\.168\..*") {
+        if(method == "INVITE") {
+            exec_dset("/usr/local/bin/local_check $fU $tU");
+            sl_send_reply("302","LCR Redirect");
+        } else {
+            route(1);
+        }
+    } else {
+        sl_send_reply( "403", "You are not allowed here!" );
+        exit;
+    }
+}
+
+```
+
+Now here is just a dummy script that echoes a SIP URI. You can make it any script you want but is needs to output a valid SIP URI to standard out: (IE. sip:+12125551212@domain.com)
+
+```bash
+
+#!/bin/sh
+
+echo sip:+12125551212@domain.com
+
+```
+
+> **Observation:** To get this to work correctly with Asterisk you need to add "promiscredir=yes" to the general section of your sip.conf

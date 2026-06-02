@@ -1,0 +1,72 @@
+---
+title: "Presence Module - Parameters and Functions"
+description: "Please refer to the module's documentation for the full list of parameters and a comprehensive description."
+---
+
+## Exported Functions
+
+* handle_publish()
+* handle_subscribe()
+
+### handle_publish()
+
+* function which handles PUBLISH requests. It stores and updates presence information in database and calls functions to send NOTIFY messages when changes in presence information occur;
+* it takes one optional parameter - the URI of the sender, used by the BLA feature( event dialog;sla ).
+**Actions:**
+
+* verifies if the PUBLISH message is correct: 
+  * check its structure - calls an event specific function defined in a presence_ev module (presence_xml or presence_mwi);
+  * if it has a SIP-if-Match header, checks is there is a previous record for the same presentity;
+  * if not present checks if a body is present
+* if the conditions are not complied with it sends an adequate error message
+* if a correct message:
+  * sends a 200Ok message with 2 extra header fields : Expires and SIP-if-Match 
+* if a new PUBLISH without a Sip-if-Match header field 
+  * it generates one
+  * inserts a new row in database
+  * calls a function which sends Notify with presence to all the watchers which have subscribed to the presentity
+* if the PUBLISH message is a sequential one
+  * updates the expires value
+  * generates a new E-Tag and sends it in the Sip-Etag header of the 200OK reply 
+* if body present
+  * updates body (replace with the new one) 
+  * calls a function which sends Notify with presence to all watchers 
+
+### handle_subscribe()
+
+* function which handles SUBSCRIBE requests. It stores or updates dialog information in and calls functions to send Notify messages to teh watcher and to the presentity (if a subscription for event presence.winfo exists for the presentity and the event) 
+* it does not take any parameter.
+
+**Actions**
+* checks if the SUBSCRIBE message is correct: 
+  * check its structure;
+  * if inside a dialog tries to match the dialogs with the records stored
+* if the conditions are not complied with it sends an adequate error message
+* if a correct message sends 2XX reply
+  * the reply contains an Expires header
+  * for SUBSCRIBE messages for event "presence.winfo" the status of the reply is 202OK  and for all the other 200OK
+* if a new SUBSCRIBE, saves the dialog information in cache
+* if a Subscribe inside a dialog
+  * if the Expires header field value is 0
+```text
+* deletes the registration from cache and database
+* if event is a PUBLISH event - sends a Notify for winfo to the presentity with full state
+```
+  * if update
+```text
+* updates the expires value
+* sends Notifies
+```
+* if a SUBSCRIBE for a PUBLISH event( 'presence', 'dialog.sla', 'message-summary'): 
+  * sends Notify with presence.winfo to the presentity(if a winfo subscription from the presentity exists) with a partial state informing only about the subscription status of the new watcher
+  * sends Notify with the presence information
+* if a SUBSCRIBE for a winfo(watcher info) event
+  * sends Notify with presence.winfo to the subscriber with full state informing about all the watchers
+
+---
+
+## Exported Parameters
+
+Please refer to the [module's documentation](http://www.opensips.org/html/docs/modules/1.11.x/presence.html) for the full list of parameters and a comprehensive description.
+
+---

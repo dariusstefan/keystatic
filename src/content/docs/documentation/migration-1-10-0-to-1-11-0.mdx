@@ -1,0 +1,43 @@
+---
+title: "Migration from 1.10.x to 1.11.0"
+description: "This section is meant to provide useful help in migrating your OpenSIPS installations from the 1.10 version to 1.11."
+---
+
+This section is meant to provide useful help in migrating your OpenSIPS installations from the **1.10** version to **1.11**.
+
+You can find the all the new additions in the **1.11.0** release compiled [under this page](/about/version-1-11-0). The changelog may help your understanding of the migration / update process.
+
+---
+
+## DB migration
+
+You can migrate your 1.10.x MySQL DB to the 1.11.0 format by using the **opensipsdbctl** tool :
+```text
+
+   # opensipsdbctl migrate opensips_1_10 opensips_1_11
+   or
+   # osipsconsole 
+   > migrate opensips_1_10 opensips_1_11
+   > quit
+   # 
+
+```
+where :
+* opensips_1_10 is the existing DB name corresponding to version 1.10.x format
+* opensips_1_11 is the DB name to be created for 1.11 format
+
+> **Observation:** 
+> * the old database will not be deleted, altered or changed - it will not be touched at all
+> * new database will be created and data from old DB will be imported into it
+
+@@red|NOTE that the migration tool is available only for MYSQL databases!@@
+
+---
+
+## Script migration
+
+* **timeout_avp** parameter from the **dialog** module was removed. Functionality was kept via the new `$DLG_timeout` variable, which is R/W, and can be set an any time ( before matching the dialog or at any time after )
+* **gw_attrs_avp** , **rule_attrs_avp** , **carrier_attrs_avp** parameters from the **drouting** module were removed. Now the script writer can provide  pseudovariables ( AVPs, regular vars, etc ) when calling the do_routing()/use_next_gw() functions, where the appropriate attrs will get populated. All parameters are optional. Any of them may be ignored,provided the necessary separation marks "," are properly placed.    
+* **set_rtp_proxy_set()** function and **rtpp_sock_pvar** parameter from **rtpproxy** module were removed. The script writer can now pass all the info ( the RTPProxy set to be used as well as a PVAR to store the actual RTPProxy used for the call ) directly when calling the rtpproxy_offer() / rtpproxy_answer() etc type functions
+* **fr_timer_avp** and **fr_inv_timer_avp** parameters from the **TM** module were removed. New `$T_fr_timeout` and `$T_fr_inv_timeout` exported pseudovariables have been added as a drop-in replacement.
+* **attrs_pvar** parameter from the **dialplan** module was removed. The script writer can now pass a pseudovariable to be populated with the diaplan rule attrs when calling dp_translate()

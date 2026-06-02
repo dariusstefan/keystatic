@@ -1,0 +1,34 @@
+---
+title: "OpenSIPS Does Not Start"
+description: "Where to check if OpenSIPS does not start?"
+---
+
+Where to check if **OpenSIPS** does not start?
+
+## What is the problem?
+
+You likely have a configuration error (script error) or a file permissions error that prevents **OpenSIPS** from starting.  
+
+First of all, you have to identify the cause of the error, so look for the **OpenSIPS** output.
+
+## Where to look for logs
+
+If you have **log_stderror=no** in your config file (opensips.cfg), all the logs from **OpenSIPS** will be sent to the **syslog** service, so you have the check the corresponding file, typically:
+* /var/log/syslog
+* /var/log/messages
+
+You can simply check system log with:   
+
+```bash
+$ less /var/log/messages
+```
+
+Note you might need root permissions to access these files! If you do not have it, set **log_stderror=yes** in your config and you will get the log in the console.
+
+If you have **log_stderror=yes**, you should get the log in the console where you are run **OpenSIPS**
+
+## Reading the error logs
+
+The logs should give you some idea about what went wrong and prevented your **OpenSIPS** to start. The info from the logs is quite comprehensive to point you the problem. Even so, it some cases you may consider increasing the verbosity of the logs by setting a higher debug level (debug=4) - it is recommended to do it if you do not see any ERROR message in the first case.
+
+If no still no clue, use the [mailing lists](/support/mailinglists) to get help on this - do not forget to post the **OpenSIPS** logs in your email.

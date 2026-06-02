@@ -1,0 +1,200 @@
+---
+title: "Fail2Ban"
+description: "Fail2ban is a daemon that you can install to control the intrusion attempts to your systems, we can adapt it to ban attackers after they have tried to login..."
+---
+
+Fail2ban is a daemon that you can install to control the intrusion attempts to your systems, we can adapt it to ban attackers after they have tried to login with wrong authentication credentials.
+
+Opensips configuration
+
+To make opensips work with fail2ban, you will have to send the logs to a different file than /var/log/syslog
+
+Change from:
+```text
+log_facility=LOG_LOCAL0
+```
+
+To:
+```text
+log_facility=LOG_LOCAL7
+```
+
+And from:
+
+```text
+ if (!www_authorize("", "subscriber")) {
+	www_challenge("", "0");
+	exit;
+}
+```
+
+To:
+
+```bash
+
+$var(auth_code) = www_authorize("", "subscriber");
+if ( $var(auth_code) == -1 || $var(auth_code) == -2 ) {
+		xlog("L_NOTICE","Auth error for $fU@$fd from $si cause $var(auth_code)");
+}
+if ( $var(auth_code) < 0 ) {
+		www_challenge("", "0");
+		exit;
+}
+
+```
+
+rsyslog configuration
+
+Add to /etc/rsyslog.conf
+
+```text
+ local7.* /var/log/opensips.log 
+```
+
+Fail2ban configuration
+
+Install fail2ban
+
+```bash
+ apt-get install fail2ban 
+```
+
+Add to the end of /etc/fail2ban/jail.conf this content:
+
+```text
+
+[opensips]
+enabled  = true
+filter   = opensips
+action   = iptables-allports[name=opensips, protocol=all]
+           sendmail-whois[name=opensips, dest=destination@example.com, sender=source@example.com]
+logpath  = /var/log/opensips.log
+maxretry = 5
+bantime = 3600
+
+```
+
+Create a file in /etc/fail2ban/filter.d/opensips.conf with the content:
+```bash
+
+# Fail2Ban configuration file
+#
+#
+# $Revision: 250 $
+#
+
+[INCLUDES]
+
+# Read common prefixes. If any customizations available -- read them from
+# common.local
+#before = common.conf
+
+[Definition]
+
+#_daemon = opensips
+
+# Option:  failregex
+# Notes.:  regex to match the password failures messages in the logfile. The
+#          host must be matched by a group named "host". The tag "<HOST>" can
+#          be used for standard IP/hostname matching and is only an alias for
+#          (?:::f{4,6}:)?(?P<host>\S+)
+# Values:  TEXT
+#
+
+failregex = Auth error for .* from <HOST> cause -[0-9]
+
+# Option:  ignoreregex
+# Notes.:  regex to ignore. If this regex matches, the line is ignored.
+# Values:  TEXT
+#
+ignoreregex =
+
+```
+
+Restart fail2ban
+```text
+ /etc/init.d/fail2ban restart 
+```
+
+opensips and rsyslog configuration notes for CentOS6
+
+> **Observation:** Use process above, but with some notes here
+
+LOCAL7 is in use by boot logging on CentOS 6, so use LOCAL6 instead.
+
+in /usr/local/etc/openssips.conf Change from:
+```text
+log_facility=LOG_LOCAL0
+```
+
+To:
+```text
+log_facility=LOG_LOCAL6
+```
+
+Add this to /etc/rsyslog.conf (near the bottom):
+
+```text
+ # logging facility for opensips
+local6.* 	/var/log/opensips.log 
+```
+
+Fail2ban Installation and Configuration notes for CentOS6 
+
+> **Observation:** Use process above, but with some notes here
+
+Follow instructions for installation here : http://www.fail2ban.org/wiki/index.php/README
+
+Download the latest fail2ban package from : http://sourceforge.net/projects/fail2ban/files/
+
+Run these commands:
+
+```text
+tar xvfj fail2ban-0.8.4.tar.bz2
+cd fail2ban-0.8.4
+python setup.py install
+```
+
+Edit configuration files /etc/fail2ban/jail.confand /etc/fail2ban/filter.d/opensips.conf as documented in the section above.
+
+To get startup / init.d script in place on CentOS6, copy the file named redhat-initd from the files folder inside fail2ban-0.8.4 directory to /etc/init.d with the command below.
+
+```bash
+# cp redhat-initd /etc/init.d/fail2ban   
+```
+
+Ensure you check the owner and permissions of the copied file and then test the script:
+
+```bash
+# /etc/init.d/fail2ban
+Usage: /etc/init.d/fail2ban {start|stop|status|restart}
+# /etc/init.d/fail2ban status
+Fail2ban (pid 8323) is running...
+Status
+|- Number of jail:	0
+`- Jail list:		
+# /etc/init.d/fail2ban stop
+Stopping fail2ban:                                         [  OK  ]
+# ps -ef | grep fail
+root      8399  8235  0 13:10 pts/0    00:00:00 grep fail
+# /etc/init.d/fail2ban start
+Starting fail2ban:                                         [  OK  ]
+# /etc/init.d/fail2ban restart
+Stopping fail2ban:                                         [  OK  ]
+Starting fail2ban:                                         [  OK  ]
+# 
+```
+
+To ensure that fail2ban starts at startup:
+
+```bash
+# chkconfig --list fail2ban
+service fail2ban supports chkconfig, but is not referenced in any runlevel (run 'chkconfig --add fail2ban')
+# chkconfig --add fail2ban
+# chkconfig --list fail2ban
+fail2ban       	0:off	1:off	2:off	3:on	4:on	5:on	6:off
+# chkconfig fail2ban on
+# chkconfig --list fail2ban
+fail2ban       	0:off	1:off	2:on	3:on	4:on	5:on	6:off
+# 
+```

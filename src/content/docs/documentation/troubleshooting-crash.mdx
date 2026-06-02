@@ -1,0 +1,106 @@
+---
+title: "OpenSIPS crashes"
+description: "Most likely you have stumbled upon a bug in OpenSIPS, which can be caused by a variety of of issues, like invalid memory access, memory corruption, etc."
+---
+
+## What is the problem?
+
+Most likely you have stumbled upon a bug in OpenSIPS, which can be caused by a variety of of issues, like invalid memory access, memory corruption, etc.
+
+## Where to look for logs
+
+If you have **log_stderror=no** in your config file (opensips.cfg), all the logs from **OpenSIPS** will be sent to the **syslog** service, so you have the check into the corresponding file, typically:
+* /var/log/syslog
+* /var/log/messages
+
+You can simply check system log by:   
+
+$ tail -f /var/log/messages
+
+Note you might need root permissions to access these files! If you do not have it, set **log_stderror=yes** in your config and you will get the log in the console.
+
+If you have **log_stderror=yes**, you should get the log in the console where you are run **OpenSIPS**
+
+## Reading the error logs
+
+First, you should check the error logs to make sure this was an actual crash, as opposed to the scenario where another entity forcefully killed your OpenSIPS process. A crash is usually detected by searching for the following string in the logs :
+```text
+
+child process 6645 exited by a signal 11
+
+```
+
+If you do not see such an error message, but rather you see things like 
+```text
+
+terminating due to SIGTERM
+
+```
+or you do not see anything logs, you just notice the OpenSIPS suddenly dying, then most likely your OpenSIPS was sent a SIGTERM or a SIGKILL, and you should investigate why some other entity decided to terminate your OpenSIPS process.
+
+If you see the 'exited by a signal 11' then your OpenSIPS has crashed and you should proceed into investigating the core file. Usually, the 'exited by a signal 11' is accompanied by a 'core was generated' message, which tells you that OpenSIPS was succesful in dumping a core file
+
+@@anchor|enabling-corefiles@@
+## How to make sure OpenSIPS dumps a proper core file 
+
+Typically, in a crash scenario, OpenSIPS should dump a core file which contains the full memory contents at the moment of the crash.
+
+Several things have to be taken care of to make sure that your OpenSIPS dumps a proper core file, that can be used for investigating the crash. Failing to follow these steps could lead to the fact that either the core file is not being generated ( you will see in the logs a message like 'core was not generated' ), or you could end up with a core file that gets overwritten at OpenSIPS shutdown, which would not be useful for further debugging.
+
+1. Pass the '-w [FOLDER]' parameter to your OpenSIPS at startup. The [FOLDER] path that you provide must be write accessible by your OpenSIPS, and will be the folder that will contain the core files in the eventuality of a crash
+
+2. Avoid undesired *special handling* for the corefiles which might have them moved/deleted by default, e.g. by the "apport" suite:
+
+```bash
+
+$ cat /proc/sys/kernel/core_pattern
+|/usr/share/apport/apport -p%p -s%s -c%c -d%d -P%P -u%u -g%g -- %E 
+
+# to disable piping the corefiles to "apport", simply do:
+$ echo "core.%p" > /proc/sys/kernel/core_pattern
+
+```
+
+3. Before starting OpenSIPS, make sure to run 'ulimit -c unlimited' . This tells the system to allow OpenSIPS to dump a core file of unlimited size. This is useful, because in case of a crash, the core file will be at least the size of your shared memory + private memory. The ulimit commands usually should go in your init.d script for OpenSIPS
+
+4. If you are running OpenSIPS with a different username and group ( -u and -g params ), some kernels might need some extra configuration to allow core dumps :
+* echo 1 > /proc/sys/fs/suid_dumpable
+
+5. Make sure your core files do not get overwritten. There are several sysctl options that can be used for this :
+* echo 1 > /proc/sys/kernel/core_uses_pid
+  * When you see the message 'child process 6645 exited by a signal 11' , you should get a core file called 'core.6645' in your -w directory
+* For more customization of the core file name, you can run setup your own core name pattern with something like : echo 'core.%e.%t.sig%s.%p' > /proc/sys/kernel/core_pattern 
+  * This will have the core file contain the process name ( % e ), the timestamp ( % t ), the received signal ( % s ) and the pid file ( % p )
+
+@@anchor|extracting-backtraces@@
+## Extracting a back trace from the core file 
+
+Browse the logs for a "signal 11" notification from one of the OpenSIPS workers. This means that it has crashed (invalid memory access):
+
+```text
+
+child process 6645 exited by a signal 11
+
+```
+
+Corefiles will usually be named "core" or "core.`<pid>`", and placed in the working OpenSIPS directory ("-w" command-line parameter). gdb can interpret them:
+
+```text
+
+gdb /usr/sbin/opensips core.6645
+
+```
+
+Once in the gdb environment, run the following command
+
+```text
+
+bt full
+
+```
+
+This will dump the full stack trace that lead to the crash. Send the crash to the OpenSIPS developers ( usually on the Sourceforge Bug tracker of on the DEV mailing list )
+
+Do not delete the core file and also make sure to keep an exact copy of your OpenSIPS binary, as the OpenSIPS developers might need to extra more information from the core file, like printing various variables, etc.
+
+**The core file on its own is useless without the exact OpenSIPS binary and modules directory (".so" module libraries) that lead to the crash.**

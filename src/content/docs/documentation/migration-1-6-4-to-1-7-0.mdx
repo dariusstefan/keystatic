@@ -1,0 +1,49 @@
+---
+title: "Migration from 1.6.4 to 1.7.0"
+description: "This section is to provide useful help in migrating your OpenSIPS installations from the 1.6.4 branch to the 1.7 branch."
+---
+
+This section is to provide useful help in migrating your OpenSIPS installations from the 1.6.4 branch to the 1.7 branch.
+
+You can find the all the new additions in 1.7.0 release compiled [under this page](/about/version-1-7-0). Overviewing it, may help you understanding the migration / update process.
+
+---
+
+## DB migration
+
+The database structure was not affected by major changes, only some fields additions in some tables and some fields type changing.
+
+You can migrate your 1.6.4 DB to the 1.7.0 format by using the **opensipsdbctl** tool :
+```text
+
+   # opensipsdbctl migrate opensips_1_6 opensips_1_7
+   or
+   # osipsconsole 
+   > migrate opensips_1_6 opensips_1_7
+   > quit
+   # 
+
+```
+where :
+* opensips_1_6 is the existing DB name corresponding to version 1.6.4 format
+* opensips_1_7 is the DB name to be created for 1.7.x format
+
+> **Observation:** 
+> * the old database will not be deleted, altered or changed - it will not be touched at all
+> * new database will be created and data from old DB will be imported into it
+
+@@red|NOTE that the migration tool is available only for MYSQL databases!@@
+
+---
+
+## Script migration
+
+* Because of the new AVP auto-aliasing feature for the script, you must remove the "avp_aliases" parameter if you were using aliases, and also remove all the "i:" and "s:" prefixes from AVP names.
+* Remove the "report_ack" parameter from the ACC module. The parameter is considered obsolete.
+* Remove the "bye_on_timeout_flag" parameter from the DIALOG module. To keep the bye on timeout behavior, you need to provide a "B" string parameter to the create_dialog() function, like create_dialog("B").
+* Remove the "dlg_flag" parameter from the DIALOG module. The parameter is considered obsolete. The only way to create a dialog is to call the create_dialog() function 
+* Remove the "enable_full_lr" parameter from the RR module. The parameter is considered obsolete.
+* A new RTPProxy module was split from the Nathelper module, so you must load this new module if you desire RTPProxy integration. The script API remains the same.
+* A new module was added, UAC_AUTH, that provides a common API for UAC authentication functionality. The UAC and B2B modules now use the API provided by the UAC_AUTH module, so you must load this module before the UAC and B2B.
+* The nat_traversal module was reworked in order to cope with the new Dialog API. If you used to reset the dlg_flag in order to cancel the late dialog creation, you must now set to 0 the `$nat_traversal.track_dialog` pvar.
+* The mediaproxy and call_control module no longer allow the cancelation of the late dialog creation, so resetflag(dlg_flag) no longer makes sense.

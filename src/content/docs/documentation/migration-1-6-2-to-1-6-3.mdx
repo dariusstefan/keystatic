@@ -1,0 +1,68 @@
+---
+title: "Migration from 1.6.2 to 1.6.3"
+description: "This section is to provide useful help in migrating your OpenSIPS installations from 1.6.2 release to 1.6.3 release (both on 1.6 branch)."
+---
+
+This section is to provide useful help in migrating your OpenSIPS installations from 1.6.2 release to 1.6.3 release (both on 1.6 branch).
+
+You can find the all the new additions in 1.6.3 release compiled [under this page](/about/version-1-6-3). Reading it may help you understand the migration / update process.
+
+---
+
+## DB migration
+
+There is only one additional field in the table dr_rules called "attrs" type char(255). Please, include the field using  mysql client. 
+
+```sql
+
+ ALTER TABLE dr_rules ADD COLUMN attrs CHAR(255);
+
+```
+
+---
+
+## Script migration
+
+### DIALPLAN module
+
+As **dialplan** depends now on the **pcre** library, the module is no longer compiled by default, so you need to take care and remove if from **exclude_modules** list in **Makefile**. Otherwise, no other changed are required.
+
+### PERMISSION module
+
+If you use the **get_source_group()** function, you will need to get the output in a different way - instead of using the return code as output, the function now requires a variable as parameter to return the output.
+
+The change is from:
+```text
+
+  $var(output) = get_source_group();
+
+```
+to
+```text
+
+  get_source_group("$var(output)");
+
+```
+
+### XLOG module
+
+As the module was removed, after updating from SVN, be sure the directory **modules/xlog** is completely purged.
+
+In your config, you just have to remove the **loadmodule** for the **xlog** module. As the syntax of the functions (now in core) didn't change, you do not have to do any other changes
+
+### DROUTING module
+
+The module parameter attrs_avp has changed to gw_attrs_avp
+
+The change is from:
+```c
+
+  modparam("drouting", "attrs_avp", "$avp(dr_attrs)")
+
+```
+to
+```c
+
+  modparam("drouting", "gw_attrs_avp", "$avp(dr_attrs)")
+
+```

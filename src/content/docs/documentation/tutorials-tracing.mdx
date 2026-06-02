@@ -1,0 +1,640 @@
+---
+title: "Tracing with OpenSIPS"
+subtitle: "Tracing"
+subtitleHref: "http://www.opensips.org/html/docs/modules/2.3.x/tracing.html"
+description: "This tutorial aims to get OpenSIPS users through the whole tracing stack that was thoroughly upgraded in latest versions. The tutorial will try to explain wh..."
+---
+
+## Tutorial Overview
+
+This tutorial aims to get OpenSIPS users through the whole tracing stack that was thoroughly upgraded in latest versions. The tutorial will try to explain why you should activate tracing in your OpenSIPS, what is Homer Encapsulation Protocol and what configurations should you do in both the tracing node and capturing node in the OpenSIPS script. Last but not least we will explain how you can integrate OpenSIPS capturing node with HOMER. 
+
+## Motivation
+
+Latest OpenSIPS versions came with major improvements regarding tracing and capturing SIP and nonSIP events that happen around OpenSIPS. These improvements transformed OpenSIPS along with [Homer](https://github.com/sipcapture/homer) into a very powerful tool that helps users to have a much better perspective over their VoIP architecture.
+
+The motivation behind all the recent features is offering the community more accessible means to inspect the SIP traffic and all the events that are happening around SIP. This might prove very useful for debugging what is going wrong in your setup and could save precious time in finding and solving problems. As an example let's suppose you can't call from A to B. If you know either A or B and you have tracing active for them you can use [Homer](https://github.com/sipcapture/homer) platform to see the whole call flow and all the events related to the call and you can inspect the traffic thus it will be very easy to detect what's wrong. You can also build charts to see various statistics such as the number of registrations or the number of SIP packets that are going through your proxy.
+
+## Homer Encapsulation Protocol
+### Overview
+Homer Encapsulation Protocol or [HEP](https://github.com/sipcapture/HEP) is a protocol used to send data from a tracing node to a capturing node. The protocol is currently on it's third version. The latest version of HEP is version 3 which came with a major improvement changing HEP protocol from a header based encapsulation protocol, that is each field had it's well known position in the header as it is for the TCP header for example, to a more flexible chunk-based protocol. [HEPv3](https://github.com/sipcapture/HEP/blob/master/docs/HEP3NetworkProtocolSpecification_REV14.pdf)/ [EEP(Extensible Encapsulation Protocol)](https://github.com/sipcapture/HEP/blob/master/docs/HEP3NetworkProtocolSpecification_REV14.pdf) allows defining only those chunks that are needed thus reducing the size of the message. What is more custom chunks can be defined allowing more complex packet manipulation and customization.
+
+### HEP in OpenSIPS (proto_hep)
+
+With version 2.2 a new protocol emerged integrating almost everything related to [HEP](https://github.com/sipcapture/HEP). The module is called [proto_hep](http://www.opensips.org/html/docs/modules/2.3.x/proto_hep) and implements [HEP](https://github.com/sipcapture/HEP) messages encapsulation both on the client and the server side. The module offers support for older protocols such as HEPv1 and HEPv2 that were already impelemented by [sipcapture](http://www.opensips.org/html/docs/modules/2.3.x/sipcapture) and [siptrace](http://www.opensips.org/html/docs/modules/2.3.x/siptrace) modules and also offers support for the new HEPv3. Versions 1 and 2 have only UDP support while version 3 offers support for TCP and UDP.
+
+What is more, since version 2.3 all the information concerning the destination of the [HEP](https://github.com/sipcapture/HEP) packets have to be defined in this module. If your OpenSIPS instance also acts as a [HEP](https://github.com/sipcapture/HEP) server one can define [HEP listeners](http://www.opensips.org/html/docs/modules/2.3.x/proto_hep#idp3302592) to handle the HEP traffic. 
+
+### HEP Tracing Overview
+
+Until version 2.3 OpenSIPS was able to trace only the SIP packets that were processed in any way by the SIP proxy. With version 2.3 came the major improvement that allows tracing other **nonSip** events such as:
+* sip-context events(they depend on Sip events to be triggered) - such traced events are **rest** queries and **xlog** messages;
+* sip-triggering events(such events will most probably trigger future Sip events) - connection events tracing for [TCP](http://www.opensips.org/html/docs/modules/2.3.x/proto_tcp), [WS](http://www.opensips.org/html/docs/modules/2.3.x/proto_ws), [WSS](http://www.opensips.org/html/docs/modules/2.3.x/proto_wss) and [TLS](http://www.opensips.org/html/docs/modules/2.3.x/proto_tls) modules; here we will trigger HEP packets when a connection is opened or closed;
+* async events(they are - almost always - totally unrelated to Sip events) - **mi** commands(all mi modules are supported);
+
+All the new events that can be traced will help you have a much better picture over how your sip proxy is behaving. The events that are depending on Sip can be set using [sip_trace](http://www.opensips.org/html/docs/modules/2.3.x/siptrace#idp5455808) function from [siptrace](http://www.opensips.org/html/docs/modules/2.3.x/siptrace) module. All the other events will have a configurable trace destination that will tell where the messages will be sent. All the events will need [proto_hep](http://www.opensips.org/html/docs/modules/2.3.x/proto_hep) module which will provide the client interface for sending HEP messages.
+
+### Correlating HEP messages in OpenSIPS 2.3
+
+![capturing tracing correlation e1490201599862](/images/docs/tutorials/capturing_tracing_correlation-e1490201599862.png)?w=900
+```text
+                                             **How data is correlated in OpenSIPS 2.3**
+```
+
+---
+
+All the new events that were added in OpenSIPS 2.3 added a lot of new information but it was missing a mechanism through which all these events could be correlated. [HEPv3](https://github.com/sipcapture/HEP/blob/master/docs/HEP3NetworkProtocolSpecification_REV14.pdf) had the correlation id chunk (id 17) but this was already used internally to correlate the packets of the same protocol. As an example the correlation id could be used to correlate the request of a **rest** query with it's corresponding reply, or to correlate all the events belonging to a certain connection such as the initial CONNECT with the event that closed the connection. But there was no way to correlate two different protocols such as linking a Sip call id with a network connection. In order to fix this problem a new correlation was added in the protocol called the **extra correlation** chunk. This chunk stores multiple correlation ids in JSON format, each one belonging to the protocol to which the current packet is linked. The name of the protocol represents the key and the value stores the correlation id. In order to give a very simple example of how this mechanism works let's consider we have a HEP packet storing a SIP message in the payload, having the correlation id set to the call id of the SIP message and multiple connection events packets all having the correlation id a number which uniquely identifies every connection. You can better understand from the following picture and examples.
+
+---
+
+![extra correlation](/images/docs/tutorials/extra-correlation.jpg)
+```text
+                                             **SIP - NET correlation example**
+```
+
+---
+
+```text
+
+### so each network packet will have a correlation id like the following one
+10289601672139926570
+
+#### the SIP packet will have the following (Sip call id)
+YzU3YzEyMmM2NDQ2NTAxMmRiN2I1NzBkNGYxOTFiMGY
+
+#### but besides it's call id the sip will also have an extra correlation id represented by the connection correlation id
+#### this way there will be a link between the connection HEP packets and the Sip HEP packets
+{
+    "net" : "10289601672139926570"
+}
+
+```
+
+### HEP Capturing Overview (sipcapture)
+
+[Sipcapture](http://www.opensips.org/html/docs/modules/2.3.x/sipcapture) is a module capturing [HEP](https://github.com/sipcapture/HEP) packets and not only, as the name suggests. Version 2.2 came with major additions to sipcapture module concerning handling [HEP](https://github.com/sipcapture/HEP)  messages  such as all the functions allowing you to change the received HEP message ([hep_set](http://www.opensips.org/html/docs/modules/2.3.x/sipcapture#hep_set_id), [hep_get](http://www.opensips.org/html/docs/modules/2.3.x/sipcapture#idp5645584)  and [hep_del](http://www.opensips.org/html/docs/modules/2.3.x/sipcapture#idp5661296)) or [hep_relay](http://www.opensips.org/html/docs/modules/2.3.x/sipcapture#idp5668256) which transforms your capturing node into a  [HEP](https://github.com/sipcapture/HEP) proxy and [hep_route](http://www.opensips.org/html/docs/modules/2.3.x/sipcapture#idp5555168) parameter which allows choosing the path your Sip messages should take.
+
+## Tracing
+### Prerequisites
+
+As discussed before, first thing before using any [HEP](https://github.com/sipcapture/HEP) tracing capabilities, [proto_hep](http://www.opensips.org/html/docs/modules/2.3.x/proto_hep) module will have to be included.
+```c
+
+   loadmodule "proto_hep.so"
+
+```
+**VERY IMPORTANT**: in order to be able to send or receive any packets a [HEP](https://github.com/sipcapture/HEP) listener will have to be defined:
+```text
+
+   #TCP Hep listener
+   listen = hep_tcp:IP:HEP_TCP_PORT 		# change the listening IP
+   #UDP Hep listener
+   listen = hep_udp:IP:HEP_UDP_PORT 		# change the listening IP
+
+```
+If version 2.3 or newer is used a [hep id](http://www.opensips.org/html/docs/modules/2.3.x/proto_hep#idp228112) will also have to be defined for identifying the receiving endpoint for the [HEP](https://github.com/sipcapture/HEP) packets
+```c
+
+   modparam("proto_hep", "hep_id",
+      "[hep_dst] RECEIVING_IP:RECEIVING_TRANSPORT; transport=tcp; version=3")
+
+```
+Also new in version 2.3 are two parameters, [homer5_on](http://www.opensips.org/html/docs/modules/2.3.x/proto_hep#idp151664) and [homer5_delim](http://www.opensips.org/html/docs/modules/2.3.x/proto_hep#idp155664). By default newer versions will encode the payload of the message as JSON since this is the protocol that the newest version of HOMER will use. This may cause failures on the capturing node so using these two parameters you can choose that all values in the JSON to be set in some sort of CSV format with a delimiter you can choose in order to make your job easier on the capturing node.
+
+```c
+
+    ### activate homer5 CSV like format for the payload
+    modparam("proto_hep", "homer5_on", 1)
+    ### set the delimiter for the payload 
+    modparam("proto_hep", "homer5_delim", "##")
+
+```
+### SIP Tracing
+Having done all the setups that are required to be able to send [HEP](https://github.com/sipcapture/HEP) packets now we can configure [siptrace](http://www.opensips.org/html/docs/modules/2.3.x/siptrace) module. First of all we need to include the module and define a  
+[siptrace_id](http://www.opensips.org/html/docs/modules/2.3.x/siptrace#idp110736) using the [hep id](http://www.opensips.org/html/docs/modules/2.3.x/proto_hep#idp228112) previously defined in  [proto_hep](http://www.opensips.org/html/docs/modules/2.3.x/proto_hep) module.
+```c
+
+   loadmodule "siptrace.so"
+   modparam("siptrace", "trace_id", "[hep_tid]hep:hep_dst")
+   ### in 2.2 the full specification of the uri have to be done here
+   # modparam("siptrace", "trace_id", "[hep_tid] uri=hep:DST_IP:HEP_DST_PORT; version=3;transport=tcp") 
+
+```
+
+What is left to do in the script is to call [sip_trace](http://www.opensips.org/html/docs/modules/2.3.x/siptrace#idp5455808) function whenever tracing is desired. It's your decision to take where and when you want to enable tracing. As an example let's suppose we want to trace the dialogs for all the registered users:
+```text
+
+    ...
+    route(AUTHENTICATE);
+    ### if here the user is valid and we will trace this dialog 
+    ### the tracing in this scenario will have to be activated only on the initial invite
+    ###    and all the rest of messages belonging to this dialog shall be traced
+    if ( !has_totag() && is_method("INVITE") )
+        sip_trace("hep_tid","d");
+    ### also working only in 2.3
+    ### sip is traced by default so there's no need to force it
+    # sip_trace("hep_tid","d", "sip");
+
+```
+### SIP Context Tracing (2.3 or newer only)
+
+As mentioned before, along with sip messages more events can be captured in version 2.3 such as **xlog** messages or **rest** queries. It is very simple to activate this behaviour, you only have to specify the events identifier to [sip_trace](http://www.opensips.org/html/docs/modules/2.3.x/siptrace#idp5455808) function. As an example scenario we will consider that for every call made by a registered user we will make a rest_query to find whether or not he has credit. In either of the scenarios a log message will be displayed which will also be traced.  
+```text
+
+   if ( !has_totag() && is_method("INVITE") ) {
+       # first we enable tracing for this dialog
+       sip_trace("hep_tid", "d", "sip|rest|xlog");
+       if ( rest_get("http://my_rest_api.com", "$var(reply")) ) {
+           ## we suppose our api returns the number of credits
+           if ( $(var(reply){s.int}) > 0 ) {
+               xlog("L_DBG",  "establishing call $rU to $dU\n"); 
+           } else {
+               xlog("L_ERR", "$rU has no more credit remaining\n");
+           }
+       }
+   }
+
+```
+
+And a sample of how the payload of the [HEP](https://github.com/sipcapture/HEP) messages payloads would look like:
+* for **rest**
+  * **request**
+```text
+
+{
+        "first_line":   "GET /path/to/resource HTTP/1.1"
+}
+
+```
+  * and **reply**
+```text
+
+{
+        "first_line":   "HTTP/1.1 200 OK",
+        "payload":      "12345"
+}
+
+```
+  * both will have an extra correlation id chunk in the following form
+```text
+
+{
+        "sip":  "5da03998-3819-46d1-84c2-aafaf92266ab"
+}
+
+```
+
+* and for **xlog**
+  * the payload
+```text
+
+{
+        "level":        "INFO",
+        "text": "We have 33 users registered so far !"
+}
+
+```
+  * and the extra correlation
+```text
+
+{
+        "sip":  "5da03998-3819-46d1-84c2-aafaf92266ab"
+}
+
+```
+
+### Transport level tracing (2.3 or newer only)
+
+This new type of tracing will capture some transport level events for the following protocols:
+* [TCP](http://www.opensips.org/html/docs/modules/2.3.x/proto_tcp)
+* [WS](http://www.opensips.org/html/docs/modules/2.3.x/proto_ws)
+* [WSS](http://www.opensips.org/html/docs/modules/2.3.x/proto_wss)
+* [TLS](http://www.opensips.org/html/docs/modules/2.3.x/proto_tls)
+
+A [HEP](https://github.com/sipcapture/HEP) packet will be generated each time a connection is either opened or accepted by OpenSIPS or when the connection is closed either by some external event or by OpenSIPS. Each protocol has it's own information that is added to the [HEP](https://github.com/sipcapture/HEP) packet as following:
+
+* [TCP](http://www.opensips.org/html/docs/modules/2.3.x/proto_tcp) will add the event type( connection accepted, connection closed etc.), the status of the event ( whether the operation was succesfull or not ) and a message indicating the status of the opeartion;
+* [WS](http://www.opensips.org/html/docs/modules/2.3.x/proto_ws) will add the http request and reply used in the web socket handshake;
+* [TLS](http://www.opensips.org/html/docs/modules/2.3.x/proto_tls) will add information about the client and the server certificate and the preshared master key used in negotiation;
+
+In order to enable tracing in one of the proto modules you have defined a hep destination previously defined in [proto_hep](http://www.opensips.org/html/docs/modules/2.3.x/proto_hep) and set **trace_on** modparam to 1(it's disabled by default). This parameter can also be controlled via the MI([tcp example](http://www.opensips.org/html/docs/modules/2.3.x/proto_tcp#tcp-trace)).
+```c
+
+modparam("proto_hep", "hep_id", "[net_dest]...")
+
+....
+modparam("proto_tcp", "trace_destination", "net_dest")
+modparam("proto_tcp", "trace_on", 1)
+
+```
+All the modules also allow you to define a special route which can be used to decide which connections should be traced and which ones should not. The filtering can be made based on [si](https://www.opensips.org/Documentation/Script-CoreVar-2-3#toc80) and [sp](https://www.opensips.org/Documentation/Script-CoreVar-2-3#toc81) core variables. In this case the variables will stand for the remote endpoint that is the entity that OpenSIPS has either accepted a connection from or opened a connection to. In order to filter by the local interface( the OpenSIPS-side interface ) you can use [Ri](https://www.opensips.org/Documentation/Script-CoreVar-2-3#toc77) and [Rp](https://www.opensips.org/Documentation/Script-CoreVar-2-3#toc78) core variables. In order to stop a connection from being traced you can use "drop" statement, any other exit form will cause that connection to be traced.
+
+```c
+
+modparam("proto_tcp", "trace_filter_route", "net_filter")
+
+....
+
+route[net_filter] {
+   ### trace only connections from/to 10.10.10.10
+   if ( $si == "10.10.10.10" ) {
+      exit;
+   }
+
+   ### anything else will be dropped
+   drop;
+}
+....
+
+```
+
+### NonSip Context tracing - Management Interface(MI) commands (2.3 or newer only)
+
+Apart from all the events that are related to SIP in one way or another, OpenSIPS 2.3 users can trace commands that are given through the Manangement Interface. This way it is now much easier to detect certain problems that might be caused by  mistaken commands that are given to the server. All the MI modules support tracing for the MI commands. All of them have the same parameters, but for exemplification we will use [mi_fifo](http://www.opensips.org/html/docs/modules/2.3.x/mi_fifo) module.
+
+As all the other tracing modules, proto_hep has to be included and at least one hep id has to be defined. Apart from this, in the mi module all you have to do is set one hep id as the destination of the trace. Moreover, all the mi modules offer you the possibility to define either a whitelist or a blacklist of mi commands which will (not) be traced. If you define a whitelist, all the other commands except the ones in the whitelist will not be traced. If you define a blacklist only the commands in the blacklist will be traced.
+
+```c
+
+    modparam("proto_hep", "hep_id", "[mi_dest]...")
+
+    ....
+    modparam("mi_fifo", "trace_destination", "mi_dest")
+    ### define a whitelist for mi commands to be traced
+    modparam("mi_fifo", "trace_bwlist", "w: ps, which")
+    ### or a blacklist
+    # modparam("mi_fifo", "trace_bwlist", "b: ps")
+
+```
+
+The generated messages will have payloads in the following form:
+```text
+* request
+```
+```text
+
+{
+        "command":      "get_statistics",
+        "backend":      "fifo",
+        "parameters":   "rcv_requests,active_dialogs,processed_dialogs,udp:X.X.X.X:5060-load,max_used_size,real_used_size,location-contacts"
+}
+
+```
+```text
+* reply
+```
+```text
+
+{
+        "code": "200",
+        "reason":       "OK",
+        "reply":        "{"core:rcv_requests": "947", "dialog:active_dialogs": "0", "dialog:processed_dialogs": "5", "shmem:max_used_size": "6395280", "s"
+}
+
+```
+
+Both the reply and the request will have an unique correlation id linking them:
+```text
+
+MICORR5S0AAJSUvligGdV1AAAAADdK8lw=
+
+```
+
+### Controlling tracing via MI (2.3 version)
+
+There might be cases when you want to disable tracing for various reasons that is for example when you have no more space on the capturing node side to save the data. One can stop any tracing in the sip context using [sip_trace](http://www.opensips.org/html/docs/modules/2.3.x/siptrace#idp5477056) mi function from the module. This functions can stop tracing either per [trace_id](http://www.opensips.org/html/docs/modules/2.3.x/siptrace#idp110736) or globally - for all the trace id's. Calling [sip_trace](http://www.opensips.org/html/docs/modules/2.3.x/siptrace#idp5477056) without parameters will display the stat of all the trace_id's:
+```bash
+
+    opensipsctl fifo sip_trace
+
+    global:: on
+    tid::  type=HEP uri=1.2.3.4:6053 state=on
+
+```
+You can stop tracing for all the  [trace_id](http://www.opensips.org/html/docs/modules/2.3.x/siptrace#idp110736)'s by giving off argument to the function
+```bash
+
+    opensipsctl fifo sip_trace off
+    opensipsctl fifo sip_trace
+
+    global:: off
+    tid::  type=HEP uri=1.2.3.4:6053 state=on
+
+```
+
+Or you can set only one [trace_id](http://www.opensips.org/html/docs/modules/2.3.x/siptrace#idp110736) off and leave the others on
+
+```bash
+
+    opensipsctl fifo sip_trace
+  
+    global:: on
+    tid::  type=HEP uri=1.2.3.4:6053 state=on
+    tid2::  type=HEP uri=1.2.3.5:6053 state=on
+
+    opensipsctl fifo sip_trace tid2 off
+
+    opensipsctl fifo sip_trace
+  
+    global:: on
+    tid::  type=HEP uri=1.2.3.4:6053 state=on
+    tid2::  type=HEP uri=1.2.3.5:6053 state=off
+
+```
+
+### Fully flavored tracing script (2.3 version)
+
+The following [script](http://opensips.org/pub/docs/tutorials/homer/osip-trace-example.cfg) puts together everything discussed in the previous chapters in one OpenSIPS configuration file. It is the same script as the [default](https://github.com/OpenSIPS/opensips/blob/master/etc/opensips.cfg) one with tracing capabilities added. Everything extra from the [basic](https://github.com/OpenSIPS/opensips/blob/master/etc/opensips.cfg) version is marked with commented numbers followed by a bracket.
+
+As concerns the additions to the script a listener for **hep** module was defined (**1)**) and **hep** module was included (**2**). TCP was used for sending the **HEP** packets. Also the protocol used by the proxy was changed from UDP as it is by default to TCP just to have a transport protocl that can be traced. Tracing was enabled for TCP modue using **trace_destination** parameter and a filtering route was defined called **tcp_filter** (**3)**). In the filtering route(**8)**) [permissions](http://www.opensips.org/html/docs/modules/2.3.x/permissions) module was used(included at **4)**) to filter by `$si` which in this case **stands for the remote endpoint**(the other end of the socket that is not OpenSIPS). If the **check_source_address** returns positive then we trace the destination(return from the route with **exit**) else we drop tracing for this connection(return from the route with **drop**).
+
+**MI** tracing was enabled too(**7)**) by setting a **trace_destination** for the HEP messages. **ps** and **sip_trace** MI commands were blacklisted to avoid them being traced.
+
+For **sip**, **xlog** and **rest** tracing **siptrace** module was loaded and a **trace_id** called **hep_id** was defined(**7)**). We decided to trace all **REGISTER** transactions (**9)**). Just for the sake of example we added rest module(**6)**) and one rest query which will generate at least one request. Along with registrations we are also tracing all dialogs(**10)**) but this time only with **sip** and **xlog** since we have no rest query.
+
+## Capturing
+### Basic OpenSIPS capturing node
+
+---
+
+![simple node](/images/docs/tutorials/simple-node.jpg)
+
+---
+
+The module that handles all the capturing in OpenSIPS is [sipcapture](http://www.opensips.org/html/docs/modules/2.3.x/sipcapture). It can capture both HEP and plain SIP packets, but in this tutorial we will focus on it's HEP capturing capabilities. [sipcapture](http://www.opensips.org/html/docs/modules/2.3.x/sipcapture), as all the other modules using hep, requires [proto_hep](http://www.opensips.org/html/docs/modules/2.3.x/proto_hep) to have capturing server capabilities since [proto_hep](http://www.opensips.org/html/docs/modules/2.3.x/proto_hep) is the module implementing HEP network functions and decapsulation. If all you want is a simple **SIP-only** capturing node then all you need to do is:
+* define a hep listener and include [proto_hep](http://www.opensips.org/html/docs/modules/2.3.x/proto_hep) module
+```c
+
+   listen=hep_tcp:127.0.0.1:6061
+   loadmodule "proto_hep.so"
+
+```
+
+* include sipcapture module and set a db_url for the messages
+```c
+
+   loadmodule "sipcapture.so"
+   modparam("sipcapture", "db_url", "mysql://opensips:opensips@127.0.0.1/opensips")
+   modparam("sipcapture", "capture_on", 1)
+   modparam("sipcpature", "hep_capture_on", 1)
+
+```
+
+and somewhere in your request and reply route call **sip_capture** function:
+```c
+
+route {
+...
+sip_capture();
+...
+}
+
+...
+onreply_route {
+...
+sip_capture();
+...
+}
+
+```
+
+This configuration will be more than enough for HEPv1 or HEPv2. As concerns HEPv3 this will only work if HOMER5 packet types will be sent which does not have their payloads JSON encapsulated. For newer versions of HOMER you will have to use [hep_route](http://www.opensips.org/html/docs/modules/2.3.x/sipcapture#idp5547072) parameter which allows having much complex configurations.
+
+### HEP Route
+
+As stated before, newer versions of OpenSIPS will also send HEP traffic with payload other than SIP. To handle this type of traffic you can define a special route, the [hep_route](http://www.opensips.org/html/docs/modules/2.3.x/sipcapture#idp5547072), through which all the HEP packets will go. The operations that can be done in this route are the following:
+* read existing hep chunks - [hep_get](http://www.opensips.org/html/docs/modules/2.3.x/sipcapture#idp5637328)
+* modify existing chunks/create new chunks [hep_set](http://www.opensips.org/html/docs/modules/2.3.x/sipcapture#hep_set_id)
+* delete chunks [hep_del](http://www.opensips.org/html/docs/modules/2.3.x/sipcapture#idp5653136)
+* forward the HEP message to another capturing node [hep_relay](http://www.opensips.org/html/docs/modules/2.3.x/sipcapture#idp5660096)
+* go to SIP request/reply route [hep_resume_sip](http://www.opensips.org/html/docs/modules/2.3.x/sipcapture#idp5664736)
+* access information about the hep interface on which the message was received [hep_net](http://www.opensips.org/html/docs/modules/2.3.x/sipcapture#idp5675488)
+
+Apart from all these there is the [report_capture](http://www.opensips.org/html/docs/modules/2.3.x/sipcapture#idp5562000) function which saves the HEP message into a table without parsing it like a sip message. The function will save the data in a generic table that must have at least the same fields as the following [table](https://github.com/OpenSIPS/opensips/blob/master/modules/sipcapture/sql/rtcpcapture.sql).
+
+When receiving packets from an OpenSIPS 2.3 tracing node you will have to parse the payload and determine where should each packet go as in the following scenario:
+
+```c
+
+modparam("sipcapture", "hep_route", "HEPR")
+...
+route[HEPR] {
+    ### it's version 1 or 2; go directly to sip route
+    if ( $HEPVERSION != 3 ) {
+        hep_resume_sip();
+    }
+
+    ### get protocol type chunk ( id 11 )
+    hep_get("11", "$var(vendor)", "$var(data)");
+    
+    ### parse 
+    if ( $var(data) == "SIP" ) {
+        ### it's a sip message but the body is still in JSON format
+        ### fetch the payload
+        hep_get("payload", "$var(vendor)", "$var(payload)");
+        ### parse the json payload
+        $json(pld) := $var(payload);
+        ### and set the new payload before going to sip routes
+        hep_set("payload", "$json(pld/payload)");
+        hep_resume_sip();
+    }
+
+    ### save the rest of the data in the generic table
+    hep_get("utf8-string", "0x11", "$var(vendor)", "$var(correlation_id)")
+    report_capture("generic_capture", "$var(correlation_id)");
+}
+
+```
+
+### HEP Proxy
+
+---
+
+![proxy node](/images/docs/tutorials/proxy-node.jpg)
+
+---
+
+Sipcapture in OpenSIPS 2.2 gave the users the possibility to transform their capturing node into a proxy by using [hep_relay](http://www.opensips.org/html/docs/modules/2.3.x/sipcapture#idp5660096) function. It will relay the hep message the same way **t_relay** function from **tm** module relays the packets. This way HEP traffic can either be cloned to another capturing node or can be spliet between multiple nodes as in the following example:
+
+```c
+
+modparam("sipcapture", "hep_route", "HEPR")
+...
+route[HEPR] {
+    ### relay the traffic based on version
+    if ( $HEPVERSION == 3 ) {
+        $du = "sip:127.0.0.1:9111";
+    } else {
+        $du = "sip:127.0.0.1:9112";
+    }
+
+    hep_relay();
+    exit;
+
+```
+
+There may be many other criteria based on which you can proxy the traffic such as the tracing node that sent the traffic (see [hep_net](http://www.opensips.org/html/docs/modules/2.3.x/sipcapture#idp5675488)), the type of the traffic(accessible through chunk of type 11 with [hep_get](http://www.opensips.org/html/docs/modules/2.3.x/sipcapture#idp5637328)) or the proxy can be a load balancer between multiple capturing agents.
+
+### Fully flavored capturing script
+
+For exemplification we put together the following opensips [configuration file](http://opensips.org/pub/docs/tutorials/homer/capture-example.cfg). Two listeners are defined, one for TCP and one for UDP to capture all versions of HEP. The **modparam** section loads **mysql**, **proto_hep** and **sipcapture** modules. There is a [hep_route](http://www.opensips.org/html/docs/modules/2.3.x/sipcapture#idp5555168) defined with the name **hep_route**. In this route we first look to see if the received message is a HEP type 3 message, else we send it directly to the script 
+```text
+
+    if ($HEPVERSION != 3) {
+	hep_resume_sip();
+    }
+
+```
+
+Next, just for the sake of example we forward the HEP packets to another HEP capturing agent. There may be cases when you want to redirect your traffic when you want someone else to inspect your traffic but you can't give that person access to your network
+
+```text
+
+    ### clone the traffic to another destination
+    ### here you can use dispatcher or any other routing module
+    $du = "sip:1.2.3.4:9191";
+    hep_relay();
+
+```
+
+Now we are sure that is a HEPv3 message so we check if the message is of SIP type. If that is the case we parse the JSON payload an also send the message to the script, as described in the previous chapter
+```text
+
+### parse it and pass it to the script
+    if ($var(data) == "SIP") {
+        ### it's a sip message but the body is still in JSON format
+        ### fetch the payload
+        hep_get("payload", "$var(vendor)", "$var(payload)");
+        ### parse the json payload
+        $json(pld) := $var(payload);
+        ### and set the new payload before going to sip routes
+	hep_set("payload", "$json(pld/payload)");
+	hep_resume_sip();
+    }
+
+```
+
+For messages other than SIP we save each type of message to a different table using [report_capture](http://www.opensips.org/html/docs/modules/2.3.x/sipcapture#idp5562000). As stated before all the tables used in the function call has to have the following [structure](https://github.com/OpenSIPS/opensips/blob/master/modules/sipcapture/sql/rtcpcapture.sql).
+
+```text
+
+### select a different table for each message type
+	### known protos have string values but they all have int values
+	$var(proto) = $(var(data){s.int});
+
+	### WARNING: you have to create all these tables by yourself
+	if ($var(proto) == 86) {
+		$var(table) = "xlog_capture";
+	} else if ($var(proto) == 87) {
+		$var(table) = "mi_capture";
+	} else if ($var(proto) == 88) {
+		$var(table) = "rest_capture";
+	} else if ($var(proto) == 89) {
+		$var(table) = "net_capture;
+	}
+
+	### fetch the correlation id chunk
+	hep_get("utf8-string", "0x11", "$var(vendor)", "$var(correlation_id"));
+
+	report_capture("$var(table)", "$var(correlation_id)");
+
+```
+
+As concerns the SIP messages both requests and replies are going to the same route which stores the messages. We store registrations in a different table than the calls .The tables where sip messages are stored must have the following [structure](https://github.com/OpenSIPS/opensips/blob/master/modules/sipcapture/sql/sipcapture.sql).
+
+```text
+
+### save the sip traffic based on type
+	### these table don't exist; they have to be created
+	if ($rm == "REGISTER") {
+		sip_capture("sip_capture_registration");
+	} else {
+		sip_capture("sip_capture_call");
+	}
+
+```
+
+## Homer integration
+
+---
+
+![homer](/images/docs/tutorials/homer.jpg)
+
+---
+
+### Homer5 integration
+Before doing any configuration in OpenSIPS you will first have to install [Homer5](https://github.com/sipcapture/homer/wiki/Quick-Install). After doing this you will see that Homer created 3 databases among which there is the **homer_data** database containing the tables used for capturing. There are the sip tables which rotate everyday for they will have a date extension (e.g. sip_capture_call_20170419) and the table storing the logs called **logs_capture**. Homer 5 does not offer support for **rest**, **net** and **mi** events therefore you won't be able to use that data.
+On the node doing the tracing all you will have to do in the sample script provided in the previous chapter is to enable [homer5_on](http://www.opensips.org/html/docs/modules/2.3.x/proto_hep#idp5014512) parameter from **proto_hep** module which will disable JSON encapsulation for HEP payload
+```c
+
+   modparam("proto_hep", "homer5_on", 1)
+   ### optional - delimiter between key values
+   modparam("proto_hep", "homer5_delim", "||"
+
+```
+
+On the capturing node all the messages SIP messages in the hep route will go directly to request/reply route without being JSON decapsulated and the log messages will be saved to logs_capture using **report_capture**
+
+```c
+
+    modparam("sipcapture", "db_url", "mysql://opensips:opensips@127.0.0.1/homer_data")
+    modparam("sipcapture", "hep_route", "HEPR")
+
+    route[HEPR] {
+        hep_get("11", "$var(vid)", "$var(data)");
+        if ( $var(data) == "SIP" ) {
+            hep_resume_sip();
+        }
+
+        $var(proto) = $(var(data){s.int});
+        ### anything but xlog shall be dropped
+        if ( $var(proto) != 87 )
+            exit;
+
+        hep_get("utf8-string", "0x11", "$var(vendor)", "$var(correlation)");
+        report_capture("logs_capture", "$var(correlation)");
+        exit;
+
+```
+
+As concerns the sip packets you will have to take into consideration the fact that the tables are rotating everyday. Luckily sip_capture function supports tables in strftime format:
+```c
+route[STORE] {
+        if($rm == "REGISTER") {
+                $var(table) = "sip_capture_registration";       
+        }
+        else if($rm =~ "(INVITE|UPDATE|BYE|ACK|PRACK|REFER|CANCEL)$")
+        {
+                $var(table) = "sip_capture_call";
+        }
+        else if($rm =~ "(NOTIFY)$" && is_present_hf("Event") && $hdr(Event)=~"refer;")
+        {
+                $var(table) = "sip_capture_call";
+        }
+        else if($rm =~ "(INFO)$")
+        {
+                $var(table) = "sip_capture_call";
+        }
+        else if($rm =~ "(OPTIONS)$" )
+        {
+            $var(table) = "sip_capture_rest";
+        }
+        else {
+            $var(table) = "sip_capture_rest";
+        }
+
+        #$var(utc) = "%Y%m%d";
+
+        xlog("WRITING NEWLY CAME PACKET INTO ($var(table))!\n");
+        if($var(table) == "sip_capture_call") sip_capture("sip_capture_call_%Y%m%d");
+        else if($var(table) == "sip_capture_registration") sip_capture("sip_capture_registration_%Y%m%d");
+        else sip_capture("sip_capture_rest_%Y%m%d");
+}
+
+```
+
+Homer5 also has support for various statistics. For a fully working opensips configuration file with statistics support you can take a look [here](https://github.com/sipcapture/homer-api/blob/master/examples/sipcapture/sipcapture.opensips).
+
+### Homer6 Integration
+
+**TBD TBD TBD**'

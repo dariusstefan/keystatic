@@ -1,0 +1,40 @@
+---
+title: "Migration from 1.9.x to 1.10.0"
+description: "This section is to provide useful help in migrating your OpenSIPS installations from the 1.9 branch to the 1.10 branch."
+---
+
+This section is to provide useful help in migrating your OpenSIPS installations from the 1.9 branch to the 1.10 branch.
+
+You can find the all the new additions in 1.10.0 release compiled [under this page](/about/version-1-10-0). The changelog may help you understanding the migration / update process.
+
+---
+
+## DB migration
+
+You can migrate your 1.9.x DB to the 1.10.0 format by using the **opensipsdbctl** tool :
+```text
+
+   # opensipsdbctl migrate opensips_1_9 opensips_1_10
+   or
+   # osipsconsole 
+   > migrate opensips_1_9 opensips_1_10
+   > quit
+   # 
+
+```
+where :
+* opensips_1_9 is the existing DB name corresponding to version 1.9.x format
+* opensips_1_8 is the DB name to be created for 1.10 format
+
+> **Observation:** 
+> * the old database will not be deleted, altered or changed - it will not be touched at all
+> * new database will be created and data from old DB will be imported into it
+
+@@red|NOTE that the migration tool is available only for MYSQL databases!@@
+
+---
+
+## Script migration
+
+* SCA support for the **presence_callinfo** module is not by default activated. If you want to disable it, you have to set the [disable_dialog_support_for_sca](/wwww/opensips/org/html/docs/modules/1/10/x/presence_callinfo/html#id249970) on **1**.
+* The **auth_username_avp**, **auth_realm_avp** and **auth_password_avp** parameters have been moved from the **uac** module to **uac_auth**. See [this FAQ](http://www.opensips.org/html/docs/modules/1.10.x/uac.html#id294170) for more information.

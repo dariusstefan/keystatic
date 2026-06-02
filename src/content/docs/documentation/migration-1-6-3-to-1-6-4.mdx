@@ -1,0 +1,28 @@
+---
+title: "Migration from 1.6.3 to 1.6.4"
+description: "This section is to provide useful help in migrating your OpenSIPS installations from 1.6.3 release to 1.6.4 release (both on 1.6 branch)."
+---
+
+This section is to provide useful help in migrating your OpenSIPS installations from 1.6.3 release to 1.6.4 release (both on 1.6 branch).
+
+You can find the all the new additions in 1.6.4 release compiled [under this page](/about/version-1-6-4). Reading it may help you understand the migration / update process.
+
+---
+
+## DB migration
+
+The tables of several modules were extended with new fields (and the version of the tables were accordingly increased).
+
+To migrate from any 1.6.x DB structure to 1.6.4, if using MySQL, you can use the DB update shell script provided by the OpenSIPS tarball under **scripts/mysql_update_1_6_4.sh** - you can also fetch it from SVN - http://opensips.svn.sourceforge.net/viewvc/opensips/branches/1.6/scripts/mysql_update_1_6_4.sh?view=log
+
+---
+
+## Script migration
+
+### NATHELPER module
+
+The **force_rtp_proxy()** function was removed and needs to be replaced with **rtpproxy_offer()** /  **rtpproxy_answer()**. The new functions take the same parameters as the old one.
+
+Replace **force_rtp_proxy()** with **rtpproxy_offer()** when dealing with the first SDP in session (like dealing with the INVITE request) and replace **force_rtp_proxy()** with **rtpproxy_answer()** when handling the second SDP in session (200 OK INVITE reply).
+
+---

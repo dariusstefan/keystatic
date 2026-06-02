@@ -1,0 +1,113 @@
+---
+title: "Using the Compression module"
+subtitle: "Compression"
+subtitleHref: "http://www.opensips.org/html/docs/modules/3.1.x/compression.html"
+description: "The purpose of this tutorial is to help you understand how the @@blue|compression@@ module works and also how it should be used. After reading this tutorial..."
+---
+
+## Tutorial Overview
+
+The purpose of this tutorial is to help you understand how the @@blue|compression@@ module works and also how it should be used. After reading
+this tutorial you should understand which functions this module provides and also how to use it in order to reduce the size of your SIP message.
+
+## Current features
+
+As stated in the [documentation](http://www.opensips.org/html/docs/modules/3.1.x/compression.html), the module currently features:
+* **Message compaction**
+  * headers not specified in the given whitelist will be removed (excepting the mandatory ones like Via, To, From)
+  * some headers which have a compact form (not all of them) will be reduced to short form( eg. Via --> 'v'; Content-Length --> 'l)
+  * multiple headers of same type will be reduced to one header, containing all of them (eg. Header1: text1 and Header1: text2 reduced to Header1: text1, text2)
+  * unnecessary sdp body a=rtpmap:CODEC_NO where CODEC_NO < 98 removal
+* **Message compression/decompression**
+  * compression of the message body
+  * compression of headers specified in a whitelist, also excepting the mandatory ones
+  * base64 encoding
+
+Future directions for the module include adding more compression algorithms and support fore more types of routes.
+
+## Example script
+The following script will implement the following scenario: two SIP Servers directly connected. One of them does the compaction and the compression, and then forwards the message. The other one, receives the compressed message, decompresses the message and then forwards it.
+
+SIP logic provided for compressing server:
+* message compression
+* message compaction
+
+SIP logic provided for decompressing server:
+* message decompression
+
+@@blue|The compressing server@@
+
+Must load the module
+
+```c
+
+loadmodule "compression.so"
+
+```
+
+Optionally, we can set the compression level(1-9), default 6:
+```c
+
+modparam("compression", "compression_level", 7)
+
+```
+
+And then let's assume that for all "INVITES" we want to do compression and compaction:
+
+```text
+
+route {
+      if (is_method("INVITE") {
+         /*
+             we want body and headers compression separately
+             will use deflate
+             won't use base64
+             let's say the headers we want to compress are Header1 and Header2      
+         */
+         if (!mc_compress("0", "bhs", "Header1|Header2")) {
+             xlog("compression failed\n");
+             exit;
+         }
+         /*
+            now do compaction but keep User-Agent and P-Asserted-Identity headers
+            the rest of them will be removed (excepting the mandatory ones)
+            VERY IMPORTANT: keep in mind that if you do compaction after compression
+            3 new headers might be added: Content-Encoding (if you compress the body),
+            Comp-Hdrs(the compressed headers), Headers-Encoding(the algorithm used to
+            compress the headers in Comp-Hdrs). These headers will not be kept by
+            openSIPS, so you must explicitly specify them in mc_compact whitelist
+            of headers not to be removed.
+         */
+         if (!mc_compact("User-Agent|P-Asserted-Identity|Content-Encoding|Comp-Hdrs|Headers-Encoding") {
+             xlog("Compaction failed\n");
+             exit;
+         }
+         $var(dest) = "SO.ME.IP.ADDRESS:SOME_PORT";
+         forward("$var(dest)");
+         
+      }
+}
+
+```
+
+@@blue|Now let's go to the receiving server, the one doing the decompression.@@
+
+Let's assume that he loaded the "compression.so" and go directly to script logic. The compressor did it for invites so the decompressor will do the same. Also keep in mind that this is one of the first things you want to do, because this function will change the sip message so all the changes to the message you have done before this will not be taken into consideration.
+
+```text
+
+route {
+      if (is_method("REGISTER")) {
+          if (!mc_decompress()) {
+              xlog("decompression failed\n");
+              exit;
+          }
+          /* use the decompressed message */
+          #some_instructions#
+          /* forward it */
+          $var(endpoit_addr) = "SO.ME.IP.ADDRESS";
+          forward("$var(endpoint_addr)");
+      }
+}
+
+```

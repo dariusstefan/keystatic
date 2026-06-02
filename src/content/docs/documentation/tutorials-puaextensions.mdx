@@ -1,0 +1,164 @@
+---
+title: "Presence User Agent Extensions"
+description: "OpenSIPS has some presence extensions that offer some very interesting features: Get presence status from Register Gateway to xmpp presence Sending Publish a..."
+---
+
+**written by Anca Vamanu**
+
+OpenSIPS has some presence extensions that offer some very interesting features:
+* Get presence status from Register
+* Gateway to xmpp presence
+* Sending Publish and Subscribe messages using the MI interface
+* Bridge Line Appearance (BLA, event: dialog;sla)
+* Busy Lamp Field (BLF, event:dialog)
+
+They are implemented as presence user agent in modules named pua_`<extension>`:
+* [pua_usrloc](#pua_usrloc)
+* [pua_mi](#pua_mi)
+* [pua_xmpp](#pua_xmpp)
+* [pua_bla](#pua_bla)
+* [pua_dialoginfo](#pua_dialoginfo)
+
+---
+
+@@anchor|pua_usrloc@@
+## pua_usrloc
+
+There are still many SIP phones( especially hard phones) that do not implement presence, or not presence with a 
+central server. Even so, the server is aware if the phone is online or not from whether the phone is registered or
+not. This information is used by this module to send basic presence information to the Presence Server about any 
+phone.
+The modules parameters that can be configured are the following:
+* default_domain : (mandatory) the default domain to use when constructing the presentity uri if it is missing from
+recorded aor
+* entity_prefix : the prefix when constructing entity attribute to be added to presence node in xml pidf. (ex: 
+'pres').
+You can filter for which users or phones to have this feature enabled. In the configuration file you must call the 
+function **pua_set_publish** exported by the module when a Register for one ot the users is being processed. 
+
+See here a [configuration file example](/documentation/tutorials-presence-puausrlocconfig).
+
+It is not a must for the presence server to run on the same machine as the pua_usrloc extension, as the 
+communication is through PUBLISH SIP messages. 
+You can read the [modules readme here](http://www.opensips.org/html/docs/modules/1.11.x/pua_usrloc.html).
+
+---
+
+@@anchor|pua_mi@@
+## pua_mi
+
+OpenSIPS offers the possibility to publish any kind of information to the Presence Server or subscribe to the 
+presence state of a resource through the MI interface. This module requires the **pua** core and at least one [MI backend module](http://www.opensips.org/Documentation/Interface-MI-1-11).
+
+The commands and their parameters:
+1. **pua_publish**
+```text
+
+ <presentity_uri> 
+ <expires>
+ <event package>
+ <content_type>     - body type if body of a type different from default event content-type or . 
+ <ETag>             - ETag that publish should match or . if no ETag
+ <extra_headers>    - extra headers to be added to the request or .
+ <publish_body>     - may not be present in case of update for expire
+
+```
+Example:
+```text
+
+:pua_publish:fifo_reply
+sip:system@192.168.2.132
+3600
+presence
+application/pidf+xml
+.
+.
+<?xml version='1.0'?><presence xmlns='urn:ietf:params:xml:ns:pidf' xmlns:dm='urn:ietf:params:xml:ns:pidf:data-model'
+ xmlns:rpid='urn:ietf:params:xml:ns:pidf:rpid' xmlns:c='urn:ietf:params:xml:ns:pidf:cipid' 
+entity='system@domain'><tuple id='0x81475a0'><status><basic>open</basic></status></tuple><dm:person 
+id='pdd748945'><rpid:activities><rpid:away/>away</rpid:activities><dm:note>CPU:16 
+MEM:476</dm:note></dm:person></presence>
+
+```
+This example publishes the state of a system( CPU/MEM). This feature can be used in many applications, one example is
+advertising and publishing news and offers through the presence status of a dummy SIP account.
+
+2. **pua_subscribe**
+```text
+
+<presentity_uri>
+<watcher_uri>
+<event_package> 
+<expires>
+
+```
+You can read the [modules readme here](http://www.opensips.org/html/docs/modules/1.11.x/pua_mi.html).
+
+---
+
+@@anchor|pua_xmpp@@
+## pua_xmpp
+
+This module implements a presence gateway between XMPP and SIP. It requires **pua** and **xmpp** modules.
+You have to respect the uri format rules described in [link| xmpp-sip tutorial]. 
+The module has one mandatory parameter:
+* **server_address** - the IP address of the machine where the OpenSIPS XMPP gateway is running
+Ex: modparam( "pua_xmpp", "server_address", "sip:xmppgw@10.10.10.10")
+
+The operations performed by **pua_xmpp** module consist in translating the presence information format from xmpp
+to sip and back and also dealing with logic incompatibilities( SIP is time based while XMPP is not).
+In the SIP part, the module sends Subscribe messages on behalf of the xmpp users and catches Notifies in the script.
+Also it detects Subscribes to users in XMPP domains and sends Subscribes with event presence.winfo to on behalf of
+those users to be notified when others Subscribe to its presence.
+
+This is achieved by calling the following functions in the script:
+* **pua_xmpp_notify()**
+* **pua_xmpp_req_winfo(char* request_uri, char* expires)**
+
+See a [configuration example here](/documentation/tutorials-presence-puaxmppconfig).
+
+You can read the [module readme here](http://www.opensips.org/html/docs/modules/1.11.x/pua_xmpp.html).
+
+---
+
+@@anchor|pua_bla@@
+## pua_bla
+
+This module implements BLA( Bridge Line Appearance ) according to draft [draft-anil-sipping-bla-03.txt](http://tools.ietf.org/draft/draft-anil-sipping-bla/draft-anil-sipping-bla-03.txt).
+The implementation is compatible with Polycom phones SoundPoint IP430 SIP.
+
+The module requires central **pua** module and a presence server( either collocated with the BLA server or remote).
+It also requires to monitor Register messages which means that as pua_usrloc, it has to be collocated with the registrar or Register messages has to be forwarded to the server.
+The BLA server works as a central entity that gathers bridge line information from the phones and then distributes it
+to all the phones registered to the line. 
+The gathering part is done by the pua_bla module, with functionalities provided by the pua module. It is achieved by 
+sending Subscribe messages to the phones when registering and then catching the Notifies from the phones. The Notify
+is then transformed in a Publish message and sent to the presence server. 
+The presence server is the one that will deal with the distributing part. It will receive the subscribe messages from
+the phones and using the published information sent by the pua_bla module, it will send Notifies with the state of the line. 
+To configure the pua_bla module you can set these parameters:
+
+* **default_domain(str)** - (mandatory) the default domain 
+* **header_name(str)** -  (mandatory) the header name to be used for comprising information about the sender of the Notify in the generated Publish message; in the configuration file of the presence server the content of this header has to be given as a parameter for the handle_publish function 
+* **outbound_proxy(str)** - the address of the outbound proxy if one is used
+* **server_address(str)** - (mandatory) the IP address of the bla server 
+
+To achieved the functionalities described above, the following functions exported by the pua_bla module have to be used in the script:
+* **bla_set_flag**: should be called upon receiving a Register message for those registrations that are addressed to a BLA
+* **bla_handle_notify**: Should be called when receiving a Notify with a BLA information ( event: dialog;sla).
+See here a [configuration file example](/documentation/tutorials-presence-puablaconfig).
+
+You can read the [module readme here](http://www.opensips.org/html/docs/modules/1.11.x/pua_bla.html).
+
+---
+
+@@anchor|pua_dialoginfo@@
+## pua_dialoginfo
+
+This module enables BLF feature in the server by monitoring and publishing dialog information to the presence server. Basically this module uses the 'dialog' module, which is a tracker for dialogs and registers callback that are called whenever a call dialog SIP message is received. These callbacks code the new state of the dialog into an application/dialog-info+xml data format text and send these to the presence server as a body for a Publish message.
+
+Then, the rest of the job is done by the presence server. To enable handling for this event in the presence server you need to load the 'presence_dialoginfo' module that will register the 'dialog-info' event to the presence server. The presence server will receive Subscribe messages from the UA's and generate Notifies with the information received in Publish messages sent by the pua_dialoginfo module. 
+
+See here a [configuration file example](/documentation/tutorials-presence-puadialoinfoconfig).
+
+You can read the [modules readme here](http://www.opensips.org/html/docs/modules/1.11.x/pua_dialoginfo.html).

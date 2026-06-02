@@ -1,0 +1,92 @@
+---
+title: "Migration from 1.5.x to 1.6.x"
+description: "This section is to provide useful help in migrating your OpenSIPS installations from any release from 1.5 branch to any release from 1.6 branch."
+---
+
+This section is to provide useful help in migrating your OpenSIPS installations from any release from 1.5 branch to any release from 1.6 branch.
+
+You can find the all the new additions in 1.6.x release compiled [under this page](/about/version-1-6-0). Reading it may help you understand the migration / update process.
+
+---
+
+## DB migration
+
+One table was remove, one table had its schema changed and new tables were added (corresponding to the newly added modules).
+
+The biggest change was done in the PERMISSIONS module, where the *trusted* and *address* tables were merged into the *address* table.
+
+You can migrate your 1.5.x DB to the 1.5.x format by using the **opensipdbctl**(deprecated)  or **osipsconsole** tools:
+```text
+
+   # opensipsdbctl migrate opensips_1_5 opensips_1_6
+   or
+   # osipsconsole 
+   > db migrate opensips_1_5 opensips_1_6
+   > quit
+   # 
+
+```
+where :
+* opensips_1_5 is the existing DB name corresponding to version 1.5.x format
+* opensips_1_6 is the DB name to be created for 1.6.x format
+
+> **Observation:** 
+> * the old database will not be deleted, altered or changed - it will not be touched at all
+> * new database will be created and data from old DB will be imported into it
+
+Take care and edit (if necessary) the **opensipsctlrc** /  **osipsconsolerc** files if you want to customize the DB users used for accessing the new DB.
+
+@@red|NOTE that the migration tool is available only for MYSQL databases!@@
+
+---
+
+## Script migration
+
+### OpenSIPS core
+
+* "`$branch`" pseudovariable was replaced by "`$br`" variable
+
+### RADIUS modules
+
+A generic AAA interface was build in 1.6 ( very similar to the DB interface). Therefore some changes must be made in the script in the parts referring to modules that use RADIUS. First you must load the **aaa_radius** module which contains the radius implementation for the AAA interface. Second, you must change the name of the module according to the list:
+* **auth_radius** modules became **auth_aaa** module
+* **group_radius** module was merged with **group** module
+* **uri_radius** and **uri_db** were merged with **uri** module
+* **avp_radius** module does not exist anymore and its functionalities were integrated in **aaa_radius** modules
+
+### ALIAS_DB module
+
+* use_domain module parameter was removed as replaced by the "d" per-lookup option. 
+
+### DISPATCHER module
+* **ds_is_from_list()** replaced with a more generic function **ds_is_in_list("ip","port")**. The new function takes as parameters the IP and PORT to test against the dispatcher list, instead of using only the source IP and PORT (as ds_is_from_list()).
+ds_is_from_list() == ds_is_in_list("`$si`","`$sp`")
+
+### GROUP module
+
+* **is_user_in()** renamed as **db_is_user_in()**
+* **get_user_group()** renamed as **db_get_user_group()** 
+
+### PERMISSIONS module
+
+* the following script parameters are no longer used: **peer_tag_avp**, **trusted_table**, **source_col**
+* **ip_addr_col** parameter was renamed as ip_col
+* **tag_col** parameter was renamed as info_col
+* **from_col** parameter was renamed as pattern_col 
+* the new functions **check_address()**, **check_source_address()**, **get_source_group()** replace old functions **allow_address()**, **allow_source_address()**, **allow_trusted()**
+### REGISTRAR module
+
+* former global parameters like **method_filtering**, **max_contacts**, **append_branches**, **use_path**, **path_mode** and **path_use_received** are now per AOR / function parameters
+* sock_flag was moved as flag of the save() function
+
+### TM module
+
+* **t_reply()** function does not requires any more a prior create Transaction. If no transaction is found, it will be automatically created.
+* **t_cancel_branch()** take flags ("a" - cancel all branches; "o" - cancel all other branches except current; "" - current branch); **t_cancel_call()** is obsoleted and removed (same as **t_cancel_branch("a")**).
+
+### URI module
+
+* **check_from()**  renamed to **db_check_from()**
+* **check_to()**  renamed to **db_check_to()**
+* **does_uri_exist()**  renamed to **db_does_uri_exist()**
+* **get_auth_id()**  renamed to **db_get_auth_id()**

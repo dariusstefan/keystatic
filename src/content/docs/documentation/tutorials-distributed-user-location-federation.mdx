@@ -1,0 +1,258 @@
+---
+title: "How To Configure a Federated User Location Cluster"
+subtitle: "How To Configure a Federated User Location Cluster (for OpenSIPS 2.4)"
+author: "by Liviu Chircu"
+description: "The \"federation\" clustering strategy for the OpenSIPS user location is a complete, high-end solution, offering:"
+---
+
+## Description
+
+The "federation" clustering strategy for the OpenSIPS user location is a complete, high-end solution, offering:
+
+* excellent horizontal scalability
+* minimal network interaction between cluster nodes
+* small NoSQL DB records, thus maximizing the scaling potential of the NoSQL cluster
+* ability to place the clustered registrars at the edge of your platform, directly facing clients, while maintaining global reachability for all SIP Addresses-of-Record and all of their Contacts
+* optional NAT pinging support
+* optional restart persistency support
+* optional "hot backup" HA support
+
+  
+
+Instead of full-mesh replicating user location data to the entire cluster (i.e. just like the ["full sharing"](/documentation/tutorials-distributed-user-location-full-sharing) clustering strategy does), the nodes will only publish some light, metadata "AoR availability" records into a shared NoSQL database, as in this picture:
+
+  
+
+![federation basic](/images/docs/tutorials/federation-basic.jpg)
+
+  
+
+This setup also supports a "hot backup" node for each member of the cluster, allowing for near-instant failover in case the active node crashes or goes offline. This is achieved using a Virtual IP, sitting in front of each pair of servers, as in this diagram:
+
+  
+
+![federation ha](/images/docs/tutorials/federation-ha.jpg)
+
+  
+
+### Configuration
+
+For the smallest possible setup, you will need:
+
+* two OpenSIPS instances
+* a MySQL instance
+* a Cassandra or MongoDB instance (you can upgrade them into a cluster later)
+
+Below are the relevant OpenSIPS config sections:
+
+  
+
+```c
+
+loadmodule "usrloc.so"
+modparam("usrloc", "use_domain", 1)
+modparam("usrloc", "working_mode_preset", "federation-cachedb-cluster")
+modparam("usrloc", "location_cluster", 1)
+
+# with Cassandra, make sure to create the keyspace and table beforehand:
+# CREATE KEYSPACE IF NOT EXISTS opensips WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'}  AND durable_writes = true;
+# USE opensips;
+# CREATE TABLE opensips.userlocation (
+#     id text,
+#     aor text,
+#     home_ip text,
+#     PRIMARY KEY (id));
+loadmodule "cachedb_cassandra.so"
+modparam("usrloc", "cachedb_url", "cassandra://10.0.0.5:9042/opensips.userlocation")
+
+# with MongoDB, we don't need to create any database or collection...
+loadmodule "cachedb_mongodb.so"
+modparam("usrloc", "cachedb_url", "mongodb://10.0.0.5:27017/opensipsDB.userlocation")
+
+loadmodule "clusterer.so"
+modparam("clusterer", "current_id", 3)
+modparam("clusterer", "seed_fallback_interval", 5)
+modparam("clusterer", "db_url", "mysql://opensips:opensipsrw@localhost/opensips")
+
+```
+
+  
+
+Example clusterer table with no HA (2 active nodes):
+
+```sql
+
+INSERT INTO clusterer(id, cluster_id, node_id, url, state, no_ping_retries, priority, sip_addr, flags, description) VALUES \
+(NULL, 1, 1, 'bin:10.0.0.177', 1, 3, 50, '10.0.0.177', 'seed', NULL), \
+(NULL, 1, 3, 'bin:10.0.0.179', 1, 3, 50, '10.0.0.179', 'seed', NULL);
+
+```
+
+| **id** | **cluster id** | **node_id** | **url** | **state** | **no_ping_retries** | **priority** | **sip_addr** | **flags** | **description** |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+|  14 | 1 | 1 | bin:10.0.0.177 | 1 | 3 | 50 | 10.0.0.177 | seed | NULL |
+|  15 | 1 | 3 | bin:10.0.0.179 | 1 | 3 | 50 | 10.0.0.179 | seed | NULL |
+
+@@green|**clusterer table example (no HA)**@@
+
+  
+
+Notice how we set the "flags" column to "seed" for both nodes. This ensures that the user location can safely boot with an empty dataset and be happy with it. If we had left "flags" set to NULL for a node, when that node starts up, its user location module would have started looking for a healthy donor node, from which to request a full user location data transfer via cluster sync. Also, the "sip_addr" column is equal to the SIP listener where we would like to receive traffic for the AoRs we've advertised as our own inside the NoSQL database. This is a usrloc-specific use case for "sip_addr" - other cluster-enabled modules may use this column differently or ignore it altogether.
+
+  
+
+Example clusterer table provisioning with HA (2 active nodes + 2 passive nodes):
+
+```sql
+
+INSERT INTO clusterer(id, cluster_id, node_id, url, state, no_ping_retries, priority, sip_addr, flags, description) VALUES \
+(NULL, 1, 1, 'bin:10.0.0.177', 1, 3, 50, '10.0.0.223', 'seed', NULL), \
+(NULL, 1, 2, 'bin:10.0.0.178', 1, 3, 50, '10.0.0.223', 'NULL', NULL), \
+(NULL, 1, 3, 'bin:10.0.0.179', 1, 3, 50, '10.0.0.224', 'seed', NULL), \
+(NULL, 1, 4, 'bin:10.0.0.180', 1, 3, 50, '10.0.0.224', 'NULL', NULL);
+
+```
+
+| **id** | **cluster id** | **node_id** | **url** | **state** | **no_ping_retries** | **priority** | **sip_addr** | **flags** | **description** |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+|  14 | 1 | 1 | bin:10.0.0.177 | 1 | 3 | 50 | 10.0.0.223 | seed | NULL |
+|  15 | 1 | 2 | bin:10.0.0.178 | 1 | 3 | 50 | 10.0.0.223 | NULL | NULL |
+|  16 | 1 | 3 | bin:10.0.0.179 | 1 | 3 | 50 | 10.0.0.224 | seed | NULL |
+|  17 | 1 | 4 | bin:10.0.0.180 | 1 | 3 | 50 | 10.0.0.224 | NULL | NULL |
+
+@@green|**clusterer table example (with HA)**@@
+
+  
+
+To achieve HA, notice how we group nodes in pairs using the "sip_addr" column.  It now contains the Virtual IP address sitting in front of each pair.  In federation mode, the user location will only replicate contact information to nodes with equal "sip_addr" values, in order to achieve the "hot backup" feature.  Next, the "flags" column is set to "seed" on the active node, and NULL on the backup.  This allows you to restart the backup node and automatically have it sync'ed up via cluster transfer.  The "flags" column is ignored when using a local SQL database for [restart persistency](http://www.opensips.org/html/docs/modules/2.4.x/usrloc.html#param_restart_persistency).
+
+#### Registration flows
+
+The registration flow has two steps:
+
+* UAs register to their configured registrar
+* if a new AoR is created, the registrar publishes the AoR's availability in the NoSQL cluster
+
+We need not change anything in the default script in order to achieve the above. The [working_mode_preset](http://www.opensips.org/html/docs/modules/2.4.x/usrloc.html#param_working_mode_preset) or [cluster_mode](http://www.opensips.org/html/docs/modules/2.4.x/usrloc.html#param_cluster_mode) module parameters take care of this.
+
+  
+
+![federation registration](/images/docs/tutorials/federation-registration.jpg)
+
+  
+
+#### Call flows
+
+When looking up an AoR, we have two options:
+
+* local lookup, using [lookup("location")](http://www.opensips.org/html/docs/modules/2.4.x/registrar#func_lookup)
+* global lookup, using [lookup("location", "g")](http://www.opensips.org/html/docs/modules/2.4.x/registrar#func_lookup)
+
+  
+
+The "g" (global) flag indicates that the lookup() will not only perform the local lookup operation, but also do a NoSQL DB lookup and prepare additional branches for each returned result. Thus, we will fork the INVITE to both the callee's local contacts and to any cluster member that has previously advertised the AoR. Below is an example of a call that gets forked to a device local to the current PoP (branch #1) and to a remote PoP (branch #2), where the callee has registered a 2nd device.
+
+  
+
+![federation forking](/images/docs/tutorials/federation-forking.jpg)
+
+  
+
+At OpenSIPS script level, we can easily distinguish calls coming in from fellow cluster nodes using [cluster_check_addr()](http://www.opensips.org/html/docs/modules/2.4.x/clusterer#func_cluster_check_addr):
+
+  
+
+```text
+
+route {
+    ...
+
+    $var(lookup_flags) = "m";
+
+    if (cluster_check_addr("1", "$si")) {
+        xlog("$rm from cluster, doing local lookup only\n");
+    } else {
+        xlog("$rm from outside, doing global lookup\n");
+        $var(lookup_flags) = $var(lookup_flags) + "g";
+    }
+
+    if (!lookup("location", "$var(lookup_flags)")) {
+        t_reply("404", "Not Found");
+        exit;
+    }
+
+    ...
+}
+
+```
+
+#### NAT pinging
+
+Some setups require periodic SIP OPTIONS pings originated by the registrar towards some of the contacts in order to keep the NAT bindings alive. Here is an example configuration:
+
+```c
+
+loadmodule "nathelper.so"
+modparam("nathelper", "natping_interval", 30)
+modparam("nathelper", "sipping_from", "sip:pinger@localhost")
+modparam("nathelper", "sipping_bflag", "SIPPING_ENABLE")
+modparam("nathelper", "remove_on_timeout_bflag", "SIPPING_RTO")
+modparam("nathelper", "max_pings_lost", 5)
+
+```
+
+We then enable these branch flags for some or all contacts before calling [save()](http://www.opensips.org/html/docs/modules/2.4.x/registrar#func_save):
+
+```text
+
+    ...
+    setbflag(SIPPING_ENABLE);
+    setbflag(SIPPING_RTO);
+
+    if (!save("location"))
+        sl_reply_error();
+    ...
+
+```
+
+  
+
+However, when we enable HA for federated clustering, **both** the active and the passive node will attempt to generate pings. Depending on your VIP implementation, your passive node may spew errors such as:
+
+```text
+
+May 30 06:09:58 localhost /usr/sbin/opensips[18833]: ERROR:core:proto_udp_send: sendto(sock,0x812ae0,294,0,0xbffd8800,16): Invalid
+argument(22) [1.2.3.4:38911]
+May 30 06:09:58 localhost /usr/sbin/opensips[18833]: CRITICAL:core:proto_udp_send: invalid sendtoparameters#012one possible reason
+is the server is bound to localhost and#012attempts to send to the net
+May 30 06:09:58 localhost /usr/sbin/opensips[18833]: ERROR:nathelper:msg_send: send() to 1.2.3.4:38911 for proto udp/1 failed
+May 30 06:09:58 localhost /usr/sbin/opensips[18833]: ERROR:nathelper:nh_timer: sip msg_send failed
+
+```
+
+To silence these errors, you can hook the [nh_enable_ping](http://www.opensips.org/html/docs/modules/2.4.x/nathelper.html#mi_nh_enable_ping) MI command into your active->backup and backup->active transitions of the VIP:
+
+```bash
+
+    opensipsctl fifo nh_enable_ping 1 # run this on the machine that takes over the VIP (new active)
+    opensipsctl fifo nh_enable_ping 0 # run this on the machine that gives up the VIP (new passive)
+
+```
+
+#### FAQ
+
+##### Should I deploy MySQL on each node?
+
+Yes, the SQL database should be local to each OpenSIPS node.
+
+##### Should I set up replication between the MySQL instances?
+
+No!  The only purpose of the SQL database is to persist the registration / dialog data on each OpenSIPS restart.  This allows the SIP node to run on its own, even if its datacenter is isolated from the global platform.
+
+##### Should I put a MongoDB instance on each node?
+
+This is left up to you to decide.  The only requirement is to have a single, global NoSQL database, with all OpenSIPS nodes being able to connect to it.  This way, different datacenters can publish their AoR metadata to this database.
+
+##### What is the recommended tool for the virtual IP management?
+
+From our experience, both *keepalived* and *vrrpd* have worked very well, without any issues once the configuration was properly set up.

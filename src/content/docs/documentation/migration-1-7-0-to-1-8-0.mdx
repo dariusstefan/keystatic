@@ -1,0 +1,46 @@
+---
+title: "Migration from 1.7.0 to 1.8.0"
+description: "This section is to provide useful help in migrating your OpenSIPS installations from the 1.7.0 branch to the 1.8 branch."
+---
+
+This section is to provide useful help in migrating your OpenSIPS installations from the 1.7.0 branch to the 1.8 branch.
+
+You can find the all the new additions in 1.8.0 release compiled [under this page](/about/version-1-8-0). Overviewing it may help you understanding the migration / update process.
+
+---
+
+## DB migration
+
+You can migrate your 1.7.x DB to the 1.8.0 format by using the **opensipsdbctl** tool :
+```text
+
+   # opensipsdbctl migrate opensips_1_7 opensips_1_8
+   or
+   # osipsconsole 
+   > migrate opensips_1_7 opensips_1_8
+   > quit
+   # 
+
+```
+where :
+* opensips_1_7 is the existing DB name corresponding to version 1.7.x format
+* opensips_1_8 is the DB name to be created for 1.8 format
+
+> **Observation:** 
+> * the old database will not be deleted, altered or changed - it will not be touched at all
+> * new database will be created and data from old DB will be imported into it
+
+> **Observation:** 
+> * Due to the latest DROUTING changes & improvements, in the gwlist per rule, the ';' is no longer accepted.
+In order to create gateway groups, use the carriers addition. The migration tool will give out warnings regarding this, but there is no way to automatically migrate this information, so manual migration will be needed for this.
+
+@@red|NOTE that the migration tool is available only for MYSQL databases!@@
+
+---
+
+## Script migration
+
+* Because of a large part of the TEXTOPS module was split to the SIPMSGOPS module, some functions that used to be in the TEXTOPS module will not reside in SIPMSGOPS. Please check the [SIPMSGOPS](http://www.opensips.org/html/docs/modules/devel/sipmsgops.html) documentation for the list of exported functions, and also load the SIPMSGOPS module, if needed. 
+* With the addition of the Key-Value Interface, for consistency, some modules were renamed. The old localcache module is now called cachedb_local , and the old memcached module is now called cachedb_memcached .
+* The dispatcher 'list_file' module parameter was removed, as the support for text file (for provisioning destinations) was dropped. If you still want to use a text file for provisioning, use db_text DB driver (DB emulated via text files)
+* With the new DROUTING module enhancements, the do_routing() function prototype has changed. The old 'sort' integer parameter was replaced by a string flags parameter. In order to sort gateways by weight, you can now pass the 'W' string flag. The addition of weights per gateway will now give you a much better control of gateways for a specific rule. For example, the old 'random' sort feature can now be implemented by adding equal weights for all GWs within the same rule.

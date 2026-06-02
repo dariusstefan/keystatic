@@ -1,0 +1,204 @@
+---
+title: "Key-Value Interface"
+description: "The Key-Value interface added into OpenSIPS provides an easy way for the script writer and the module writer to transparently access different Key-Value type..."
+---
+
+## Key-Value Interface
+
+The Key-Value interface added into OpenSIPS provides an easy way for the script writer and the module writer to transparently access different Key-Value type back-ends, very similar to the way the DB interface allows easy connection to different types of SQL databases.
+
+Modules that offer actual back-end connection will use the Key-Value interface in order to provide the actual functionality to the end-user. At the current stage in time ( Official 1.7 release is out, trunk holds the future 1.8 ), there are four modules that use the interface :
+
+* cachedb_local - Uses OpenSIPS shared memory as storage 
+  * Advantage - very fast, no external communication needed
+  * Disadvantage - low persistency, an OpenSIPS restart will cause the cache to get flushed
+* cachedb_memcached - Uses Memcached servers as back-end
+  * Advantage - memory costs are no longer on the server. Better persistency, OpenSIPS restart will not affect memcached state
+  * Disadvantage - still behaves very much like a cache, so a Memcached server restart will cause all the information to be lost
+* cachedb_redis - Uses Redis Cluster servers as back-end
+  * Advantage - Behaves like a DB, so a restart both on the OpenSIPS and the Redis server will not cause any data loss. Even more, because of the distributed character of the Redis Cluster, it can allow for easy and fast key-value sharing between multiple SIP instances.
+  * Disadvantage - The cost of full persistency and distribution makes it slower than the above back-ends.
+* cachedb_cassandra - Uses Cassandra Cluster servers as back-end
+  * Advantage - Behaves like a DB, so a restart both on the OpenSIPS and the Cassandra server will not cause any data loss. Even more, because of the distributed character of the Cassandra Cluster, it can allow for easy and fast key-value sharing between multiple SIP instances.
+  * Disadvantage - The cost of full persistency and distribution makes it slower than the above back-ends.
+
+---
+
+## Core API
+
+The OpenSIPS core offers an API for operating with any memory caching system from the script. This API is composed out of the following functions: 
+
+* store - [cache_store()](/documentation/script-corefunctions#toc101)
+* fetch - [cache_fetch()](/documentation/script-corefunctions#toc102)
+* remove - [cache_remove()](/documentation/script-corefunctions#toc103)
+* add - [cache_add()](/documentation/script-corefunctions#toc104)
+* sub - [cache_sub()](/documentation/script-corefunctions#toc105)
+
+Each of the above functions in the API receive as first parameter the ENGINE_ID of the targeted cache system, a plain-text string.
+The three modules previously listed that offer the actual implementation behave in the following way, in regards to providing the ENGINE_ID :
+* cachedb_local : the ENGINE_ID is always "local"
+* cachedb_memcached : The Memcached module exports a parameter to script, [cachedb_url](http://www.opensips.org/html/docs/modules/devel/cachedb_memcached.html#id249176) . The prefix part of the URL provided ( the part before :// ) will be the ENGINE_ID identifier that will be provided to the functions in the API
+* cachedb_redis : Similar to the memcached module, the Redis module exports a parameter to script, [cachedb_url](http://www.opensips.org/html/docs/modules/devel/cachedb_redis.html#id249095) . The prefix part of the URL provided ( the part before :// ) will be the ENGINE_ID identifier that will be provided to the functions in the API
+
+---
+
+## Use Cases and Examples
+
+### Password caching for DB authentication
+
+#### The idea - how to
+
+The idea is, after performing a DB authentication (authentication by fetching the password from DB) to store the password in memcache; the password is stored with a certain lifetime to ensure that from time to time the password is read from DB again.
+
+When a new authentication is needed, first we check if the password is available in memcache (previously stored and not yet expired); if so, we use the value from there to perform authentication without a DB hit.
+
+As we have to store in the same time the passwords of more than one users, we need to use different names for the attributes -> the attribute name will contain the user name, something like "passwd_username". 
+
+#### The logic - diagram
+
+* REGISTER request received
+* is password stored in "passwd_`$tu`" attribute?
+  * NO -> perform DB authentication 
+  * store the used password into "passwd_`$tu`" with s lifetime (1200 seconds - 10 minutes)
+  * DONE
+* YES -> use the value from the memcache do to authentication from script variables.
+* DONE
+
+#### Script example
+
+Current format of authentication script for REGISTER is:
+```text
+
+	if (!www_authorize("", "subscriber")) {
+		www_challenge("", "0");
+		exit;
+	};
+
+```
+
+By adding memcache support, the script looks like:
+```c
+
+....
+loadmodule "modules/db_mysql/db_mysql.so"
+loadmodule "modules/auth/auth.so"
+loadmodule "modules/auth_db/auth_db.so"
+loadmodule "modules/localcache/localcache.so"
+....
+modparam("auth","username_spec","$avp(i:54)")
+modparam("auth","password_spec","$avp(i:55)")
+modparam("auth","calculate_ha1",1)
+
+modparam("auth_db", "calculate_ha1", yes)
+modparam("auth_db", "password_column", "password")
+modparam("auth_db", "db_url","mysql://opensips:opensipsrw@localhost/opensips_1_2")
+modparam("auth_db", "load_credentials", "$avp(i:55)=password")
+....
+
+....
+route[x]{
+	.....
+	# do we have the password cached ?
+	if(cache_fetch("local","passwd_$tu",$avp(i:55))) {
+		$avp(i:54) = $tU;
+		xlog("SCRIPT: stored password is $avp(i:55)\n");
+		# perform auth from variables
+		# $avp(i:54) contains the username
+		# $avp(i:55) contains the password
+		if (!pv_www_authorize("")) {
+			# authentication failed -> do challenge			
+			www_challenge("", "0");
+			exit;
+		};
+	} else {
+		# perform DB authentication ->
+		# password will be loaded from DB automatically
+		if (!www_authorize("", "subscriber")) {
+			# authentication failed -> do challenge		
+			www_challenge("", "0");
+			exit;
+		};
+		# after DB authentication, the password is available
+		# in $avp(i:55) because of the "load_credentials"
+		# module parameter.
+		xlog("SCRIPT: storing password <$avp(i:55)>\n");
+		# use a 20 minutes lifetime for the password;
+		# after that, it will erased from cache and we do
+		# db authentication again (refresh the passwd from DB)
+		cache_store("local","passwd_$tu","$avp(i:55)",1200);
+	}
+
+	....
+}
+
+```
+
+References:
+* auth module - see [functions and parameters](http://www.opensips.org/html/docs/modules/1.5.x/auth.html)
+* auth_db module - see [functions and parameters](http://www.opensips.org/html/docs/modules/1.5.x/auth_db.html)
+
+#### Performance improvement
+
+Assuming a 30 minute registration period and placing a call each 20 minutes, without any caching, there will be 5 authentication queries to DB per hour per user.
+
+This means, for 1000 users, per day : 1000 * 3 * 24 = 72000 queries per day for auth.
+
+If you set a 2 hours lifetime for cached data, you have one query per user at each 2 hours.
+
+So, for the same 1000 users, per day, you have : 1000 * 0.5 * 24 = 12000 queries per day for auth
+
+So, this gives you a reduction to with 83% (to 17%) of the numbers of queries! 
+
+### Simple but distributed billing
+
+#### The idea - how to
+
+One can have multiple distributed OpenSIPS servers responsible for the same domain, for redundancy and load-balancing purposes, which can easily be accomplished via a simple mechanism like DNS Round-Robin.
+Because all of the OpenSIPS servers will try to access the user's credit information, the problem occurs when you try to bill the calls done via those distributed OpenSIPS servers, but also when it comes to rejecting certain calls because the user does not have enough credit available.
+
+The solution would be to use a Redis DB clusters. The key will hold the actual username and the value will be the available credit. Because of the atomic nature of cache_add and cache_sub operations, all the OpenSIPS servers can reliably update the credit once the call ends. An OpenSIPS server can also consistently get the credit available for a certain user, in order to decide if it allows initial INVITEs to pass through or not. Even more, because of the persistency of Redis Server, all the credit information will not be lost in case of failures.
+
+#### Prerequisites
+
+Each machine where OpenSIPS runs should have a Redis Server instance running. All the Redis Servers should be linked into a Redis cluster. A good tutorial on how create a simple Redis Cluster is located [here](http://antirez.com/post/2-4-and-other-news.html).
+
+#### Script example
+
+Rejecting calls due to low credit and updating credit cost after each call end can be done in the following way :
+
+```c
+
+modparam("cachedb_redis","cachedb_url","redis://192.168.2.1:6379") 
+....
+
+route {
+...
+   # sequential requests
+   if (has_totag()) {
+      if (is_method("BYE")) {
+          # substract from credit call_duration*cost cents
+          $avp(cost) = $DLG_lifetime * $(dlg_val(cost){s.int});
+          cache_sub("redis","credit_$fU",$avp(cost),0);
+      }
+      ...
+   } else {
+      # initial INVITE
+      if (is_method("INVITE")) {
+         # get user credit
+         cache_fetch("redis","credit_$fU",$avp(user_credit));
+         if ($avp(user_credit) <= 1) {
+            xlog("User $fU does not have enough credit\n");
+            sl_send_reply("403","Forbidden - Not enough credit");
+            exit;
+         }
+
+         create_dialog();
+         # get call cost
+         $dlg_val(cost)= "3"; 
+      }
+      ...
+   }
+...
+}
+
+```

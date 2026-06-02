@@ -1,0 +1,165 @@
+---
+title: "RCS - Managing Capabilities"
+author: "by Liviu Chircu"
+description: "RCS (Rich Communication Services) is a communication protocol between mobile telephone carriers and between phone and carrier, aiming at replacing SMS messag..."
+---
+
+## Introduction
+
+RCS (Rich Communication Services) is a communication protocol between mobile telephone carriers and between phone and carrier, aiming at replacing SMS messages with a text-message system that is richer, provides phonebook polling (for service discovery), and can transmit in-call multimedia[\[1\]](https://en.wikipedia.org/wiki/Rich_Communication_Services).
+
+On the SIP protocol level, RCS comes with only a minimal amount of extensions, as the various services it enables (e.g. group chat, file transfer, message read receipts, etc.) are often dependent of additional, non-SIP micro-services part of the same RCS platform, such as web servers, dedicated application servers, etc.  In the overwhelming majority of cases, each RCS feature shall be represented in SIP as a Contact header field parameter, or as an Accept-Contact header field parameter (see [RFC 3841](https://datatracker.ietf.org/doc/html/rfc3841) for more info about this header).
+
+## Managing Capabilities at opensips.cfg Level
+
+RCS capabilities and/or capability preferences may be included in various SIP requests.  Here are some examples on how these RCS SIP payloads may look like:
+
+* SIP [REGISTER](https://topaz.github.io/paste/#XQAAAQAaBQAAAAAAAAApEUUI0nzkDSkv/znaTL6ykZtpcqypkKN0qBVE1PQAbbfTHFHr+UXdbmi6oPihCczws0Wkyu89pogRIs8H9kNnIjKzQHe7HnrzlH3zqewNMerQZgPN/UXJzp6c+Qm+PRlMebLg7XGJ9PNf+1+uu2HKg4nNCoiyVD+Rz/GnpD8EJ/tVR2prPqzhnaGDxZSKAvqSeHbCgeALtY4OmpFyEitHePxd9I+wFJRBKkzPuZGtEZunyFC3gE26/gm75M80QDlG57gsTVxzPaaH6+ZsdlBaqAwD76MW3dxTApSysbq3tx9ZeaxDpEOEpp/SWPtaRVP+WUkF49vZiKyAGc1r05WgD80wn/122GMhhudtJIW6xTXbKanL7nNgUHIP+zc2GTTXVK+Pb3i1WtHB7VJZIzaDn2lZkF/OvPSGsFA5kA60bwXhDRashbPuQhPPEjrBCfEc1Z8WsRTsCNwd/EuAEMs7Zcst3LGmnhHC/9PfZ32SYdb00EJ2KXQzFnwUR7aB1WajYJJFsa+mGwERxlXXY5aMH+QitUDSGp7y5KCaopYR1s2mUGZad8LHLX2LkYkVXvxWFLQLdnBM68FgoG2/pSh6a5oIJ2bM/iOG6fMjvr0EtCI/v7XhqvOknEyaEYDYQ1rEZRr7ERQcZCa4GAXqABFdJTUSwFncMYkLrLf12U41v8WYZJlom852bSYNT6xrj2pj+YqC7phawAGwrvlx2QPxtnqRiSzt7UpXNPedFmYwTuuPAaPE5QZyhWzINC8c6qFXdoCm7w3cEM3pq9zO7INZ/H1YBlimYuXtuMw9/PHxWyyXMyWPVroNMC/gr7GX5ec9KC3NmtMos5rMQObpxwl/JNLXsqmmt33CU+WNXZUEyUCbwIIF37iBTidtEROXsbBLT/+RxPUA) packet
+* SIP [SUBSCRIBE](https://topaz.github.io/paste/#XQAAAQAVBwAAAAAAAAAplURHvwauuecl+9dRreHnkbu+pi4nJf/e/L5fr6biVK1uvV48E/iBOlqNnr3hDIAGOi1cfwkY7fg3SVr508OPxcffAqudT4VpauQ4r12PJF1jhFUkH+DzDDKXvl+5UTGvDqHFBr8PC0xzKq1huXLPZq9Gaymx0Q3r2PM/Y2obpytdY7r/WkKSTGCYUFHjB4UxbFSzFYYRhlbpm2S+LZWMr4GcSJ9P7gzcUkDPARCDMJv8SzMeAVf8ufY960A+WuOeW1iycGujJbYyDYwSRLBjOMhrmzXZHdiLeGuVIymYVqmhijNig0yc7yX+B/WHuVC/SUwWMiQ/vgclq9IpOKij0oMuri6qgxoteQQSutigOPEd+d7j81ptWOIu466zWNQoJi3mllL1/r6nYZVhzwsz/TJ4/d0jfenVGDeUbFvWdItfCSsFCeKW+9n/IfNqJozKi/KauY4LK5dAtI5bGSmrxnRuP3kDci5Z51+jYArCQf/0/rKqUc+nd5S7uuANR8RJWpk6vcX1D/Pcunla5u+7owiyylELNMI6U0lsyrsiUAHnixc6YUw2uJomm40TXaCSbdTSfOFxUUi0DEWthS+OqXDODx2etAJRGGa39qlI1eOmCHTc/Cf/jU7vjfDeeM5odARp5nv2H0q5M/ZNG5YeYNExu0ggb9pVxTzIBfrkd332wtnf500wZ+d32seTDEAb6wdxnivmgWCn89q0PJj84zI+t4Y0j+g9JG1mLtrQFTiXmCeOwCxKTE6O0sMrMlpWap4/3b6F8c2aO2n1P2edtkbrNhEg9vlus4raL989+1mlD91febFYWD/i9HG5UUqsiViuTM/VDEm/T2b7Ha0MOpfEGL9KQ8d/SsESZKe0IeT/VP9u4rw9TAUiFLUJ7RAW2ZtrPScu6+ry6dpm0avNVFirhzr7UEhhmpPFsvJZft6Nl3l9UkUuMI1aAJuSZfBD5irc4G7SAFMnm5HOmKEuVL2PyD4Fc9Lya3GWVdIkCcchO0Nr5O+/GL4+VLuiTxVG+e/ymj3aqSX5j5o+YxHPqVtx7lIL/G3BuuyWkqD7BcG9mY6x+29GDzk2VLdV1wfJ7BM9XuzEsRTRfm9Jl47Qm/iuH8L3eEMKkJZv/shYE5WnuG0pt84b3VQOr3qixN85Rfr+Zbqf3ZWayIdP2CrMy4iqxPdSf+HjfjwQ/c/5l+zO+BvDy2sWxfPg3nuKnCwgkiwiWPasvD61KBDWTv/cQ4F/XUZEPOxB6YCZ4nHKCMgNK99vS7yrrPxwbABfWc+Jw9oZE7KZ6dRVlVp3NnyAA+smBjV0qBy6Rg7+K1QRjhG0RVoMiu7/vrc7yg==) packet
+* SIP [OPTIONS](https://topaz.github.io/paste/#XQAAAQDbBQAAAAAAAAAnlAa9JM9YtzjNyc9ny7oKnyE0Q96kMOZG9DhWmddBGbRJ4/KNR1ugdmkNK/Pzh3i6xhVUZvObVrgQL2pZYsOWvlNWOc7pdXbtCt2g0cHqXZ4svhmfn5lSFcHXzOEFtF/yi6xYmW/aOmJgboLQ4DLmVX0JCCgeJMRspZ/vDw3ZgDfnFUBmkW2DqrWMnmSg+4JGWowjxFJ82pXPyhzwRU48cAkb4PBrZIqQXMy8agtVbR6u2lfxrXqIgfEq3qdceCIMmFixQpZmWBr5/rKIf0LWmKh69cgS80NAOJliU+L2pvjZYOfdGu+244f1BS6Q+ekUPPUYr3zE0uE0s53iZBoPDZbduDQROwFAm6q/WY2+r0LBkwCPBYffDhakNEUCNB5SXh7AzZ9DwBdLVJTksGK2uejI7sGaYyR3qzzFk+SRvHQVgoMJhWgqK8atdoST/9QDQU41JGIEaMWk3eRQ7L5g3dI6CwcBiG2eNUSz6eC5iJHhux57N3rmxtmWsvmpysxjMFlLvLNC3PzZNvu7a+Gmc+r+vU4leThrVN7kDsOYsRpiY6cvATTt++gX5oseZhXOh741GKrTbQzjJX82OwV2/uZoEEf06RWSLd4KnkiJl7ITWgcNf7CjmGCJGpg/hUO5K9+anf+FOxBhvfwr7G/cXnrLXH5WDyqNkZ5Dpi41VEK8ZH3ppIi9w8t2NwaNDWCUvO6jx+gKSXkGATOBwZE0MheS1URaXMajIVCzIFVxYNyzeUN4hrBjSPZXcDXPn1t9eXWtL/27CPw3RRE=) packet
+
+Notice the often long lists of capabilities attached to the Contact and Accept-Contact header fields.  Below are some examples for managing such lists of RCS capabilities using best-current-practice opensips.cfg scripting techniques:
+
+### Iterating through all Capabilities
+
+```bash
+
+# first, we save our Contact header capabilities in a variable, for quick access
+$var(caps) = $(hdr(Contact){nameaddr.params});
+
+# next, we iterate over each capability and print its name and value
+# Note: the "+=" syntax only works on 3.1+ OpenSIPS versions
+$var(i) = 0;
+while ($(var(caps){s.select,$var(i),;}) != NULL) {
+    $var(cap) = $(var(caps){param.name,$var(i)});
+    $var(val) = $(var(caps){param.valueat,$var(i)});
+
+    if ($var(cap) != "+g.3gpp.iari-ref") {
+        xlog("    $var(cap): $var(val)\n");
+    } else {
+        # some capabilities, such as "+g.3gpp.iari-ref" actually contain a sub-list of capabilities as their value, so we use a nested loop to properly walk them
+        $var(j) = 0;
+        while ($(var(val){s.select,$var(j),,}) != NULL) {
+             xlog("    +g.3gpp.iari-ref[$var(j)]: $(var(val){s.select,$var(j),,})\n");
+             $var(j) += 1;
+        }
+    }
+
+    $var(i) += 1;
+}
+
+```
+
+Running the above code over the OPTIONS payload mentioned above yields:
+
+```text
+
+Mar 29 19:26:46 [67988]     +sip.instance: <urn:gsma:imei:35824005-944763-1>
+Mar 29 19:26:46 [67988]     +g.oma.sip-im: 
+Mar 29 19:26:46 [67988]     +g.3gpp.iari-ref[0]: urn%3Aurn-7%3A3gpp-application.ims.iari.rcse.im
+Mar 29 19:26:46 [67988]     +g.3gpp.iari-ref[1]: urn%3Aurn-7%3A3gpp-application.ims.iari.rcse.ft
+Mar 29 19:26:46 [67988]     +g.3gpp.iari-ref[2]: urn%3Aurn-7%3A3gpp-application.ims.iari.rcs.fthttp
+Mar 29 19:26:46 [67988]     +g.3gpp.iari-ref[3]: urn%3Aurn-7%3A3gpp-application.ims.iari.rcs.ftthumb
+Mar 29 19:26:46 [67988]     +g.3gpp.iari-ref[4]: urn%3Aurn-7%3A3gpp-application.ims.iari.rcs.ext.streaming
+Mar 29 19:26:46 [67988]     +g.3gpp.iari-ref[5]: urn%3Aurn-7%3A3gpp-application.ims.iari.rcs.ext.messaging
+Mar 29 19:26:46 [67988]     +g.3gpp.icsi-ref: urn%3Aurn-7%3A3gpp-service.ims.icsi.gsma.rcs.extension
+
+```
+
+Advanced: in order to un-escape those hex-encoded strings before working with them, simply chain an additional `{s.unescape.param}` transformation to the right, as in:
+
+```text
+
+    xlog("    +g.3gpp.iari-ref[$var(j)]: $(var(val){s.select,$var(j),,}{s.unescape.param})\n");
+
+```
+
+... this will produce:
+
+```text
+
+Mar 29 19:45:53 [80814]     +sip.instance: <urn:gsma:imei:35824005-944763-1>
+Mar 29 19:45:53 [80814]     +g.oma.sip-im: 
+Mar 29 19:45:53 [80814]     +g.3gpp.iari-ref[0]: urn:urn-7:3gpp-application.ims.iari.rcse.im
+Mar 29 19:45:53 [80814]     +g.3gpp.iari-ref[1]: urn:urn-7:3gpp-application.ims.iari.rcse.ft
+Mar 29 19:45:53 [80814]     +g.3gpp.iari-ref[2]: urn:urn-7:3gpp-application.ims.iari.rcs.fthttp
+Mar 29 19:45:53 [80814]     +g.3gpp.iari-ref[3]: urn:urn-7:3gpp-application.ims.iari.rcs.ftthumb
+Mar 29 19:45:53 [80814]     +g.3gpp.iari-ref[4]: urn:urn-7:3gpp-application.ims.iari.rcs.ext.streaming
+Mar 29 19:45:53 [80814]     +g.3gpp.iari-ref[5]: urn:urn-7:3gpp-application.ims.iari.rcs.ext.messaging
+Mar 29 19:45:53 [80814]     +g.3gpp.icsi-ref: urn:urn-7:3gpp-service.ims.icsi.gsma.rcs.extension
+
+```
+
+### Removing, Re-ordering or Adding Capabilities
+
+There are no special helper functions for this purpose, so such operations will have to be done with a *[remove_hf()](https://opensips.org/docs/modules/3.3.x/sipmsgops.html#func_remove_hf)* function call, followed by an *[append_hf()](https://opensips.org/docs/modules/3.3.x/sipmsgops.html#func_append_hf)*.  For example, say we want to remove support for RCS File Transfer (our platform does not have it), while always advertising support for RCS Geolocation PUSH (since we can handle those types of payloads).
+
+First, we filter out any undesired RCS File Transfer capabilities while iterating them:
+
+  
+
+```bash
+
+$var(new_caps) = "";
+
+$var(i) = 0;
+while ($(var(caps){s.select,$var(i),;}) != NULL) {
+    $var(cap) = $(var(caps){param.name,$var(i)});
+    $var(val) = $(var(caps){param.valueat,$var(i)});
+
+    if ($var(cap) != "+g.3gpp.iari-ref") {
+        if ($var(val))
+            $var(new_caps) += $var(cap) + "=" + $var(val) + ";";
+        else
+            $var(new_caps) += $var(cap) + ";";
+    } else {
+        # now we make sure to remove all File Transfer related capabilities from the "iari-ref" list
+        $var(j) = 0;
+        $var(new_iari_ref) = "";
+        while ($(var(val){s.select,$var(j),,}) != NULL) {
+             $var(subcap) = $(var(val){s.select,$var(j),,}{s.unescape.param});
+             if ($var(subcap) !~ "urn:urn-7:3gpp-application.ims.iari.rcse?.ft.*")
+                 $var(new_iari_ref) += $(var(subcap){s.escape.param}) + ",";
+
+             $var(j) += 1;
+        }
+
+        if ($var(new_iari_ref)) {
+            # make sure to trim out the trailing comma
+            $var(len) = $(var(new_iari_ref){s.len}) - 1;
+            $var(new_caps) += "+g.3gpp.iari-ref=\"" + $(var(new_iari_ref){s.substr,0,$var(len)}) + "\"";
+        }
+    }
+
+    $var(i) += 1;
+}
+
+if ($var(new_caps)) {
+    # make sure to trim out the trailing semi-colon
+    $var(len) = $(var(new_caps){s.len}) - 1;
+    $var(new_caps) = $(var(new_caps){s.substr,0,$var(len)});
+}
+
+```
+
+Next, if we want to add new capabilities, this is an easy task: we just append them to the iari_ref sub-capabilities string.
+
+  
+
+Finally, we remove/re-add the "Accept-Contact" SIP header field with the large, re-processed string.
+
+```bash
+
+...
+        # we re-write the above paragraph a bit
+        if ($var(new_iari_ref))
+            $var(new_caps) += "+g.3gpp.iari-ref=\"" + $(var(new_iari_ref){s.substr,0,$var(len)}) + ",urn%3Aurn-7%3A3gpp-application.ims.iari.rcs.geopush\"";
+        else
+            $var(new_caps) += "+g.3gpp.iari-ref=\"urn%3Aurn-7%3A3gpp-application.ims.iari.rcs.geopush\"";
+...
+
+# finally, just rewrite the Accept-Contact
+remove_hf("Accept-Contact");
+append_hf("Accept-Contact: $var(new_caps)\r\n");
+
+```
