@@ -196,30 +196,24 @@ h1#_top {
   font-weight: 600;
 }
 
-/* Numbered headings and matching TOC counters */
+/* Numbered headings */
 
 .sl-markdown-content {
   counter-reset: h2counter h3counter h4counter;
 }
 
-/* Block any Starlight counter-reset on heading wrappers */
-.sl-markdown-content .sl-heading-wrapper {
-  counter-reset: none !important;
+.sl-markdown-content h2 {
+  counter-increment: h2counter;
+  counter-reset: h3counter h4counter;
 }
 
-/* Drive counters from the wrappers (outside Starlight's reset target) */
-.sl-markdown-content .sl-heading-wrapper.level-h2 {
-  counter-increment: h2counter !important;
-  counter-reset: h3counter !important;
+.sl-markdown-content h3 {
+  counter-increment: h3counter;
+  counter-reset: h4counter;
 }
 
-.sl-markdown-content .sl-heading-wrapper.level-h3 {
-  counter-increment: h3counter !important;
-  counter-reset: h4counter !important;
-}
-
-.sl-markdown-content .sl-heading-wrapper.level-h4 {
-  counter-increment: h4counter !important;
+.sl-markdown-content h4 {
+  counter-increment: h4counter;
 }
 
 .sl-markdown-content h2::before {
@@ -315,6 +309,18 @@ h1#_top {
   margin-block-end: 0;
 }
 
+/* Nested sidebar group labels (e.g. Troubleshooting inside Documentation)
+   should render the same weight/size as leaf links, not as bold section headers.
+   Placed inside @layer starlight.core so it competes on specificity with Starlight's
+   .large rule (which uses :where() = zero added specificity). */
+@layer starlight.core {
+  ul:not(.top-level) summary .group-label .large {
+    font-size: var(--sl-text-sm);
+    font-weight: 400;
+    color: var(--sl-color-gray-2);
+  }
+}
+
 :root[data-theme='light'] {
   --sl-color-accent-low: #e8f3c9;
   --sl-color-accent: #5e8222;
@@ -393,9 +399,3 @@ main:has(.home-splash) .sl-markdown-content h3::before {
 main:has(.site-footer) {
   padding-bottom: 0;
 }
-
-/* Expressive-code: bold title */
-.expressive-code .frame .title {
-  font-weight: 700 !important;
-}
-
