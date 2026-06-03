@@ -308,7 +308,7 @@ def format_author(author: str) -> str:
 # Git log parsing
 # ---------------------------------------------------------------------------
 
-_COMMIT_RE = re.compile(r'^COMMIT:([0-9a-f]{40}):(.*)$')
+_COMMIT_RE = re.compile(r'^COMMIT:([0-9a-f]{40}):([^:]+):(.*)$')
 _NUMSTAT_RE = re.compile(r'^(\d+|-)\t(\d+|-)\t(.+)$')
 
 
@@ -317,7 +317,7 @@ def _git_log_for_path(path_glob: str, branch: str = 'master', extra_args: list[s
     cmd = [
         'git', 'log',
         branch,
-        '--format=COMMIT:%H:%an <%ae>',
+        '--format=COMMIT:%H:%aI:%an <%ae>',
         '--numstat',
         *(extra_args or []),
         '--',
@@ -335,23 +335,18 @@ def _git_log_for_path(path_glob: str, branch: str = 'master', extra_args: list[s
         if m:
             if current:
                 commits.append(current)
-            sha, raw_author = m.group(1), m.group(2)
+            sha, iso_date, raw_author = m.group(1), m.group(2), m.group(3)
             if sha in SKIP_COMMITS:
                 current = None
                 continue
             if sha in FIX_AUTHORS:
                 raw_author = FIX_AUTHORS[sha]
             author = normalize_author(raw_author)
-            current = {'sha': sha, 'author': author, 'added': 0, 'deleted': 0, 'date': None}
-            # get date separately (fast, cached by git)
-            d = subprocess.run(
-                ['git', 'show', '--no-patch', '--format=%aI', sha],
-                cwd=OPENSIPS_DIR, capture_output=True, text=True
-            )
             try:
-                current['date'] = datetime.fromisoformat(d.stdout.strip().split('\n')[0])
+                date = datetime.fromisoformat(iso_date)
             except Exception:
-                pass
+                date = None
+            current = {'sha': sha, 'author': author, 'added': 0, 'deleted': 0, 'date': date}
             continue
 
         if current is None:
