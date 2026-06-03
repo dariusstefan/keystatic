@@ -279,6 +279,8 @@ class _Emitter:
             for child in elem:
                 self._block(child, depth)
         elif tag in ("chapter", "section", "refsect1", "refsect2", "refsect3"):
+            if (elem.get('id') or '').lower() in ('contributors', 'documentation'):
+                return
             self._section(elem, depth)
         elif tag in ("para", "simpara"):
             self._para(elem, depth)
@@ -624,7 +626,7 @@ def convert_module(module_dir: Path, global_entities: dict) -> str | None:
         "Creative Common License 4.0\n"
     )
 
-    return fm + "\n" + body + license_section
+    return fm + "\n" + body + "\n<!-- CONTRIBUTORS -->\n" + license_section
 
 
 # ---------------------------------------------------------------------------

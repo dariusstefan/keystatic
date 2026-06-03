@@ -10,6 +10,7 @@
     "astro": "astro",
     "generate:modules": "python3 scripts/generate-module-docs.py",
     "generate:modules:all": "python3 scripts/generate-module-docs.py --all-versions",
+    "generate:contributors": "python3 scripts/generate-contributors.py",
     "populate:fork": "python3 scripts/populate-fork.py",
     "populate:fork:dry": "python3 scripts/populate-fork.py --dry-run"
   },
