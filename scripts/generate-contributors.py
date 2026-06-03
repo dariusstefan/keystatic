@@ -16,7 +16,7 @@ from pathlib import Path
 
 ROOT         = Path(__file__).parent.parent
 OPENSIPS_DIR = ROOT / 'opensips'
-MODULES_DIR  = ROOT / 'src/content/docs/modules/devel'
+MODULES_ROOT = ROOT / 'src/content/docs/modules'
 PLACEHOLDER  = '<!-- CONTRIBUTORS -->'
 
 # Global project stats (last updated in build-contrib.sh)
@@ -242,6 +242,16 @@ FIX_AUTHORS = {
     "2e15877aab36ce18d71d06700dd7578c7831fa69": "Ovidiu Sas",
 }
 
+# version slug → git branch name
+SLUG_TO_BRANCH = {
+    'devel': 'master',
+    '4-0':   '4.0',
+    '3-6':   '3.6',
+    '3-5':   '3.5',
+    '3-4':   '3.4',
+    '3-3':   '3.3',
+}
+
 # module → old_name (simplified; timestamp-based renames use tuple (old, since, until))
 MOD_RENAMES = {
     "db_mysql":        "mysql",
@@ -302,10 +312,11 @@ _COMMIT_RE = re.compile(r'^COMMIT:([0-9a-f]{40}):(.*)$')
 _NUMSTAT_RE = re.compile(r'^(\d+|-)\t(\d+|-)\t(.+)$')
 
 
-def _git_log_for_path(path_glob: str, extra_args: list[str] | None = None) -> list[dict]:
+def _git_log_for_path(path_glob: str, branch: str = 'master', extra_args: list[str] | None = None) -> list[dict]:
     """Return a list of commit dicts {sha, author, date, added, deleted} for path_glob."""
     cmd = [
         'git', 'log',
+        branch,
         '--format=COMMIT:%H:%an <%ae>',
         '--numstat',
         *(extra_args or []),
@@ -363,22 +374,20 @@ def _git_log_for_path(path_glob: str, extra_args: list[str] | None = None) -> li
     return [c for c in commits if c['added'] or c['deleted']]
 
 
-def get_module_commits(module: str) -> list[dict]:
-    commits = _git_log_for_path(f'modules/{module}/')
+def get_module_commits(module: str, branch: str = 'master') -> list[dict]:
+    commits = _git_log_for_path(f'modules/{module}/', branch)
     old = MOD_RENAMES.get(module)
     if old:
-        commits += _git_log_for_path(f'modules/{old}/')
+        commits += _git_log_for_path(f'modules/{old}/', branch)
     return commits
 
 
-def get_doc_commits(module: str) -> list[dict]:
-    commits = _git_log_for_path(f'modules/{module}/doc/')
+def get_doc_commits(module: str, branch: str = 'master') -> list[dict]:
+    commits = _git_log_for_path(f'modules/{module}/doc/', branch)
     old = MOD_RENAMES.get(module)
     if old:
-        commits += _git_log_for_path(f'modules/{old}/doc/')
-    return [c for c in commits if not any(
-        x in (c.get('sha') or '') for x in ()
-    )]
+        commits += _git_log_for_path(f'modules/{old}/doc/', branch)
+    return commits
 
 
 # ---------------------------------------------------------------------------
@@ -419,9 +428,9 @@ def _fmt_date(dt: datetime | None) -> str:
     return dt.strftime('%b %Y') if dt else '?'
 
 
-def generate_contributors_md(module: str) -> str:
-    commits     = get_module_commits(module)
-    doc_commits = get_doc_commits(module)
+def generate_contributors_md(module: str, branch: str = 'master') -> str:
+    commits     = get_module_commits(module, branch)
+    doc_commits = get_doc_commits(module, branch)
 
     if not commits and not doc_commits:
         return ''
@@ -507,8 +516,7 @@ def generate_contributors_md(module: str) -> str:
 # Injection
 # ---------------------------------------------------------------------------
 
-def process_module(module: str) -> bool:
-    md_path = MODULES_DIR / f'{module}.md'
+def process_file(md_path: Path, module: str) -> bool:
     if not md_path.exists():
         return False
 
@@ -533,23 +541,43 @@ def main():
         print(f'ERROR: {OPENSIPS_DIR} not found. Clone opensips repo first.', file=sys.stderr)
         sys.exit(1)
 
-    if not MODULES_DIR.exists():
+    if not MODULES_ROOT.exists():
         print('Run npm run generate:modules first.', file=sys.stderr)
         sys.exit(1)
 
-    modules = sys.argv[1:] or sorted(p.stem for p in MODULES_DIR.glob('*.md'))
-    print(f'Generating contributors for {len(modules)} modules...')
+    # Collect all (md_path, module_name, slug) pairs across all version dirs
+    if sys.argv[1:]:
+        pairs = [
+            (version_dir / f'{module}.md', module, version_dir.name)
+            for version_dir in sorted(MODULES_ROOT.iterdir()) if version_dir.is_dir()
+            for module in sys.argv[1:]
+        ]
+    else:
+        pairs = [
+            (md_path, md_path.stem, version_dir.name)
+            for version_dir in sorted(MODULES_ROOT.iterdir()) if version_dir.is_dir()
+            for md_path in sorted(version_dir.glob('*.md'))
+            if PLACEHOLDER in md_path.read_text('utf-8')
+        ]
 
+    print(f'Generating contributors for {len(pairs)} files...')
+
+    contrib_cache: dict[tuple, str] = {}
     ok = 0
-    for m in modules:
-        print(f'  {m}', end='', flush=True)
-        if process_module(m):
-            ok += 1
-            print(' ✓')
-        else:
-            print(' ✗')
+    for md_path, module, slug in pairs:
+        branch = SLUG_TO_BRANCH.get(slug, 'master')
+        print(f'  {slug}/{module}', end='', flush=True)
+        key = (module, branch)
+        if key not in contrib_cache:
+            contrib_cache[key] = generate_contributors_md(module, branch)
+        contrib = contrib_cache[key]
+        content = md_path.read_text('utf-8')
+        if PLACEHOLDER in content and contrib.strip():
+            md_path.write_text(content.replace(PLACEHOLDER, contrib.strip()), 'utf-8')
+        ok += 1
+        print(' ✓')
 
-    print(f'Done ({ok}/{len(modules)}).')
+    print(f'Done ({ok}/{len(pairs)}).')
 
 
 if __name__ == '__main__':
