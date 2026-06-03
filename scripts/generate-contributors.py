@@ -560,13 +560,15 @@ def main():
             if PLACEHOLDER in md_path.read_text('utf-8')
         ]
 
-    print(f'Generating contributors for {len(pairs)} files...')
+    total = len(pairs)
+    print(f'Generating contributors for {total} files...')
 
     contrib_cache: dict[tuple, str] = {}
     ok = 0
-    for md_path, module, slug in pairs:
+    for i, (md_path, module, slug) in enumerate(pairs, 1):
         branch = SLUG_TO_BRANCH.get(slug, 'master')
-        print(f'  {slug}/{module}', end='', flush=True)
+        cached = (module, branch) in contrib_cache
+        print(f'  [{i}/{total}] {slug}/{module}{"" if cached else " (git log...)"}', end='', flush=True)
         key = (module, branch)
         if key not in contrib_cache:
             contrib_cache[key] = generate_contributors_md(module, branch)
@@ -577,7 +579,7 @@ def main():
         ok += 1
         print(' ✓')
 
-    print(f'Done ({ok}/{len(pairs)}).')
+    print(f'Done ({ok}/{total}).')
 
 
 if __name__ == '__main__':
