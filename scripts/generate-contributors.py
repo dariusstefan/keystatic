@@ -308,7 +308,7 @@ def format_author(author: str) -> str:
 # Git log parsing
 # ---------------------------------------------------------------------------
 
-_COMMIT_RE = re.compile(r'^COMMIT:([0-9a-f]{40}):([^:]+):(.*)$')
+_COMMIT_RE = re.compile(r'^COMMIT:([0-9a-f]{40})\|([^|]+)\|(.*)$')
 _NUMSTAT_RE = re.compile(r'^(\d+|-)\t(\d+|-)\t(.+)$')
 
 
@@ -317,7 +317,7 @@ def _git_log_for_path(path_glob: str, branch: str = 'master', extra_args: list[s
     cmd = [
         'git', 'log',
         branch,
-        '--format=COMMIT:%H:%aI:%an <%ae>',
+        '--format=COMMIT:%H|%aI|%an <%ae>',
         '--numstat',
         *(extra_args or []),
         '--',
