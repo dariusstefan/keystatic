@@ -212,9 +212,9 @@ def _inline_child(elem) -> str:
         txt = inner.strip() or _linkend_label(linkend)
         result = f"[{txt}]({url})"
     elif tag == "superscript":
-        result = f"^{inner}^"
+        result = f"<sup>{inner}</sup>"
     elif tag == "subscript":
-        result = f"~{inner}~"
+        result = f"<sub>{inner}</sub>"
     elif tag in ("para", "simpara"):
         result = inner.strip()
     elif tag in ("programlisting", "screen"):

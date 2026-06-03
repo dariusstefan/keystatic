@@ -444,8 +444,8 @@ def generate_contributors_md(module: str, branch: str = 'master') -> str:
     # --- Table 1: By Commit Statistics ---
     lines.append('\n### By Commit Statistics {#contrib_commit_statistics}\n')
     lines.append(
-        '**Top contributors by DevScore^(1)^, authored commits^(2)^ '
-        'and lines added/removed^(3)^**\n'
+        '**Top contributors by DevScore<sup>(1)</sup>, authored commits<sup>(2)</sup> '
+        'and lines added/removed<sup>(3)</sup>**\n'
     )
     lines.append('| # | Name | DevScore | Commits | Lines++ | Lines-- |')
     lines.append('|---|---|---|---|---|---|')
