@@ -30,6 +30,12 @@ if (isModulePage) {
 }
 ---
 
+{isModulePage && moduleName && currentSlug && (
+  <div class="version-row">
+    <VersionSelector module={moduleName} currentSlug={currentSlug} versions={availableVersions} />
+  </div>
+)}
+
 <h1 id={PAGE_TITLE_ID}>{Astro.locals.starlightRoute.entry.data.title}</h1>
 
 {Astro.locals.starlightRoute.entry.data.subtitle && Astro.locals.starlightRoute.entry.data.subtitleHref && (
@@ -47,9 +53,6 @@ if (isModulePage) {
   <p class="page-author">{Astro.locals.starlightRoute.entry.data.author}</p>
 )}
 
-{isModulePage && moduleName && currentSlug && (
-  <VersionSelector module={moduleName} currentSlug={currentSlug} versions={availableVersions} />
-)}
 
 {isModulePage && currentSlug && currentSlug !== 'devel' && (
   <link rel="preload" as="fetch" href={`/sidebar/${currentSlug}.json`} crossorigin="anonymous" />
@@ -97,6 +100,13 @@ if (isModulePage) {
 
 
 <style>
+  .version-row {
+    display: flex;
+    justify-content: flex-end;
+    padding-inline: 2rem;
+    margin-bottom: 0.25rem;
+  }
+
   @layer starlight.core {
     h1 {
       margin-top: 1rem;

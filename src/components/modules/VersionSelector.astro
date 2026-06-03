@@ -12,7 +12,6 @@ const current = versions.find((v) => v.slug === currentSlug);
 ---
 
 <nav class="version-selector not-content" aria-label="Version">
-  <span class="vs-label">Version</span>
   <details class="vs-dropdown">
     <summary class="vs-trigger">
       {current?.label ?? currentSlug}
@@ -52,19 +51,7 @@ const current = versions.find((v) => v.slug === currentSlug);
   .version-selector {
     display: flex;
     align-items: center;
-    gap: 0.625rem;
-    margin: 1rem 0 1.75rem;
     font-size: 0.8125rem;
-    padding-inline: 2rem;
-  }
-
-  .vs-label {
-    color: var(--sl-color-gray-3);
-    font-weight: 600;
-    white-space: nowrap;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-    font-size: 0.75rem;
   }
 
   .vs-dropdown {
