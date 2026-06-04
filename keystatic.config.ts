@@ -34,6 +34,20 @@ export default config({
         content: fields.mdx({ label: 'Content' }),
       },
     }),
+    manuals: collection({
+      label: 'Manuals',
+      slugField: 'title',
+      path: 'src/content/docs/manual/**/*',
+      format: { contentField: 'content' },
+      schema: {
+        title: fields.slug({ name: { label: 'Title' } }),
+        subtitle: fields.text({ label: 'Subtitle', validation: { isRequired: false } }),
+        subtitleHref: fields.url({ label: 'Subtitle URL', validation: { isRequired: false } }),
+        author: fields.text({ label: 'Author', validation: { isRequired: false } }),
+        description: fields.text({ label: 'Description', multiline: true, validation: { isRequired: false } }),
+        content: fields.mdx({ label: 'Content' }),
+      },
+    }),
   },
   singletons: {},
 });
