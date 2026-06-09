@@ -31,3 +31,9 @@ pnpm-debug.log*
 # wiki files
 wiki/
 pmwiki-mdx/__pycache__/
+pmwiki-mdx/.pytest_cache/
+
+# converter scratch dirs (convert.py input pages / output MDX)
+pmwiki-mdx/input/
+output/
+.claude/
