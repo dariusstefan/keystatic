@@ -8,6 +8,7 @@
     "build": "NODE_OPTIONS=--max-old-space-size=4096 astro build",
     "preview": "astro preview",
     "astro": "astro",
+    "generate:flat": "python3 scripts/generate-flat-docs.py",
     "generate:modules": "python3 scripts/generate-module-docs.py",
     "generate:modules:all": "python3 scripts/generate-module-docs.py --all-versions",
     "generate:contributors": "python3 scripts/generate-contributors.py",
