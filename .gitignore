@@ -3,6 +3,8 @@ dist/
 
 # generated module docs (run `npm run generate:modules` to rebuild)
 src/content/docs/modules/
+# flat docs fetched from the opensips-docs repo (run `npm run generate:flat` to rebuild)
+src/content/docs/docs/*.md
 # generated types
 .astro/
 opensips/
@@ -27,3 +29,4 @@ pnpm-debug.log*
 
 # wiki files
 wiki/
+pmwiki-mdx/__pycache__/
