@@ -33,6 +33,8 @@ wiki/
 pmwiki-mdx/__pycache__/
 pmwiki-mdx/.pytest_cache/
 
+scripts/__pycache__/
+
 # converter scratch dirs (convert.py input pages / output MDX)
 pmwiki-mdx/input/
 output/
