@@ -5,8 +5,8 @@ Reads opensips/modules/<name>/doc/*.xml and writes a single README.md per
 module with Starlight-compatible YAML frontmatter.
 
 Usage:
-    python3 pmwiki-mdx/docbook_to_md.py            # convert all 193 modules
-    python3 pmwiki-mdx/docbook_to_md.py acc dialog  # convert specific modules
+    python3 converters/docbook_to_md.py            # convert all 193 modules
+    python3 converters/docbook_to_md.py acc dialog  # convert specific modules
 """
 
 import re

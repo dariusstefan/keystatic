@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
-"""Populate the dariusstefan/opensips fork with generated README.md docs.
+"""Populate the dariusstefan/opensips fork with the generated manual docs/.
 
-For each supported branch, checks out the branch in opensips/, runs the
-DocBook → Markdown converter, commits the README.md files, and pushes to
-the 'darius' remote.
+Mirrors populate-fork.py (which does the module READMEs), but for the OpenSIPS
+Manual: for each supported branch, checks out the branch in opensips/, runs the
+PmWiki → Markdown manual converter for that branch's version into opensips/docs/,
+commits the docs/ files, and pushes to the 'darius' remote.
+
+Each branch carries only its own version's manual, so the converter drops the
+-X-Y suffix and writes a flat docs/ (README.md index + sibling .md pages) with
+relative .md links between them.
 
 Usage:
-    python3 scripts/populate-fork.py              # all supported branches
-    python3 scripts/populate-fork.py --branch 3.5 # single branch
-    python3 scripts/populate-fork.py --dry-run    # show what would happen
+    python3 scripts/populate-fork-manual.py              # all supported branches
+    python3 scripts/populate-fork-manual.py --branch 4.0 # single branch
+    python3 scripts/populate-fork-manual.py --dry-run    # show what would happen
 """
 
 import argparse
@@ -18,10 +23,21 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OPENSIPS_DIR = REPO_ROOT / "opensips"
-CONVERTER = REPO_ROOT / "converters" / "docbook_to_md.py"
-MODULES_DIR = OPENSIPS_DIR / "modules"
+CONVERTER = REPO_ROOT / "converters" / "convert.py"
+WIKI_DIR = REPO_ROOT / "wiki"
+DOCS_DIR = OPENSIPS_DIR / "docs"
 
-BRANCHES = ["master", "4.0", "3.6", "3.5", "3.4", "3.3"]
+# Branch -> manual version in the wiki dump. 'master' tracks the latest (devel)
+# manual; release branches map to their matching version.
+BRANCH_VERSION = {
+    "master": "4-1",
+    "4.0": "4-0",
+    "3.6": "3-6",
+    "3.5": "3-5",
+    "3.4": "3-4",
+    "3.3": "3-3",
+}
+BRANCHES = list(BRANCH_VERSION.keys())
 REMOTE = "darius"
 
 
@@ -30,7 +46,7 @@ def run(cmd, cwd=None, check=True, capture=False):
     result = subprocess.run(
         cmd, cwd=cwd,
         stdout=subprocess.PIPE if capture else None,
-        stderr=subprocess.PIPE,  # always capture stderr for error reporting
+        stderr=subprocess.PIPE,
         text=True,
     )
     if check and result.returncode != 0:
@@ -38,7 +54,6 @@ def run(cmd, cwd=None, check=True, capture=False):
         print(f"  [ERROR] exit {result.returncode}: {stderr}")
         sys.exit(1)
     elif result.stderr and result.stderr.strip():
-        # Print stderr even on success (git often uses stderr for progress)
         for line in result.stderr.strip().splitlines():
             print(f"  {line}")
     return result
@@ -52,18 +67,19 @@ def current_branch() -> str:
     return r.stdout.strip()
 
 
-def clear_readmes():
-    """Remove all untracked README.md files from modules/ to get a clean slate."""
+def clear_docs():
+    """Remove generated manual files so each run starts from a clean slate."""
+    if not DOCS_DIR.exists():
+        return
     removed = 0
-    for f in MODULES_DIR.glob("*/README.md"):
+    for f in DOCS_DIR.glob("*.md"):
         f.unlink()
         removed += 1
     if removed:
-        print(f"  Cleared {removed} existing README.md files")
+        print(f"  Cleared {removed} existing docs/*.md files")
 
 
 def checkout_branch(branch: str):
-    # Try existing local branch first, then create from origin
     r = subprocess.run(
         ["git", "checkout", branch],
         cwd=OPENSIPS_DIR, capture_output=True, text=True,
@@ -74,58 +90,47 @@ def checkout_branch(branch: str):
         print(f"  Checked out {branch}")
 
 
-def generate_readmes():
-    print("  Generating README.md files...")
-    result = subprocess.run(
-        [sys.executable, str(CONVERTER)],
-        cwd=REPO_ROOT,
-        capture_output=True, text=True,
-    )
-    # Print any warnings
+def generate_docs(version: str, devel: bool = False):
+    print(f"  Generating manual {version} → docs/ ...")
+    cmd = [sys.executable, str(CONVERTER),
+           "--manual", version, "--wiki", str(WIKI_DIR), "--out", str(DOCS_DIR)]
+    if devel:
+        cmd.append("--devel")
+    result = subprocess.run(cmd, cwd=REPO_ROOT, capture_output=True, text=True)
     for line in result.stderr.splitlines():
         if line.strip():
             print(f"    {line}")
-    count = sum(1 for _ in MODULES_DIR.glob("*/README.md"))
-    print(f"  Generated {count} README.md files")
+    count = sum(1 for _ in DOCS_DIR.glob("*.md"))
+    print(f"  Generated {count} docs/*.md files")
     if result.returncode != 0:
         print(f"  [WARN] converter exited with code {result.returncode}")
+        print(f"    {result.stdout.strip().splitlines()[-1] if result.stdout else ''}")
 
 
 def commit_and_push(branch: str, dry_run: bool):
-    readmes = sorted(MODULES_DIR.glob("*/README.md"))
-    if not readmes:
-        print("  [WARN] No README.md files to commit")
+    docs = sorted(DOCS_DIR.glob("*.md"))
+    if not docs:
+        print("  [WARN] No docs/*.md files to commit")
         return
-
-    rel_paths = [f"modules/{r.parent.name}/README.md" for r in readmes]
+    rel_paths = [f"docs/{d.name}" for d in docs]
 
     if dry_run:
         print(f"  [DRY RUN] Would git add {len(rel_paths)} files, commit, and push to {REMOTE}/{branch}")
         return
 
-    # Stage
     run(["git", "add"] + rel_paths, cwd=OPENSIPS_DIR)
 
-    # Check if anything changed
-    status = subprocess.run(
-        ["git", "diff", "--cached", "--quiet"],
-        cwd=OPENSIPS_DIR,
-    )
+    status = subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=OPENSIPS_DIR)
     if status.returncode == 0:
         print("  Nothing new to commit")
     else:
-        run(
-            ["git", "commit", "-m", "docs: add generated README.md files"],
-            cwd=OPENSIPS_DIR,
-        )
+        run(["git", "commit", "-m", "docs: add generated manual"], cwd=OPENSIPS_DIR)
 
-    # Fetch remote branch and rebase on top of it (handles fork being ahead of local)
     fetch_result = subprocess.run(
         ["git", "fetch", REMOTE, branch],
         cwd=OPENSIPS_DIR, capture_output=True, text=True,
     )
     if fetch_result.returncode == 0:
-        # Check if remote branch exists and has commits we don't have
         behind = subprocess.run(
             ["git", "log", "--oneline", f"HEAD..{REMOTE}/{branch}"],
             cwd=OPENSIPS_DIR, capture_output=True, text=True,
@@ -138,10 +143,12 @@ def commit_and_push(branch: str, dry_run: bool):
 
 
 def process_branch(branch: str, dry_run: bool):
-    print(f"\n[{branch}]")
-    clear_readmes()
+    version = BRANCH_VERSION[branch]
+    print(f"\n[{branch}]  (manual {version})")
+    clear_docs()
     checkout_branch(branch)
-    generate_readmes()
+    DOCS_DIR.mkdir(parents=True, exist_ok=True)
+    generate_docs(version, devel=(branch == "master"))
     commit_and_push(branch, dry_run)
 
 
@@ -157,11 +164,14 @@ def main():
     if not CONVERTER.exists():
         print(f"Error: {CONVERTER} does not exist")
         sys.exit(1)
+    if args.branch and args.branch not in BRANCH_VERSION:
+        print(f"Error: unknown branch '{args.branch}'. Known: {', '.join(BRANCHES)}")
+        sys.exit(1)
 
     branches = [args.branch] if args.branch else BRANCHES
     original_branch = current_branch()
 
-    print(f"Populating {REMOTE} fork for branches: {', '.join(branches)}")
+    print(f"Populating {REMOTE} fork (manual) for branches: {', '.join(branches)}")
     print(f"Current branch: {original_branch}")
 
     try:
