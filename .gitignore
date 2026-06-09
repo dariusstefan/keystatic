@@ -1,10 +1,11 @@
 # build output
 dist/
 
-# generated module docs (run `npm run generate:modules` to rebuild)
-src/content/docs/modules/
-# flat docs fetched from the opensips-docs repo (run `npm run generate:flat` to rebuild)
-src/content/docs/docs/*.md
+# generated/fetched docs content — all of it is built at deploy time:
+#   flat docs    → npm run generate:flat   (opensips-docs repo)
+#   manual       → npm run generate:manual (opensips fork)
+#   modules      → npm run generate:modules (opensips fork)
+src/content/docs/docs/
 # generated types
 .astro/
 opensips/

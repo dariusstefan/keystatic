@@ -1,6 +1,0 @@
----
-title: "DB schema"
-description: ""
----
-
-
