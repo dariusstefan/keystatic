@@ -7,24 +7,40 @@ const PAGE_TITLE_ID = '_top';
 
 const { id } = Astro.locals.starlightRoute;
 const parts = id.split('/');
-// Module pages have the form: modules/<version-slug>/<module-name>
-const isModulePage = parts[0] === 'modules' && parts.length === 3;
+// Module pages have the form: docs/modules/<version-slug>/<module-name>
+const isModulePage = parts[0] === 'docs' && parts[1] === 'modules' && parts.length === 4;
+// Manual pages have the form: docs/manual/<version-slug>[/<page...>] ('' page = index)
+const isManualPage = parts[0] === 'docs' && parts[1] === 'manual' && parts.length >= 3;
 
 let moduleName: string | undefined;
+let manualPage: string | undefined;
 let currentSlug: string | undefined;
 let availableVersions = VERSIONS;
 
 if (isModulePage) {
-  currentSlug = parts[1];
-  moduleName = parts[2];
+  currentSlug = parts[2];
+  moduleName = parts[3];
 
   const allDocs = await getCollection('docs');
   const availableSlugs = allDocs
     .filter((e) => {
       const p = e.id.split('/');
-      return p[0] === 'modules' && p.length === 3 && p[2] === moduleName && !e.data.sidebar?.hidden;
+      return p[0] === 'docs' && p[1] === 'modules' && p.length === 4 && p[3] === moduleName && !e.data.sidebar?.hidden;
     })
-    .map((e) => e.id.split('/')[1]);
+    .map((e) => e.id.split('/')[2]);
+
+  availableVersions = VERSIONS.filter((v) => availableSlugs.includes(v.slug));
+} else if (isManualPage) {
+  currentSlug = parts[2];
+  manualPage = parts.slice(3).join('/'); // '' for the manual index
+
+  const allDocs = await getCollection('docs');
+  const availableSlugs = allDocs
+    .filter((e) => {
+      const p = e.id.split('/');
+      return p[0] === 'docs' && p[1] === 'manual' && p.length >= 3 && p.slice(3).join('/') === manualPage && !e.data.sidebar?.hidden;
+    })
+    .map((e) => e.id.split('/')[2]);
 
   availableVersions = VERSIONS.filter((v) => availableSlugs.includes(v.slug));
 }
@@ -33,6 +49,12 @@ if (isModulePage) {
 {isModulePage && moduleName && currentSlug && (
   <div class="version-row">
     <VersionSelector module={moduleName} currentSlug={currentSlug} versions={availableVersions} />
+  </div>
+)}
+
+{isManualPage && currentSlug && manualPage !== undefined && (
+  <div class="version-row">
+    <VersionSelector manualPage={manualPage} currentSlug={currentSlug} versions={availableVersions} />
   </div>
 )}
 
@@ -54,49 +76,169 @@ if (isModulePage) {
 )}
 
 
-{isModulePage && currentSlug && currentSlug !== 'devel' && (
-  <link rel="preload" as="fetch" href={`/sidebar/${currentSlug}.json`} crossorigin="anonymous" />
+{(isManualPage || isModulePage) && currentSlug && currentSlug !== 'devel' && (
   <script define:vars={{ currentSlug }}>
-    async function rebuildSidebar() {
-      const res = await fetch(`/sidebar/${currentSlug}.json`);
-      if (!res.ok) return;
-      const sidebarModules = await res.json();
-
-      const templateLink = document.querySelector('nav a[href*="/modules/devel/"]');
-      if (!templateLink) return;
-      const templateLi = templateLink.closest('li');
-      const container = templateLi?.parentElement;
-      if (!container || !templateLi) return;
-
-      const newItems = sidebarModules.map(({ module, title }) => {
-        const href = `${window.location.origin}/modules/${currentSlug}/${module}`;
-        const li = templateLi.cloneNode(true);
-        const a = li.querySelector('a');
-        if (!a) return li;
-        a.setAttribute('href', href);
-        a.textContent = title;
-        const isCurrent =
-          window.location.pathname === `/modules/${currentSlug}/${module}` ||
-          window.location.pathname === `/modules/${currentSlug}/${module}/`;
-        if (isCurrent) {
-          a.setAttribute('aria-current', 'page');
-        } else {
-          a.removeAttribute('aria-current');
-        }
-        return li;
-      });
-
-      container.replaceChildren(...newItems);
-
-      // Open the parent <details> so the Modules group is expanded
-      const details = container.closest('details');
-      if (details) details.open = true;
+    // The Manual sidebar is rendered statically from the devel content. Whenever
+    // a non-devel version is active — on a manual page OR a module page (so the
+    // selection persists across both) — rebuild the Manual submenu from that
+    // version's own structure (/manual-sidebar.json), so it shows exactly that
+    // version's pages and modules, grouped per that version's modules.md.
+    //
+    // The rebuild CLONES live sidebar nodes as templates (a leaf link <li> and a
+    // group <li>) so Starlight's scoped classes/markup are preserved verbatim.
+    // Everything is strictly scoped to #starlight__sidebar.
+    function loadSidebars() {
+      if (!window.__manualSidebars)
+        window.__manualSidebars = fetch('/manual-sidebar.json')
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null);
+      return window.__manualSidebars;
     }
 
-    rebuildSidebar();
-    document.addEventListener('astro:after-swap', rebuildSidebar);
+    async function rebuildManualSidebar() {
+      const sidebar = document.querySelector('#starlight__sidebar');
+      if (!sidebar) return;
+
+      // Find the "Manual" group <details> and its child <ul>.
+      const manualLabel = [...sidebar.querySelectorAll('.group-label .large')]
+        .find((el) => el.textContent.trim() === 'Manual');
+      const manualDetails = manualLabel && manualLabel.closest('details');
+      const manualUl = manualDetails && manualDetails.querySelector(':scope > ul');
+      if (!manualUl) return;
+
+      const data = await loadSidebars();
+      const items = data && data[currentSlug];
+      if (!items) return; // unknown version — leave the static (devel) sidebar
+
+      // Capture templates from the live sidebar before we touch anything.
+      const leafLi = sidebar.querySelector('li > a')?.closest('li');
+      const groupLi = sidebar.querySelector('li > details')?.closest('li');
+      if (!leafLi || !groupLi) return;
+      const leafTpl = leafLi.cloneNode(true);
+      const groupTpl = groupLi.cloneNode(true);
+      // Normalise the group template: drop Starlight's restore element and empty
+      // its child list (we refill it). Keep summary + caret untouched.
+      groupTpl.querySelectorAll('sl-sidebar-restore').forEach((n) => n.remove());
+
+      const here = window.location.pathname.replace(/\/$/, '');
+      let currentLink = null;
+
+      const makeLeaf = (it) => {
+        const li = leafTpl.cloneNode(true);
+        const a = li.querySelector('a');
+        const href = `/${it.slug.replace(/^\/+/, '')}/`;
+        a.setAttribute('href', href);
+        a.removeAttribute('aria-current');
+        const span = a.querySelector('span') || a;
+        span.textContent = it.label;
+        if (href.replace(/\/$/, '') === here) currentLink = a;
+        return li;
+      };
+
+      const makeGroup = (it) => {
+        const li = groupTpl.cloneNode(true);
+        const details = li.querySelector('details');
+        details.open = false;
+        const label = details.querySelector('.group-label .large') || details.querySelector('summary span');
+        if (label) label.textContent = it.label;
+        const ul = details.querySelector(':scope > ul');
+        ul.replaceChildren(...it.items.map(makeItem));
+        return li;
+      };
+
+      const makeItem = (it) => (it.items ? makeGroup(it) : makeLeaf(it));
+
+      manualUl.replaceChildren(...items.map(makeItem));
+
+      // Highlight the current page and open all of its ancestor groups (incl. the
+      // Manual group and the top-level Documentation group above it).
+      if (currentLink) currentLink.setAttribute('aria-current', 'page');
+      let el = (currentLink || manualUl).closest('details');
+      while (el) { el.open = true; el = el.parentElement && el.parentElement.closest('details'); }
+    }
+
+    rebuildManualSidebar();
+    document.addEventListener('astro:after-swap', rebuildManualSidebar);
   </script>
 )}
+
+
+<script>
+  // Expanding a sidebar group navigates to its first page (the Overview, for
+  // groups that have one — Manual, Modules documentation, Troubleshooting — or
+  // the first child page for the rest). Collapsing an already-open group is left
+  // alone, so the caret/header still folds it away. One delegated listener on the
+  // sidebar covers statically-rendered AND version-rebuilt groups.
+  function wireGroupHeaderNav() {
+    const sidebar = document.querySelector('#starlight__sidebar');
+    if (!sidebar || sidebar.dataset.groupNavWired) return;
+    sidebar.dataset.groupNavWired = '1';
+    sidebar.addEventListener('click', (e) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+      const summary = e.target.closest('summary');
+      if (!summary || !sidebar.contains(summary)) return;
+      const details = summary.closest('details');
+      if (!details || details.open) return; // already open → let the click collapse it
+      const first = details.querySelector('a[href]'); // first page within the group
+      if (!first) return;
+      e.preventDefault(); // skip the native toggle; navigating there expands it
+      window.location.assign(first.getAttribute('href'));
+    });
+  }
+  wireGroupHeaderNav();
+  document.addEventListener('astro:after-swap', wireGroupHeaderNav);
+</script>
+
+
+<script>
+  // Some sidebar entries (Manual, Version Migration, Advanced Tutorials) are a
+  // single link whose sub-pages are sibling slugs (e.g. /manual/devel/<page>,
+  // /documentation/migration-*, /documentation/tutorials-*). Starlight only
+  // highlights/expands them on the entry's exact URL, so on a sub-page nothing
+  // lights up and the parent group stays collapsed. This handler marks the
+  // right entry current and opens its ancestor group(s). Path-derived so it
+  // stays correct across client-side navigations.
+  function syncSidebarSections() {
+    const sidebar = document.querySelector('#starlight__sidebar');
+    if (!sidebar) return;
+    const path = window.location.pathname;
+    const findLink = (re) =>
+      [...sidebar.querySelectorAll('a')].find((a) => re.test(a.getAttribute('href') || ''));
+
+    const sections = [
+      {
+        active: /^\/docs\/migration(\/|-|$)/.test(path),
+        link: findLink(/^\/docs\/migration\/?$/),
+      },
+      {
+        active: /^\/docs\/tutorials(\/|-|$)/.test(path),
+        link: findLink(/^\/docs\/tutorials\/?$/),
+      },
+    ];
+
+    // Clear only the highlights we previously forced (leave Starlight's own).
+    sidebar.querySelectorAll('a[data-section-current]').forEach((a) => {
+      a.removeAttribute('aria-current');
+      a.removeAttribute('data-section-current');
+    });
+
+    for (const s of sections) {
+      if (!s.active || !s.link) continue;
+      s.onActive?.(s.link);
+      s.link.setAttribute('aria-current', 'page');
+      s.link.setAttribute('data-section-current', '');
+      // Expand the containing group(s), e.g. the "Documentation" <details>.
+      let el = s.link.closest('details');
+      while (el) {
+        el.open = true;
+        el = el.parentElement && el.parentElement.closest('details');
+      }
+      break;
+    }
+  }
+  syncSidebarSections();
+  document.addEventListener('astro:after-swap', syncSidebarSections);
+</script>
 
 
 <style>

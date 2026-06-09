@@ -106,17 +106,19 @@ html[data-theme='dark'] {
   --sl-color-accent-high: #c5e288;
   --sl-color-text-accent: #7da82e;
   --sl-content-width: 56rem;
-  --sl-sidebar-width: 18rem;
+  --sl-sidebar-width: 19rem;
   --sl-content-pad-x: 2rem;
+  --toc-width: 18rem;
 }
 
 /* Documentation layout: OpenAI-docs-style reading proportions */
 @media (min-width: 72rem) {
   :root {
-    --sl-sidebar-width: 18rem;
-    --sl-content-width: 56rem;
-    --sl-content-pad-x: clamp(2.5rem, 4vw, 4rem);
-    --sl-sidebar-pad-x: 1.5rem;
+    --sl-sidebar-width: 19rem;
+    --toc-width: 19rem;
+    --sl-content-pad-x: 0rem;
+    --sl-sidebar-pad-x: 1rem;
+    --content-max: 60rem;
   }
 
   main {
@@ -127,27 +129,37 @@ html[data-theme='dark'] {
     min-width: 0;
   }
 
+  /* Content grows to fill the main pane up to --content-max; beyond that it
+     caps and centers, so the extra space splits evenly on both sides. A
+     constant horizontal padding is applied to the content elements (below). */
   .content-panel > .sl-container {
-    max-width: var(--sl-content-width);
-    margin-inline: 0 auto;
+    max-width: var(--content-max);
+    margin-inline: auto;
   }
 
+  /* Give the ToC a fixed-width track instead of Starlight's viewport-scaled
+     formula, and let the main content area absorb the leftover space. */
+  .right-sidebar-container {
+    width: var(--toc-width);
+  }
+  [data-has-sidebar][data-has-toc] .main-pane {
+    width: calc(100% - var(--toc-width));
+  }
+  .right-sidebar {
+    width: var(--toc-width);
+  }
+  .right-sidebar-panel {
+    padding-inline: 1rem;
+  }
   .right-sidebar-panel > .sl-container {
-    width: min(18rem, 100%);
-    max-width: 18rem;
+    width: 100%;
+    max-width: 100%;
   }
 }
 
 @media (min-width: 96rem) {
   :root {
     --sl-sidebar-width: 19rem;
-    --sl-content-width: 58rem;
-    --sl-content-pad-x: 4.5rem;
-  }
-
-  .right-sidebar-panel > .sl-container {
-    width: min(19rem, 100%);
-    max-width: 19rem;
   }
 }
 
@@ -156,6 +168,15 @@ html[data-theme='dark'] {
 h1#_top,
 .sl-markdown-content {
   padding-inline: 2rem;
+}
+
+/* Above 72rem the content column fills the pane, so give it a slightly
+   larger constant horizontal padding for breathing room from the sidebars. */
+@media (min-width: 72rem) {
+  h1#_top,
+  .sl-markdown-content {
+    padding-inline: 3rem;
+  }
 }
 
 main:has(.home-splash) h1#_top,
@@ -221,31 +242,25 @@ h1#_top {
   content: counter(h2counter) "." counter(h3counter) "." counter(h4counter) " ";
 }
 
-.sl-markdown-content .sl-anchor-link {
-  display: none;
-}
+/* Use Starlight's native heading anchor links (.sl-anchor-link) — they render
+   on every heading that has an id ({#id} from the converter). Previously these
+   were hidden in favour of a custom legacy-heading-link tied to the old
+   @@anchor token, which has been removed.
 
-.sl-markdown-content .legacy-heading-link {
-  display: inline-flex;
+   Starlight's default tucks the icon into reserved heading padding via a
+   negative margin; with this project's heading overrides that lands the icon
+   on top of the text. Lay the wrapper out as flex with a real gap instead so
+   the icon sits cleanly after the heading, revealed on hover. */
+.sl-markdown-content .sl-heading-wrapper {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  inline-size: 0.85em;
-  block-size: 0.85em;
-  margin-inline-start: 0.3em;
-  color: var(--sl-color-text-accent);
-  opacity: 0;
-  text-decoration: none;
-  vertical-align: -0.1em;
+  gap: var(--sl-anchor-icon-gap, 0.25em);
 }
-
-.sl-markdown-content :is(h2, h3, h4, h5, h6):hover .legacy-heading-link,
-.sl-markdown-content .legacy-heading-link:focus-visible {
-  opacity: 1;
+.sl-markdown-content .sl-heading-wrapper > :first-child {
+  padding-inline-end: 0;
 }
-
-.sl-markdown-content .legacy-heading-link svg {
-  inline-size: 100%;
-  block-size: 100%;
+.sl-markdown-content .sl-anchor-link {
+  margin-inline-start: 0;
 }
 
 
@@ -336,13 +351,21 @@ h1#_top {
 .sl-markdown-content .color-orange { color: #c05621; }
 .sl-markdown-content .color-yellow { color: #b7791f; }
 
-.sl-markdown-content .legacy-anchor {
-  position: relative;
-  display: inline-block;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-  scroll-margin-top: 0;
+/* Deprecated/removed code examples (PMwiki {-[@...@]-}): the converter tags the
+   line with Expressive Code's `del` marker. EC's default doesn't strike the text,
+   so add a line-through and drop the red diff tint / "-" gutter so it reads as a
+   plain code block with crossed-out text. */
+.expressive-code .ec-line.del .code {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  opacity: 0.7;
+  border-inline-start: none !important; /* drop EC's red diff accent bar */
+}
+.expressive-code .ec-line.del {
+  background: transparent !important; /* drop EC's red diff tint */
+}
+.expressive-code .ec-line.del .code::before {
+  display: none !important; /* hide the "-" diff gutter marker */
 }
 
 /* Overscroll bounce areas: match footer on home, match content elsewhere */

@@ -16,7 +16,7 @@ from pathlib import Path
 
 ROOT         = Path(__file__).parent.parent
 OPENSIPS_DIR = ROOT / 'opensips'
-MODULES_ROOT = ROOT / 'src/content/docs/modules'
+MODULES_ROOT = ROOT / 'src/content/docs/docs/modules'
 PLACEHOLDER  = '<!-- CONTRIBUTORS -->'
 
 # Global project stats (last updated in build-contrib.sh)

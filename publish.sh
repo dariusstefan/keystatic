@@ -8,7 +8,10 @@ server_dir="/opt/opensips-astro"
 # Load env so PUBLIC_ vars are available at build time (baked into the JS bundle)
 set -a; source /etc/opensips-keystatic.env; set +a
 
-NODE_OPTIONS=--max-old-space-size=2560 ./node_modules/.bin/astro build
+# Stop the app server to free RAM for the build
+systemctl stop opensips-astro
+
+NODE_OPTIONS=--max-old-space-size=3072 ./node_modules/.bin/astro build
 
 # Run pagefind separately so it doesn't compete with Node.js for RAM
 ./node_modules/.bin/pagefind --site dist/client

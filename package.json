@@ -8,12 +8,18 @@
     "build": "NODE_OPTIONS=--max-old-space-size=4096 astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "generate:flat": "python3 scripts/generate-flat-docs.py",
+    "resolve:toc": "python3 scripts/resolve-toc-anchors.py",
+    "prebuild": "python3 scripts/resolve-toc-anchors.py",
     "generate:modules": "python3 scripts/generate-module-docs.py",
     "generate:modules:all": "python3 scripts/generate-module-docs.py --all-versions",
+    "generate:manual": "python3 scripts/generate-manual-docs.py",
+    "generate:manual:all": "python3 scripts/generate-manual-docs.py --all-versions",
+    "generate:flat": "python3 scripts/generate-flat-docs.py",
     "generate:contributors": "python3 scripts/generate-contributors.py",
     "populate:fork": "python3 scripts/populate-fork.py",
-    "populate:fork:dry": "python3 scripts/populate-fork.py --dry-run"
+    "populate:fork:dry": "python3 scripts/populate-fork.py --dry-run",
+    "populate:fork:manual": "python3 scripts/populate-fork-manual.py",
+    "populate:fork:manual:dry": "python3 scripts/populate-fork-manual.py --dry-run"
   },
   "dependencies": {
     "@astrojs/markdoc": "^1.0.5",

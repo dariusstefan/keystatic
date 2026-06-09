@@ -12,13 +12,14 @@ Usage:
 """
 
 import argparse
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OPENSIPS_DIR = REPO_ROOT / "opensips"
-CONVERTER = REPO_ROOT / "converters" / "docbook_to_md.py"
+CONVERTER = REPO_ROOT / "pmwiki-mdx" / "docbook_to_md.py"
 MODULES_DIR = OPENSIPS_DIR / "modules"
 
 BRANCHES = ["master", "4.0", "3.6", "3.5", "3.4", "3.3"]
@@ -53,13 +54,18 @@ def current_branch() -> str:
 
 
 def clear_readmes():
-    """Remove all untracked README.md files from modules/ to get a clean slate."""
+    """Remove generated README.md / samples.md / samples/ to get a clean slate."""
     removed = 0
     for f in MODULES_DIR.glob("*/README.md"):
         f.unlink()
         removed += 1
+    for f in MODULES_DIR.glob("*/samples.md"):
+        f.unlink()
+    for d in MODULES_DIR.glob("*/samples"):
+        if d.is_dir():
+            shutil.rmtree(d)
     if removed:
-        print(f"  Cleared {removed} existing README.md files")
+        print(f"  Cleared {removed} existing README.md files (+ samples)")
 
 
 def checkout_branch(branch: str):
@@ -98,9 +104,14 @@ def commit_and_push(branch: str, dry_run: bool):
         return
 
     rel_paths = [f"modules/{r.parent.name}/README.md" for r in readmes]
+    # Also stage generated config-sample overviews and their .cfg folders.
+    rel_paths += [f"modules/{s.parent.name}/samples.md"
+                  for s in sorted(MODULES_DIR.glob("*/samples.md"))]
+    rel_paths += [f"modules/{d.parent.name}/samples"
+                  for d in sorted(MODULES_DIR.glob("*/samples")) if d.is_dir()]
 
     if dry_run:
-        print(f"  [DRY RUN] Would git add {len(rel_paths)} files, commit, and push to {REMOTE}/{branch}")
+        print(f"  [DRY RUN] Would git add {len(rel_paths)} paths, commit, and push to {REMOTE}/{branch}")
         return
 
     # Stage

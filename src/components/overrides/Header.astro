@@ -3,20 +3,24 @@ import type { Props } from '@astrojs/starlight/props';
 import Search from '@astrojs/starlight/components/Search.astro';
 import ThemeSelect from './ThemeSelect.astro';
 
-const nav = [
+const nav: { label: string; href: string; match?: string[] }[] = [
   { label: 'About', href: '/about' },
   { label: 'Downloads', href: '/downloads' },
-  { label: 'Documentation', href: '/documentation' },
+  // Points at the Manual, but stays active across the whole docs section.
+  { label: 'Documentation', href: '/docs/manual/devel', match: ['/docs'] },
   { label: 'Community', href: '/community' },
   { label: 'Training', href: '/training' },
 ];
 
 const currentPath = Astro.url.pathname.replace(/\/$/, '');
 
-function isActive(href: string) {
-  const h = href.replace(/\/$/, '');
-  if (h === '') return currentPath === '';
-  return currentPath === h || currentPath.startsWith(h + '/');
+function isActive(item: { href: string; match?: string[] }) {
+  const paths = item.match ?? [item.href];
+  return paths.some((p) => {
+    const h = p.replace(/\/$/, '');
+    if (h === '') return currentPath === '';
+    return currentPath === h || currentPath.startsWith(h + '/');
+  });
 }
 ---
 
@@ -33,7 +37,7 @@ function isActive(href: string) {
       {nav.map((item) => (
         <a
           href={item.href}
-          class:list={['nav-link', { 'is-active': isActive(item.href) }]}
+          class:list={['nav-link', { 'is-active': isActive(item) }]}
         >
           {item.label}
         </a>
@@ -73,7 +77,7 @@ function isActive(href: string) {
       {nav.map((item) => (
         <a
           href={item.href}
-          class:list={['mobile-nav-link', { 'is-active': isActive(item.href) }]}
+          class:list={['mobile-nav-link', { 'is-active': isActive(item) }]}
         >
           {item.label}
         </a>

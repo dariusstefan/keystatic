@@ -1,14 +1,22 @@
 ---
-import { type Version, VERSIONS, getModuleUrl } from '~/config/module-versions';
+import { type Version, VERSIONS, getModuleUrl, getManualUrl } from '~/config/module-versions';
 
 interface Props {
-  module: string;
+  /** Module mode: the module name. */
+  module?: string;
+  /** Manual mode: the page sub-path after the version slug ('' for the index). */
+  manualPage?: string;
   currentSlug: string;
   versions?: Version[];
 }
 
-const { module, currentSlug, versions = VERSIONS } = Astro.props;
+const { module, manualPage, currentSlug, versions = VERSIONS } = Astro.props;
 const current = versions.find((v) => v.slug === currentSlug);
+
+// Keep the same page when switching versions: manual pages use getManualUrl,
+// module pages use getModuleUrl.
+const urlForSlug = (slug: string) =>
+  manualPage !== undefined ? getManualUrl(manualPage, slug) : getModuleUrl(module!, slug);
 ---
 
 <nav class="version-selector not-content" aria-label="Version">
@@ -25,7 +33,7 @@ const current = versions.find((v) => v.slug === currentSlug);
         return (
           <li>
             <a
-              href={getModuleUrl(module, v.slug)}
+              href={urlForSlug(v.slug)}
               class:list={['vs-item', { 'vs-item--active': isCurrent }]}
               aria-current={isCurrent ? 'page' : undefined}
             >
@@ -94,7 +102,9 @@ const current = versions.find((v) => v.slug === currentSlug);
   .vs-list {
     position: absolute;
     top: calc(100% + 0.4rem);
-    left: 0;
+    /* Anchor to the button's right edge so the menu opens leftward, into the
+       content area — never overlapping the fixed TOC's left border on the right. */
+    right: 0;
     z-index: 50;
     display: flex;
     flex-direction: column;

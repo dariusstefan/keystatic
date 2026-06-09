@@ -23,6 +23,7 @@ Usage:
 import argparse
 import json
 import re
+import shutil
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -30,7 +31,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MODULES_DIR = REPO_ROOT / "opensips" / "modules"
-CONTENT_DIR = REPO_ROOT / "src" / "content" / "docs" / "modules"
+CONTENT_DIR = REPO_ROOT / "src" / "content" / "docs" / "docs" / "modules"
 
 FORK = "dariusstefan/opensips"
 GITHUB_RAW = f"https://raw.githubusercontent.com/{FORK}"
@@ -82,6 +83,74 @@ def _fetch_readme(branch: str, module: str) -> str | None:
         return None
 
 
+# ---------------------------------------------------------------------------
+# Config-sample propagation
+#
+# A module README may include a samples.md overview via the portable link
+# directive `[label](./samples.md "include")`. On the fork that link resolves
+# to modules/<name>/samples.md (+ its samples/*.cfg); on the website all modules
+# of a version live flat in one dir, so we copy each module's sample assets into
+# a per-module, glob-ignored ".samples/<name>/" subdir and rewrite the link to
+# point there. (Starlight's loader skips dot-prefixed dirs, so samples.md/.cfg
+# are not treated as routable pages; the remark include plugin still reads them
+# from disk at build time.)
+# ---------------------------------------------------------------------------
+
+SAMPLES_INCLUDE = '](./samples.md "include")'
+_CFG_INCLUDE_RE = re.compile(r'\]\(\./samples/([^)"]+) "include"\)')
+
+
+def _fetch_raw(branch: str, relpath: str) -> str | None:
+    url = f"{GITHUB_RAW}/{branch}/{relpath}"
+    try:
+        with urllib.request.urlopen(url, timeout=30) as r:
+            return r.read().decode("utf-8", errors="replace")
+    except Exception:
+        return None
+
+
+def _rewrite_samples_link(md: str, name: str) -> str:
+    return md.replace(SAMPLES_INCLUDE, f'](./.samples/{name}/samples.md "include")')
+
+
+def _strip_samples_link(md: str) -> str:
+    """Drop the whole `[label](./samples.md "include")` line (sample assets unavailable)."""
+    return re.sub(r'(?m)^\[[^\]]*\]\(\./samples\.md "include"\)\n?', '', md)
+
+
+def _propagate_samples_local(name: str, md: str, out_dir: Path) -> str:
+    if SAMPLES_INCLUDE not in md:
+        return md
+    src_md = MODULES_DIR / name / "samples.md"
+    if not src_md.exists():
+        return _strip_samples_link(md)
+    dest = out_dir / ".samples" / name
+    (dest / "samples").mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(src_md, dest / "samples.md")
+    src_dir = MODULES_DIR / name / "samples"
+    if src_dir.is_dir():
+        for f in src_dir.iterdir():
+            if f.is_file():
+                shutil.copyfile(f, dest / "samples" / f.name)
+    return _rewrite_samples_link(md, name)
+
+
+def _propagate_samples_remote(name: str, branch: str, md: str, out_dir: Path) -> str:
+    if SAMPLES_INCLUDE not in md:
+        return md
+    samples_md = _fetch_raw(branch, f"modules/{name}/samples.md")
+    if samples_md is None:
+        return _strip_samples_link(md)
+    dest = out_dir / ".samples" / name
+    (dest / "samples").mkdir(parents=True, exist_ok=True)
+    (dest / "samples.md").write_text(samples_md, "utf-8")
+    for cfg in _CFG_INCLUDE_RE.findall(samples_md):
+        body = _fetch_raw(branch, f"modules/{name}/samples/{cfg}")
+        if body is not None:
+            (dest / "samples" / cfg).write_text(body, "utf-8")
+    return _rewrite_samples_link(md, name)
+
+
 def _normalize_title(raw: str) -> str:
     t = raw.strip().strip('"\'').lower()
     if not re.search(r'\bmodule\b', t):
@@ -90,6 +159,10 @@ def _normalize_title(raw: str) -> str:
 
 
 def _normalize_title_in_md(md: str) -> str:
+    # Manual links are absolute (https://web.opensips.org/docs/manual/…) so they
+    # work on github.com from the fork; strip the origin to a root-relative path
+    # for the on-site build.
+    md = md.replace("https://web.opensips.org/docs/", "/docs/")
     if not md.startswith("---"):
         return md
     try:
@@ -128,9 +201,9 @@ def generate_devel_local(module_names: list[str], verbose: bool) -> tuple[int, i
         if not src.exists():
             failed += 1
             continue
-        (out_dir / f"{name}.md").write_text(
-            _normalize_title_in_md(src.read_text("utf-8")), "utf-8"
-        )
+        text = _normalize_title_in_md(src.read_text("utf-8"))
+        text = _propagate_samples_local(name, text, out_dir)
+        (out_dir / f"{name}.md").write_text(text, "utf-8")
         if verbose:
             print(f"  {name}")
         ok += 1
@@ -156,7 +229,9 @@ def generate_devel_remote(verbose: bool) -> tuple[int, int]:
             if md is None:
                 failed += 1
                 continue
-            (out_dir / f"{name}.md").write_text(_normalize_title_in_md(md), "utf-8")
+            text = _normalize_title_in_md(md)
+            text = _propagate_samples_remote(name, LATEST["branch"], text, out_dir)
+            (out_dir / f"{name}.md").write_text(text, "utf-8")
             ok += 1
             if verbose:
                 print(f"  {name}")
@@ -186,6 +261,7 @@ def generate_version(slug: str, branch: str, verbose: bool) -> tuple[int, int]:
             if md is None:
                 failed += 1
                 continue
+            md = _propagate_samples_remote(name, branch, md, out_dir)
             (out_dir / f"{name}.md").write_text(md, "utf-8")
             ok += 1
             if verbose:
@@ -240,7 +316,7 @@ def generate_redirects(verbose: bool) -> int:
             if target:
                 out = CONTENT_DIR / slug / f"{module}.md"
                 out.write_text(
-                    f"---\ntitle: ''\nhead:\n  - tag: meta\n    attrs:\n      http-equiv: refresh\n      content: '0; url=/modules/{target}/{module}'\nsidebar:\n  hidden: true\n---\n",
+                    f"---\ntitle: ''\nhead:\n  - tag: meta\n    attrs:\n      http-equiv: refresh\n      content: '0; url=/docs/modules/{target}/{module}'\nsidebar:\n  hidden: true\n---\n",
                     "utf-8",
                 )
                 count += 1

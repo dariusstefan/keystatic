@@ -1,7 +1,4 @@
 const COLOR_MARKER_RE = /@@(red|green|blue|orange|yellow)\|(.+?)@@/g;
-const ANCHOR_MARKER_RE = /^@@anchor\|([A-Za-z0-9_.-]+)@@$/;
-const LINK_ICON =
-  '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 0 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 1 0-1.42-1.42Zm8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 0 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 1 0 1.42 1.42l3.88-3.89a4.49 4.49 0 0 0 0-6.33ZM8.83 15.17a1 1 0 0 0 1.1.22 1 1 0 0 0 .32-.22l4.92-4.92a1 1 0 0 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42Z"/></svg>';
 
 function escapeHtml(value) {
   return value
@@ -16,6 +13,74 @@ function colorMarkerToHtml(color, value) {
     type: 'html',
     value: `<span class="color-${color}">${escapeHtml(value)}</span>`,
   };
+}
+
+function nodeToHtmlString(node) {
+  if (node.type === 'text') return escapeHtml(node.value);
+  if (node.type === 'strong') return `<strong>${(node.children || []).map(nodeToHtmlString).join('')}</strong>`;
+  if (node.type === 'emphasis') return `<em>${(node.children || []).map(nodeToHtmlString).join('')}</em>`;
+  if (node.type === 'inlineCode') return `<code>${escapeHtml(node.value)}</code>`;
+  if (node.type === 'html') return node.value;
+  if (node.type === 'link') {
+    const href = escapeHtml(node.url || '');
+    return `<a href="${href}">${(node.children || []).map(nodeToHtmlString).join('')}</a>`;
+  }
+  if (Array.isArray(node.children)) return node.children.map(nodeToHtmlString).join('');
+  return escapeHtml(node.value || '');
+}
+
+// Handle @@color|...@@ spans that cross AST node boundaries (e.g. contain **bold** or *italic*).
+function processColorSpansInParent(node) {
+  if (!node || !Array.isArray(node.children)) return;
+  const children = node.children;
+  const OPEN_RE = /^([\s\S]*?)@@(red|green|blue|orange|yellow)\|([\s\S]*)$/;
+
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i];
+    if (child.type !== 'text') continue;
+
+    const startMatch = child.value.match(OPEN_RE);
+    if (!startMatch) continue;
+
+    const [, beforeMarker, color, afterOpen] = startMatch;
+
+    // If closing @@ is in the same text node, splitColorMarkers handles it
+    if (afterOpen.includes('@@')) continue;
+
+    // Find the closing @@ in a later sibling
+    const innerNodes = [];
+    if (afterOpen) innerNodes.push({ type: 'text', value: afterOpen });
+
+    let j = i + 1;
+    let closeFound = false;
+    let afterClose = '';
+
+    while (j < children.length) {
+      const sibling = children[j];
+      if (sibling.type === 'text') {
+        const closeIdx = sibling.value.indexOf('@@');
+        if (closeIdx !== -1) {
+          const textBefore = sibling.value.slice(0, closeIdx);
+          if (textBefore) innerNodes.push({ type: 'text', value: textBefore });
+          afterClose = sibling.value.slice(closeIdx + 2);
+          closeFound = true;
+          break;
+        }
+      }
+      innerNodes.push(sibling);
+      j++;
+    }
+
+    if (!closeFound) continue;
+
+    const innerHtml = innerNodes.map(nodeToHtmlString).join('');
+    const replacement = [];
+    if (beforeMarker) replacement.push({ type: 'text', value: beforeMarker });
+    replacement.push({ type: 'html', value: `<span class="color-${color}">${innerHtml}</span>` });
+    if (afterClose) replacement.push({ type: 'text', value: afterClose });
+
+    children.splice(i, j - i + 1, ...replacement);
+  }
 }
 
 function colorMarkersToHtml(value) {
@@ -66,64 +131,6 @@ function splitColorMarkers(node, index, parent) {
   parent.children.splice(index, 1, ...replacement);
 }
 
-function getAnchorMarkerId(node) {
-  if (node?.type !== 'paragraph' || node.children?.length !== 1) return null;
-
-  const child = node.children[0];
-  if (child.type !== 'text') return null;
-
-  return child.value.trim().match(ANCHOR_MARKER_RE)?.[1] ?? null;
-}
-
-function getPlainText(node) {
-  if (!node) return '';
-  if (typeof node.value === 'string') return node.value;
-  if (!Array.isArray(node.children)) return '';
-  return node.children.map(getPlainText).join('');
-}
-
-function addHeadingLink(heading, anchorId) {
-  if (heading.children?.some((child) => child.type === 'html' && child.value.includes('legacy-heading-link'))) {
-    return;
-  }
-
-  const label = escapeHtml(getPlainText(heading).trim() || anchorId);
-  heading.children.push({
-    type: 'html',
-    value: `<a class="legacy-heading-link" href="#${escapeHtml(anchorId)}" aria-label="Link to ${label}" data-pagefind-ignore="true">${LINK_ICON}</a>`,
-  });
-}
-
-function attachAnchorMarkersToHeadings(node) {
-  if (!node || !Array.isArray(node.children)) return;
-
-  for (let index = node.children.length - 2; index >= 0; index -= 1) {
-    const anchorId = getAnchorMarkerId(node.children[index]);
-    const next = node.children[index + 1];
-
-    if (!anchorId || next?.type !== 'heading') continue;
-
-    next.data = next.data || {};
-    next.data.hProperties = {
-      ...(next.data.hProperties || {}),
-      id: anchorId,
-    };
-    addHeadingLink(next, anchorId);
-    node.children.splice(index, 1);
-  }
-}
-
-function replaceAnchorParagraph(node, index, parent) {
-  if (!parent) return;
-
-  const anchorId = getAnchorMarkerId(node);
-  if (!anchorId) return;
-  parent.children.splice(index, 1, {
-    type: 'html',
-    value: `<span id="${escapeHtml(anchorId)}" class="legacy-anchor" aria-hidden="true"></span>`,
-  });
-}
-
 function replaceInlineCodeMarkers(node, index, parent) {
   COLOR_MARKER_RE.lastIndex = 0;
   if (!parent || node.type !== 'inlineCode' || !COLOR_MARKER_RE.test(node.value)) return;
@@ -150,12 +157,11 @@ function replaceCodeBlockMarkers(node, index, parent) {
 function visit(node, parent = null) {
   if (!node || !Array.isArray(node.children)) return;
 
-  attachAnchorMarkersToHeadings(node);
+  processColorSpansInParent(node);
 
   for (let index = node.children.length - 1; index >= 0; index -= 1) {
     const child = node.children[index];
     visit(child, node);
-    replaceAnchorParagraph(child, index, node);
     replaceCodeBlockMarkers(child, index, node);
     replaceInlineCodeMarkers(child, index, node);
     splitColorMarkers(child, index, node);

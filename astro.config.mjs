@@ -10,6 +10,9 @@ import node from '@astrojs/node';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import remarkTextMarkers from './src/utils/remarkTextMarkers.mjs';
+import remarkGithubAlerts from './src/utils/remarkGithubAlerts.mjs';
+import remarkInclude from './src/utils/remarkInclude.mjs';
+import { manualSidebar } from './src/config/manual-sidebar.mjs';
 import remarkHeadingId from 'remark-heading-id';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -19,7 +22,7 @@ export default defineConfig({
   prefetch: false,
   adapter: node({ mode: 'standalone' }),
   markdown: {
-    remarkPlugins: [remarkTextMarkers, remarkHeadingId],
+    remarkPlugins: [remarkInclude, remarkGithubAlerts, remarkTextMarkers, remarkHeadingId],
   },
   security: {
     checkOrigin: false,
@@ -55,35 +58,35 @@ export default defineConfig({
           label: 'Documentation',
           collapsed: true,
           items: [
-            { label: 'OpenSIPS Tools', slug: 'documentation/tools' },
-            { label: 'Advanced Tutorials', slug: 'documentation/tutorials' },
-            { label: 'Tips and FAQ', slug: 'documentation/tipsfaq' },
+            {
+              label: 'Manual',
+              collapsed: true,
+              items: manualSidebar(),
+            },
+            { label: 'Advanced Tutorials', slug: 'docs/tutorials' },
+            { label: 'Tips & FAQ', slug: 'docs/tipsfaq' },
+            {
+              label: 'Version Migration', slug: 'docs/migration'
+            },
             {
               label: 'Troubleshooting',
               collapsed: true,
               items: [
-                { label: 'Overview', slug: 'documentation/troubleshooting' },
-                { label: 'OpenSIPS Does Not Start', slug: 'documentation/troubleshooting-doesnotstart' },
-                { label: 'OpenSIPS Crashes', slug: 'documentation/troubleshooting-crash' },
-                { label: 'Out Of Memory', slug: 'documentation/troubleshooting-outofmem' },
-                { label: 'Increasing Memory', slug: 'documentation/troubleshooting-increasemem' },
+                { label: 'Overview', slug: 'docs/troubleshooting' },
+                { label: 'OpenSIPS Does Not Start', slug: 'docs/troubleshooting-doesnotstart' },
+                { label: 'OpenSIPS Crashes', slug: 'docs/troubleshooting-crash' },
+                { label: 'Out Of Memory', slug: 'docs/troubleshooting-outofmem' },
+                { label: 'Increasing Memory', slug: 'docs/troubleshooting-increasemem' },
               ],
             },
-            {
-              label: 'Version Migration', slug: 'documentation/migration'
-            },
+            { label: 'OpenSIPS Tools', slug: 'docs/tools' },
           ],
-        },
-        {
-          label: 'Modules',
-          collapsed: true,
-          items: [{ autogenerate: { directory: 'modules/devel' } }],
         },
       ],
     }),
     // Must come AFTER starlight() so astro-expressive-code (registered by Starlight) wraps MDX code blocks correctly.
     mdx({
-      remarkPlugins: [remarkTextMarkers, remarkHeadingId],
+      remarkPlugins: [remarkInclude, remarkGithubAlerts, remarkTextMarkers, remarkHeadingId],
     }),
   ],
   vite: {
