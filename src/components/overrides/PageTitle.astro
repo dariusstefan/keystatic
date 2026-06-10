@@ -191,13 +191,16 @@ if (isModulePage) {
 
 
 <script>
-  // Some sidebar entries (Manual, Version Migration, Advanced Tutorials) are a
-  // single link whose sub-pages are sibling slugs (e.g. /manual/devel/<page>,
-  // /documentation/migration-*, /documentation/tutorials-*). Starlight only
-  // highlights/expands them on the entry's exact URL, so on a sub-page nothing
-  // lights up and the parent group stays collapsed. This handler marks the
-  // right entry current and opens its ancestor group(s). Path-derived so it
-  // stays correct across client-side navigations.
+  // Some sidebar entries (Advanced Tutorials) are a single link whose sub-pages
+  // are sibling slugs (e.g. /docs/tutorials-*). Starlight only highlights/expands
+  // them on the entry's exact URL, so on a sub-page nothing lights up and the
+  // parent group stays collapsed. This handler marks the right entry current and
+  // opens its ancestor group(s). Path-derived so it stays correct across
+  // client-side navigations.
+  //
+  // (Version Migration is NOT handled here — it's a real submenu with explicit
+  // child slugs, so Starlight already highlights the active page. Adding it here
+  // would double-highlight the Overview link on every migration-* sub-page.)
   function syncSidebarSections() {
     const sidebar = document.querySelector('#starlight__sidebar');
     if (!sidebar) return;
@@ -206,10 +209,6 @@ if (isModulePage) {
       [...sidebar.querySelectorAll('a')].find((a) => re.test(a.getAttribute('href') || ''));
 
     const sections = [
-      {
-        active: /^\/docs\/migration(\/|-|$)/.test(path),
-        link: findLink(/^\/docs\/migration\/?$/),
-      },
       {
         active: /^\/docs\/tutorials(\/|-|$)/.test(path),
         link: findLink(/^\/docs\/tutorials\/?$/),
@@ -281,5 +280,16 @@ if (isModulePage) {
     font-size: var(--sl-text-sm);
     font-weight: 600;
     color: var(--sl-color-gray-3);
+  }
+
+  /* Match the title/body horizontal padding, which widens past 72rem
+     (see global.css h1#_top / .sl-markdown-content), so the subtitle,
+     author, and version row stay left-aligned with the content column. */
+  @media (min-width: 72rem) {
+    .version-row,
+    .page-subtitle,
+    .page-author {
+      padding-inline: 3rem;
+    }
   }
 </style>
