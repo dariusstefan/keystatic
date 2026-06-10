@@ -447,7 +447,11 @@ class _Emitter:
         if title_txt:
             level = min(depth + 1, 6)
             id_suffix = f" {{#{section_id}}}" if section_id else ""
-            self._add(f'\n{"#" * level} {title_txt}{id_suffix}\n')
+            # Normalize whitespace on the assembled line so the heading is always
+            # single-line and single-spaced, regardless of nested-element quirks in
+            # the DocBook <title> (e.g. a <function> child re-introducing spaces).
+            heading = re.sub(r"\s+", " ", f'{"#" * level} {title_txt}{id_suffix}').strip()
+            self._add(f'\n{heading}\n')
         for child in elem:
             if (child.tag or "").lower() != "title":
                 self._block(child, depth + 1)
@@ -455,7 +459,13 @@ class _Emitter:
     def _get_title(self, elem) -> str:
         for child in elem:
             if (child.tag or "").lower() == "title":
-                return _inline(child).strip().replace('`', '')
+                # Collapse ALL internal whitespace (newlines/tabs/runs of spaces)
+                # to single spaces so the title stays on ONE line. DocBook titles
+                # that document a pair of functions, or a signature that wraps,
+                # span multiple lines; left as-is they produced a multi-line
+                # Markdown heading whose trailing {#anchor} fell onto a
+                # non-heading continuation line.
+                return " ".join(_inline(child).split()).replace('`', '')
         return ""
 
     # Tags that, when found inside a <para>, must be emitted as blocks rather
