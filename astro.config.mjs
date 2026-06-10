@@ -13,6 +13,7 @@ import remarkTextMarkers from './src/utils/remarkTextMarkers.mjs';
 import remarkGithubAlerts from './src/utils/remarkGithubAlerts.mjs';
 import remarkInclude from './src/utils/remarkInclude.mjs';
 import { manualSidebar } from './src/config/manual-sidebar.mjs';
+import { tutorialsSidebar } from './src/config/tutorials-sidebar.mjs';
 import remarkHeadingId from 'remark-heading-id';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -63,7 +64,11 @@ export default defineConfig({
               collapsed: true,
               items: manualSidebar(),
             },
-            { label: 'Advanced Tutorials', slug: 'docs/tutorials' },
+            {
+              label: 'Advanced Tutorials',
+              collapsed: true,
+              items: tutorialsSidebar(),
+            },
             { label: 'Tips & FAQ', slug: 'docs/tipsfaq' },
             {
               label: 'Version Migration',
