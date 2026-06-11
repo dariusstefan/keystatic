@@ -19,7 +19,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OPENSIPS_DIR = REPO_ROOT / "opensips"
-CONVERTER = REPO_ROOT / "pmwiki-mdx" / "docbook_to_md.py"
+CONVERTER = REPO_ROOT / "converters" / "docbook_to_md.py"
 MODULES_DIR = OPENSIPS_DIR / "modules"
 
 BRANCHES = ["master", "4.0", "3.6", "3.5", "3.4", "3.3"]

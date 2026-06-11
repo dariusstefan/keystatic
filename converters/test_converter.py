@@ -230,13 +230,16 @@ class TestImages:
 
 class TestArrows:
     def test_bidirectional_arrow(self):
-        # arrows are handled in escape_prose_line (mdx_safety_pass), not convert_inline
+        # <-> → ↔ (Unicode bidirectional arrow, plain text, no MDX issues)
         result = pmwiki_to_mdx("UAC<->OpenSIPS")
-        assert "`<->`" in result
+        assert "↔" in result
+        assert "`<->`" not in result
 
     def test_left_arrow(self):
+        # <- → ← (Unicode left arrow, plain text, no MDX issues)
         result = pmwiki_to_mdx("response<-server")
-        assert "`<-`" in result
+        assert "←" in result
+        assert "`<-`" not in result
 
 
 # ---------------------------------------------------------------------------
@@ -418,37 +421,69 @@ class TestTables:
         assert "| Module | Name |" in result
         assert "! Module" not in result
 
-    def test_table_with_code_cell_becomes_gfm_table_with_inline_code(self):
+    def test_table_with_code_cell_becomes_list_items(self):
         # A table whose last column holds a multi-line [@...@] code example →
-        # rendered as a GFM table with the code collapsed to a single inline code span.
+        # each row becomes a bullet list item with a nested fenced code block
+        # (indented 2 spaces) that preserves the code's newlines/indentation.
         src = (
             "||Value source||Value type||Example||\n"
             "||Inline URI ||\"uri\" ||[@\n"
-            "<destination>sip:x</destination>\n"
+            "<destination>\n"
+            "   sip:x\n"
+            "</destination>\n"
             "@]||"
         )
         result = pmwiki_to_mdx(src)
-        assert "| Value source |" in result
-        assert "| Inline URI |" in result
-        assert "`<destination>sip:x</destination>`" in result
+        assert '* **Inline URI** — "uri"' in result
+        # fence is nested (indented 2 spaces) under the list item
+        assert "  ```" in result
+        # multi-line code stays on multiple lines, indented to nest in the item
+        assert "  <destination>\n     sip:x\n  </destination>" in result
         assert "[@" not in result and "@]" not in result
         assert "<table>" not in result
+        assert "| Value source |" not in result  # not a broken GFM table
 
-    def test_code_comparison_table_becomes_sections(self):
-        # A 2-column table whose cells hold multi-line [@...@] code becomes
-        # sequential labeled sections with fenced code blocks.
+    def test_orange_table_caption_drops_prefix(self):
+        # An orange "Table:" caption precedes labeled code blocks, not a real
+        # table, so the "Table:" prefix is dropped and the caption itself is
+        # colored orange.
+        src = "%color=#ff7f00% Table: %black%'''Scenario init node examples'''"
+        result = pmwiki_to_mdx(src)
+        assert "@@orange|**Scenario init node examples**@@" in result
+        assert "Table:" not in result
+
+    def test_plain_table_prefix_before_colored_caption_dropped(self):
+        # "Table:" as plain text before a colored bold caption is also dropped.
+        src = "Table: %green%'''Scripting examples'''%%"
+        result = pmwiki_to_mdx(src)
+        assert "@@green|**Scripting examples**@@" in result
+        assert "Table:" not in result
+
+    def test_orange_ex_caption_keeps_prefix(self):
+        # "Ex:" captions are left untouched — only "Table:" is dropped.
+        src = "%color=#ff7f00% Ex: %black%'''Fifo MI command'''"
+        result = pmwiki_to_mdx(src)
+        assert "@@orange|Ex:@@" in result
+        assert "Fifo MI command" in result
+
+    def test_code_comparison_table_becomes_list_items(self):
+        # A 2-column table whose cells hold multi-line [@...@] code becomes a
+        # bullet list, one item per column (bold label + nested code) — not
+        # headings, so the labels stay out of the TOC.
         text = (
             "||border=1\n"
             "|| '''With Helper''' || '''Classic''' ||\n"
             "||%block black% [@\nloadmodule \"a.so\"\n@]||[@\nloadmodule \"b.so\"\n@]||"
         )
         result = pmwiki_to_mdx(text)
-        assert "With Helper" in result and "Classic" in result
+        assert "* **With Helper**" in result and "* **Classic**" in result
         assert 'loadmodule "a.so"' in result
         assert 'loadmodule "b.so"' in result
         assert "[@" not in result and "@]" not in result
         assert "||" not in result
-        assert result.count("```") == 4  # two fenced blocks
+        # labels are not headings
+        assert "###### With Helper" not in result
+        assert result.count("```") == 4  # two fenced blocks (nested, indented)
 
     def test_table_attribute_line_dropped(self):
         text = "|| border=1 cellpadding=4\n|| A || B ||\n|| 1 || 2 ||"
@@ -469,47 +504,50 @@ class TestTables:
 class TestNoteBlock:
     def test_note_inline(self):
         result = pmwiki_to_mdx("NOTE: some text here")
-        assert "> **Observation:**" in result
-        assert "some text here" in result
+        assert "> [!NOTE]" in result
+        assert "> some text here" in result
 
     def test_note_standalone_with_bullets(self):
         text = "NOTE:\n* first item\n* second item"
         result = pmwiki_to_mdx(text)
-        assert "> **Observation:**" in result
+        assert "> [!NOTE]" in result
         assert "> * first item" in result
         assert "> * second item" in result
 
-    def test_bold_note_marker_becomes_observation(self):
-        # a line opening with a bolded "Note" callout marker → Observation
+    def test_bold_note_marker_becomes_note_alert(self):
+        # a line opening with a bolded "Note" callout marker → Note alert
         result = pmwiki_to_mdx('"""Note""" that after forcing the SRS interface, restore it.')
-        assert "> **Observation:** after forcing the SRS interface, restore it." in result
+        assert "> [!NOTE]" in result
+        assert "> after forcing the SRS interface, restore it." in result
 
     def test_bold_note_colon_inside_markers(self):
-        # '''NOTE:''' (colon inside the bold markers) at line start → Observation
+        # '''NOTE:''' (colon inside the bold markers) at line start → Note alert
         result = pmwiki_to_mdx("'''NOTE:''' the default port for WSS is privileged.")
-        assert "> **Observation:** the default port for WSS is privileged." in result
+        assert "> [!NOTE]" in result
+        assert "> the default port for WSS is privileged." in result
 
     def test_inline_note_stays_inline(self):
-        # '''NOTE:''' mid-line (parenthetical) must NOT become a blockquote
+        # '''NOTE:''' mid-line (parenthetical) must NOT become a callout
         result = pmwiki_to_mdx("* @@-n@@: the port ('''NOTE:''' NG only)")
-        assert "> **Observation:**" not in result
+        assert "> [!NOTE]" not in result
         assert "**NOTE:**" in result
 
     def test_plain_note_prose_untouched(self):
         # ordinary "Note that ..." prose (no bold) must stay prose
         result = pmwiki_to_mdx("Note that this is just normal prose.")
-        assert "> **Observation:**" not in result
+        assert "> [!NOTE]" not in result
         assert "Note that this is just normal prose." in result
 
-    def test_note_as_heading_becomes_blockquote(self):
+    def test_note_as_heading_becomes_alert(self):
         # !!NOTE: ... — authored misuse of heading syntax for a note
         result = pmwiki_to_mdx('!!NOTE: add promiscredir=yes to sip.conf')
-        assert "> **Observation:** add promiscredir=yes to sip.conf" in result
+        assert "> [!NOTE]" in result
+        assert "> add promiscredir=yes to sip.conf" in result
         assert "## NOTE" not in result
 
     def test_note_standalone_no_bullets(self):
         result = pmwiki_to_mdx("NOTE:\n\nSome other paragraph")
-        assert "> **Observation:**" in result
+        assert "> [!NOTE]" in result
 
 
 class TestSubtitle:

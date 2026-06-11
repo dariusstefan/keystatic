@@ -5,11 +5,12 @@ Reads opensips/modules/<name>/doc/*.xml and writes a single README.md per
 module with Starlight-compatible YAML frontmatter.
 
 Usage:
-    python3 converters/docbook_to_md.py            # convert all 193 modules
-    python3 converters/docbook_to_md.py acc dialog  # convert specific modules
+    python3 pmwiki-mdx/docbook_to_md.py            # convert all 193 modules
+    python3 pmwiki-mdx/docbook_to_md.py acc dialog  # convert specific modules
 """
 
 import re
+import shutil
 import sys
 from pathlib import Path
 import xml.etree.ElementTree as ET
@@ -21,6 +22,111 @@ ENTITIES_FILE = REPO_ROOT / "opensips" / "doc" / "entities.xml"
 # Standard XML character entities — handled by the parser; never substituted
 # by our pre-processor so they aren't lost before ET.fromstring() runs.
 XML_ENTITIES = {"lt", "gt", "amp", "quot", "apos"}
+
+# Legacy OpenSIPS website module-doc URLs. Both the current and the older
+# /html/docs/ path, with or without the .html suffix:
+#   opensips.org/docs/modules/<ver>.x/<mod>.html[#anchor]
+#   www.opensips.org/html/docs/modules/<ver>.x/<mod>[#anchor]
+_MOD_DOC_RE = re.compile(
+    r"https?://(?:www\.)?opensips\.org/(?:html/)?docs/modules/[^/]+/([\w.\-]+?)(?:\.html)?(#\S*)?$",
+    re.IGNORECASE,
+)
+
+
+def _module_doc_rel(url: str):
+    """A legacy website module-doc URL → a relative sibling link (../<mod>), or
+    None if it isn't one. Drops the pinned <ver>.x so the link follows the
+    current page's version; keeps any #anchor. Works on github.com (sibling
+    module README) and on the website (/docs/modules/<ver>/<mod>)."""
+    m = _MOD_DOC_RE.match(url or "")
+    if not m:
+        return None
+    return f"../{m.group(1)}{m.group(2) or ''}"
+
+
+# ---------------------------------------------------------------------------
+# Manual-page links (old version-suffix URLs → /docs/manual/<ver>/<page>)
+# ---------------------------------------------------------------------------
+
+SITE_URL = "https://web.opensips.org"
+_LATEST_MANUAL_VER = "4-1"
+_MANUAL_PAGES: set[str] = set()
+
+_DOC_URL_RE = re.compile(
+    r"https?://(?:www\.)?opensips\.org/(?:html/)?Documentation/([^#?\s]+)(#\S*)?$",
+    re.IGNORECASE,
+)
+
+
+def _load_manual_pages() -> None:
+    man_root = REPO_ROOT / "src" / "content" / "docs" / "docs" / "manual"
+    if not man_root.exists():
+        return
+    for p in man_root.rglob("*.md"):
+        s = p.stem.lower()
+        if s != "index":
+            _MANUAL_PAGES.add(s)
+
+
+_load_manual_pages()
+
+# ---------------------------------------------------------------------------
+# Flat-doc links (opensips.org/Documentation/Tutorials-Foo → /docs/tutorials-foo)
+# ---------------------------------------------------------------------------
+
+_FLAT_DOC_PAGES: set[str] = set()
+
+
+def _load_flat_doc_pages() -> None:
+    flat_root = REPO_ROOT / "src" / "content" / "docs" / "docs"
+    if not flat_root.exists():
+        return
+    for p in flat_root.glob("*.md"):
+        _FLAT_DOC_PAGES.add(p.stem.lower())
+
+
+_load_flat_doc_pages()
+
+
+def _flat_doc_web(url: str):
+    """A legacy website Documentation URL (opensips.org/Documentation/Tutorials-Foo)
+    → an absolute website URL https://web.opensips.org/docs/tutorials-foo, or None.
+    Absolute so it works on github.com; generate-module-docs.py strips the origin
+    for the on-site build (same pattern as _manual_doc_web)."""
+    m = _DOC_URL_RE.match(url or "")
+    if not m:
+        return None
+    slug = m.group(1).rstrip("/").lower()
+    if slug not in _FLAT_DOC_PAGES:
+        return None
+    return f"{SITE_URL}/docs/{slug}{m.group(2) or ''}"
+
+
+def _manual_page_ref(seg: str):
+    """'Script-CoreVar-3-6' → (page, slug) when de-versioned name is a known
+    manual page, else None. 4-1 → devel."""
+    m = re.match(r"^(.*?)-(\d+)-(\d+)$", seg)
+    if not m:
+        return None
+    page = m.group(1).lower()
+    if page not in _MANUAL_PAGES:
+        return None
+    ver = f"{m.group(2)}-{m.group(3)}"
+    return page, ("devel" if ver == _LATEST_MANUAL_VER else ver)
+
+
+def _manual_doc_web(url: str):
+    """A legacy website manual URL (opensips.org/Documentation/Script-CoreVar-3-6)
+    → an absolute website URL /docs/manual/<slug>/<page>, or None. Absolute so it
+    works on github.com; generate-module-docs strips the origin for the site."""
+    m = _DOC_URL_RE.match(url or "")
+    if not m:
+        return None
+    mp = _manual_page_ref(m.group(1).split("/")[-1])
+    if not mp:
+        return None
+    page, slug = mp
+    return f"{SITE_URL}/docs/manual/{slug}/{page}{m.group(2) or ''}"
 
 
 # ---------------------------------------------------------------------------
@@ -132,6 +238,15 @@ def build_combined_xml(module_dir: Path, global_entities: dict) -> str | None:
     # SYSTEM (file-inclusion) entities
     for ent_name, rel_path in _extract_system_entities(text).items():
         filepath = (doc_dir / rel_path).resolve()
+        # Config-script samples (.cfg) are not inlined as a frozen code block.
+        # Emit a <cfgsample> marker instead; the renderer extracts these into a
+        # samples/ folder and references them via an include link (resolves to a
+        # link on github.com, expands to the file's contents on the website).
+        if rel_path.lower().endswith(".cfg"):
+            entities[ent_name] = (
+                f'<cfgsample src="{Path(rel_path).name}"/>' if filepath.exists() else ""
+            )
+            continue
         if filepath.exists():
             content = filepath.read_text("utf-8", errors="replace")
             # Strip leading XML comments that head every fragment file
@@ -199,7 +314,16 @@ def _inline_child(elem) -> str:
     elif tag == "ulink":
         url = elem.get("url", "")
         txt = inner.strip() or url
-        if url and "://" not in url and "/" not in url and not url.startswith("#"):
+        man = _manual_doc_web(url)
+        flat = _flat_doc_web(url)
+        rel = _module_doc_rel(url)
+        if man is not None:
+            url = man   # legacy version-suffix manual link → /docs/manual/<ver>/<page>
+        elif flat is not None:
+            url = flat  # legacy Documentation/Tutorials-* link → /docs/tutorials-*
+        elif rel is not None:
+            url = rel   # legacy website module-doc link → relative sibling module
+        elif url and "://" not in url and "/" not in url and not url.startswith("#"):
             url = f"../{url}"  # step up from …/module/index.html to reach sibling
         result = f"[{txt}]({url})"
     elif tag == "xref":
@@ -239,6 +363,9 @@ def _linkend_label(linkend: str) -> str:
 class _Emitter:
     def __init__(self):
         self._lines: list[str] = []
+        # .cfg samples encountered, in document order: {"file", "title"}.
+        self.samples: list[dict] = []
+        self._samples_included = False
 
     # -- public API ----------------------------------------------------------
 
@@ -320,7 +447,11 @@ class _Emitter:
         if title_txt:
             level = min(depth + 1, 6)
             id_suffix = f" {{#{section_id}}}" if section_id else ""
-            self._add(f'\n{"#" * level} {title_txt}{id_suffix}\n')
+            # Normalize whitespace on the assembled line so the heading is always
+            # single-line and single-spaced, regardless of nested-element quirks in
+            # the DocBook <title> (e.g. a <function> child re-introducing spaces).
+            heading = re.sub(r"\s+", " ", f'{"#" * level} {title_txt}{id_suffix}').strip()
+            self._add(f'\n{heading}\n')
         for child in elem:
             if (child.tag or "").lower() != "title":
                 self._block(child, depth + 1)
@@ -328,7 +459,13 @@ class _Emitter:
     def _get_title(self, elem) -> str:
         for child in elem:
             if (child.tag or "").lower() == "title":
-                return _inline(child).strip().replace('`', '')
+                # Collapse ALL internal whitespace (newlines/tabs/runs of spaces)
+                # to single spaces so the title stays on ONE line. DocBook titles
+                # that document a pair of functions, or a signature that wraps,
+                # span multiple lines; left as-is they produced a multi-line
+                # Markdown heading whose trailing {#anchor} fell onto a
+                # non-heading continuation line.
+                return " ".join(_inline(child).split()).replace('`', '')
         return ""
 
     # Tags that, when found inside a <para>, must be emitted as blocks rather
@@ -383,7 +520,26 @@ class _Emitter:
 
         flush_pending()
 
+    def _register_sample(self, filename: str, title: str) -> None:
+        """Record a .cfg sample and emit a one-time include of samples.md.
+
+        The README links to samples.md once (at the first sample); samples.md
+        in turn includes each .cfg with its own heading. On github.com the link
+        navigates to the file; the website expands it inline at build time.
+        """
+        if not filename:
+            return
+        title = " ".join(title.split())
+        self.samples.append({"file": filename, "title": title})
+        if not self._samples_included:
+            self._add(f'\n[{title or "samples"}](./samples.md "include")\n')
+            self._samples_included = True
+
     def _code(self, elem, title: str = "") -> None:
+        sample = elem.find(".//cfgsample")
+        if sample is not None:
+            self._register_sample(sample.get("src", ""), title)
+            return
         code = (elem.text or "").strip("\n")
         lang = "c"
         if title:
@@ -473,6 +629,11 @@ class _Emitter:
                 for child in listitem:
                     self._block(child, depth + 1)
 
+    # DocBook admonition → GitHub alert type (renders as a native alert on
+    # github.com and, via remarkGithubAlerts, a Starlight aside on the website).
+    _GH_ALERT = {"note": "NOTE", "tip": "TIP", "important": "IMPORTANT",
+                 "warning": "WARNING", "caution": "CAUTION"}
+
     def _admonition(self, elem, label: str, depth: int) -> None:
         parts = [
             _inline(c).strip()
@@ -481,7 +642,8 @@ class _Emitter:
         ]
         text = " ".join(p for p in parts if p)
         if text:
-            self._add(f"\n> **{label}:** {text}\n")
+            gh = self._GH_ALERT.get(label.lower(), "NOTE")
+            self._add(f"\n> [!{gh}]\n> {text}\n")
 
     def _example(self, elem, depth: int) -> None:
         title_txt = self._get_title(elem)
@@ -610,7 +772,8 @@ def convert_module(module_dir: Path, global_entities: dict) -> str | None:
 
     description = re.sub(r"\s+", " ", _extract_description(root)).strip()
 
-    body = _Emitter().emit(root)
+    emitter = _Emitter()
+    body = emitter.emit(root)
 
     safe_title = module_title.replace('"', '\\"')
     safe_desc = description.replace('"', '\\"')
@@ -626,7 +789,33 @@ def convert_module(module_dir: Path, global_entities: dict) -> str | None:
         "Creative Common License 4.0\n"
     )
 
-    return fm + "\n" + body + "\n<!-- CONTRIBUTORS -->\n" + license_section
+    content = fm + "\n" + body + "\n<!-- CONTRIBUTORS -->\n" + license_section
+    return content, emitter.samples
+
+
+def _write_samples(module_dir: Path, samples: list[dict]) -> None:
+    """Copy referenced .cfg files into <module>/samples/ and write samples.md.
+
+    samples.md is a frontmatter-less fragment: it is included into the module
+    README (and, on the website, spliced inline), so it holds only the per-sample
+    headings and the include links to ./samples/<file>.
+    """
+    doc_dir = module_dir / "doc"
+    samples_dir = module_dir / "samples"
+    samples_dir.mkdir(exist_ok=True)
+
+    blocks: list[str] = []
+    for s in samples:
+        fname = s["file"]
+        src = doc_dir / fname
+        if not src.exists():
+            continue
+        shutil.copyfile(src, samples_dir / fname)
+        heading = s["title"] or "Sample configuration"
+        blocks.append(f'## {heading}\n\n[{fname}](./samples/{fname} "include")\n')
+
+    if blocks:
+        (module_dir / "samples.md").write_text("\n".join(blocks) + "\n", "utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -655,15 +844,19 @@ def main() -> None:
 
         print(f"Converting {name} ...", end=" ", flush=True)
         try:
-            content = convert_module(module_dir, global_entities)
-            if content is None:
+            result = convert_module(module_dir, global_entities)
+            if result is None:
                 print("SKIPPED (no main XML)")
                 skipped += 1
                 continue
+            content, samples = result
 
             out = module_dir / "README.md"
             out.write_text(content, encoding="utf-8")
-            print(f"OK → {out.relative_to(REPO_ROOT)}")
+            if samples:
+                _write_samples(module_dir, samples)
+            print(f"OK → {out.relative_to(REPO_ROOT)}"
+                  + (f" (+{len(samples)} sample)" if samples else ""))
             ok += 1
         except Exception as exc:  # noqa: BLE001
             import traceback

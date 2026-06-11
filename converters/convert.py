@@ -10,6 +10,7 @@ constructs Keystatic's MDX editor can round-trip:
     or other MDX-unsafe characters — no \\{ escapes, no &lt; entities
 """
 
+import html
 import re
 import sys
 from pathlib import Path
@@ -24,6 +25,87 @@ _REDIRECTS: dict[str, str] = {}
 # Maps normalized filename stem (lowercase, no hyphens) to the actual site slug.
 # e.g. "troubleshootingdoesnotstart" -> "/documentation/troubleshooting/troubleshooting-doesnotstart"
 _SLUG_MAP: dict[str, str] = {}
+
+# Manual link map: populated by convert_manual.py when converting a single
+# version manual into a flat repo docs/ directory. Maps normalized page stem
+# (see _manual_link_key) to a sibling relative filename, e.g.
+# "installdownload41" -> "Install-Download.md". When non-empty, page_to_slug
+# resolves in-manual references to these relative .md links instead of website
+# slugs, keeping the converted manual self-contained.
+_MANUAL_LINKS: dict[str, str] = {}
+
+
+# Legacy OpenSIPS website module-doc URLs — current and older /html/docs/ path,
+# with or without the .html suffix — capturing (version dir, module, anchor):
+#   opensips.org/docs/modules/<ver>.x/<mod>.html[#anchor]
+#   www.opensips.org/html/docs/modules/<ver>.x/<mod>[#anchor]
+_MOD_DOC_RE = re.compile(
+    r"https?://(?:www\.)?opensips\.org/(?:html/)?docs/modules/([^/]+)/([\w.\-]+?)(?:\.html)?(#\S*)?$",
+    re.IGNORECASE,
+)
+# The module version whose website slug is "devel" (the master/dev branch).
+_LATEST_MOD_VER = "4.1"
+
+# Canonical website origin. Used to make manual links to website-only "flat"
+# pages (migration/tutorials/… — not in the fork) absolute, so they work on
+# github.com too. generate-manual-docs.adapt_links strips this back to a
+# root-relative path for the on-site build.
+SITE_URL = "https://web.opensips.org"
+
+# Manual page set (de-versioned stems, lowercased) — populated by
+# load_manual_pages() / convert_manual(). Old manual URLs used a version SUFFIX
+# (Script-CoreVar-3-6); the manual now lives at /docs/manual/<ver>/<page>.
+_MANUAL_PAGES: set[str] = set()
+# The manual version whose website slug is "devel" (master/dev branch).
+_LATEST_MANUAL_VER = "4-1"
+
+
+def _manual_page_ref(seg: str):
+    """A version-suffixed manual page name ('Script-CoreVar-3-6') → (page, slug)
+    when the de-versioned name is a known manual page, else None. 4-1 → devel."""
+    m = re.match(r"^(.*?)-(\d+)-(\d+)$", seg)
+    if not m:
+        return None
+    page = m.group(1).lower()
+    if page not in _MANUAL_PAGES:
+        return None
+    ver = f"{m.group(2)}-{m.group(3)}"
+    return page, ("devel" if ver == _LATEST_MANUAL_VER else ver)
+
+
+def load_manual_pages(content_dir: Path) -> None:
+    """Populate _MANUAL_PAGES from the website manual content
+    (content_dir/docs/manual/<ver>/<page>.md), unioned across versions."""
+    man_root = content_dir / "docs" / "manual"
+    if not man_root.exists():
+        return
+    for p in man_root.rglob("*.md"):
+        s = p.stem.lower()
+        if s != "index":
+            _MANUAL_PAGES.add(s)
+
+
+def _modver_to_slug(verdir: str) -> str:
+    """A module-doc version dir ('3.5.x', '4.1.x', 'devel', …) → its website
+    slug ('3-5', 'devel', …). The latest release dir maps to 'devel'."""
+    v = verdir.strip().lower()
+    if v in ("devel", "latest"):
+        return "devel"
+    m = re.match(r"(\d+)\.(\d+)", v)
+    if not m:
+        return v
+    mm = f"{m.group(1)}.{m.group(2)}"
+    return "devel" if mm == _LATEST_MOD_VER else f"{m.group(1)}-{m.group(2)}"
+
+
+def _module_doc_web(url: str):
+    """A legacy website module-doc URL → an internal website route
+    /docs/modules/<slug>/<mod>[#anchor], or None if it isn't one. The pinned
+    <ver>.x is mapped to its slug so the link keeps pointing at that version."""
+    m = _MOD_DOC_RE.match(url or "")
+    if not m:
+        return None
+    return f"/docs/modules/{_modver_to_slug(m.group(1))}/{m.group(2)}{m.group(3) or ''}"
 
 
 # ---------------------------------------------------------------------------
@@ -45,7 +127,9 @@ def parse_pmwiki_file(path: Path) -> dict:
 
 def decode_pmwiki_text(text: str) -> str:
     text = unquote(text, encoding="cp1252", errors="replace")
-    # <pre>...</pre> blocks (GeSHi syntax-highlighted HTML) → strip tags, keep text
+    # <pre>...</pre> blocks (GeSHi syntax-highlighted HTML) → strip tags, keep text.
+    # Must run BEFORE html.unescape so that &lt;tag&gt; inside <pre> blocks is not
+    # unescaped to <tag> and then accidentally stripped by the tag-stripping regex.
     def pre_to_plain(m):
         inner = m.group(1)
         inner = re.sub(r'<br\s*/?>', '\n', inner, flags=re.IGNORECASE)  # <br> → newline
@@ -53,6 +137,15 @@ def decode_pmwiki_text(text: str) -> str:
         inner = inner.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>').replace('&nbsp;', ' ').replace('&quot;', '"')
         return f'[@\n{inner.strip()}\n@]'
     text = re.sub(r'<pre>(.*?)</pre>', pre_to_plain, text, flags=re.DOTALL)
+    # Decode remaining HTML character entities in prose (e.g. &#539; → ț, &mdash; → —).
+    text = html.unescape(text)
+    # Transliterate Romanian/diacritic characters to plain ASCII.
+    text = text.translate(str.maketrans(
+        'țțșșăâî'
+        'ȚȚȘȘĂÂÎ',
+        'ttssaai'
+        'TTSSAAI',
+    ))
     return text
 
 
@@ -76,6 +169,10 @@ def strip_nav_header(text: str) -> str:
             or s == "\\\\"
             or bool(re.match(r'^-{4,}$', s))
             or bool(re.match(r'^\(:.*:\)$', s))
+            # PMwiki page-variable artifacts in the header, e.g.
+            # "This page has been visited {$PageCount} times." — otherwise this
+            # non-skippable line halts the loop before the prev/next nav below it.
+            or bool(re.search(r'\{\$\w+\}', s))
             or (s.startswith("||") and ("Prev" in s or "Next" in s or bool(re.search(r'\+.*\+', s))))
         )
 
@@ -162,7 +259,48 @@ def _code_variable_tokens_segment(text: str) -> str:
             i += 1
             continue
 
-        out.append(f"`{text[i:end]}`")
+        # Include any word-char prefix immediately before the $ so that tokens
+        # like "passwd_$tu" become `passwd_$tu` rather than passwd_`$tu`.
+        prefix = ""
+        if out and re.match(r'\w', out[-1]):
+            j = len(out) - 1
+            while j > 0 and re.match(r'\w', out[j - 1]):
+                j -= 1
+            prefix = "".join(out[j:])
+            out = out[:j]
+
+        # Extend forward through path/extension characters so that tokens like
+        # "$OPENSIPS_HOME/etc/tls/ca.conf" become one code span, not two.
+        # Only enter path mode when the separator after the variable is followed
+        # by a non-$ word char — this keeps "$pr/$proto" as two separate spans.
+        def _is_path_start(pos: int) -> bool:
+            """True if text[pos] looks like the start of a path component."""
+            if pos >= len(text):
+                return False
+            c = text[pos]
+            if c in '@:-' and pos + 1 < len(text) and re.match(r'[A-Za-z0-9_]', text[pos + 1]):
+                return True
+            if c == '/' and pos + 1 < len(text):
+                nc = text[pos + 1]
+                # /word  or  /.dotfile (hidden dir)
+                if re.match(r'[A-Za-z0-9_]', nc):
+                    return True
+                if nc == '.' and pos + 2 < len(text) and re.match(r'[A-Za-z0-9_]', text[pos + 2]):
+                    return True
+            return False
+        if _is_path_start(end):
+            while end < len(text):
+                c = text[end]
+                if re.match(r'[A-Za-z0-9_@:-]', c):
+                    end += 1
+                elif c in '/.' and end + 1 < len(text) and re.match(r'[A-Za-z0-9_]', text[end + 1]):
+                    end += 1
+                elif c == '/' and end + 1 < len(text) and text[end + 1] == '.' and end + 2 < len(text) and re.match(r'[A-Za-z0-9_]', text[end + 2]):
+                    end += 1  # /.dotfile
+                else:
+                    break
+
+        out.append(f"`{prefix}{text[i:end]}`")
         i = end
 
     coded = "".join(out)
@@ -278,6 +416,40 @@ def pmwiki_to_mdx(text: str) -> str:
     while i < len(lines):
         line = lines[i]
 
+        # PMwiki "deleted" code block: {-[@ ... @]-} — a [@code@] block wrapped in
+        # {-...-} deletion markup (migration notes striking out a deprecated
+        # example). Emit a fenced block tagged for Expressive Code's `del` marker
+        # so it renders as a struck-through code block (see global.css).
+        if line.strip().startswith("{-[@"):
+            code_lines = []
+            rest = line.strip()[4:]
+            if rest.endswith("@]-}"):
+                code_lines = [rest[:-4]]
+            else:
+                if rest:
+                    code_lines.append(rest)
+                i += 1
+                while i < len(lines) and not lines[i].rstrip().endswith("@]-}"):
+                    code_lines.append(lines[i])
+                    i += 1
+                if i < len(lines):
+                    code_lines.append(lines[i].rstrip()[:-4])
+            while code_lines and not code_lines[0].strip():
+                code_lines.pop(0)
+            while code_lines and not code_lines[-1].strip():
+                code_lines.pop()
+            if code_lines:
+                lang = detect_language(code_lines)
+                # Prepend a comment so the deprecation is clear even where the
+                # strikethrough isn't rendered (plain Markdown on github.com).
+                # Strike only the code lines (2..N+1), leaving the comment legible.
+                out.append(f"```{lang} del={{2-{len(code_lines) + 1}}}")
+                out.append("# this is deprecated")
+                out.extend(code_lines)
+                out.append("```")
+            i += 1
+            continue
+
         # Code block: [@ ... @]
         if line.strip().startswith("[@"):
             code_lines: list[str] = []
@@ -320,6 +492,19 @@ def pmwiki_to_mdx(text: str) -> str:
                 code_lines.pop(0)
             while code_lines and not code_lines[-1].strip():
                 code_lines.pop()
+            # A frame carrying PmWiki color spans (e.g. the pseudo-variable syntax
+            # notation where green marks the optional fields) is formatted text, not
+            # verbatim code — render the markup via the prose path instead of
+            # fencing it, otherwise the %green%/'''/'' tokens show literally.
+            if code_lines and re.search(
+                r'%(?:red|green|blue|orange|yellow|black|white|purple|gr[ae]y)%',
+                "\n".join(code_lines),
+            ):
+                for cl in code_lines:
+                    if cl.strip():
+                        out.append(convert_line(cl))
+                        out.append("")
+                continue
             if code_lines:
                 out.append(f"```{detect_language(code_lines)}")
                 out.extend(code_lines)
@@ -333,9 +518,40 @@ def pmwiki_to_mdx(text: str) -> str:
             i += 1  # skip the >><<  closing marker too
             continue
 
+        # PMwiki admonition div blocks: >>important<< / >>tip<< / >>warning<< ... >><<
+        # Emit GitHub alert syntax (> [!TYPE]) — these render natively as callouts
+        # on github.com (the fork manual), and a remark plugin turns them into
+        # Starlight asides on the website (see remarkGithubAlerts.mjs).
+        _ADMONITION = {"important": "IMPORTANT", "warning": "WARNING", "tip": "TIP",
+                       "note": "NOTE", "caution": "CAUTION"}
+        adm = re.match(r'^>>(\w+)<<$', line.strip())
+        if adm and adm.group(1).lower() in _ADMONITION:
+            gh_type = _ADMONITION[adm.group(1).lower()]
+            i += 1
+            block: list[str] = []
+            while i < len(lines) and lines[i].strip() != ">><<":
+                block.append(lines[i])
+                i += 1
+            i += 1  # skip the >><< closing marker
+            while block and not block[0].strip():
+                block.pop(0)
+            while block and not block[-1].strip():
+                block.pop()
+            # A blockquote must be its own block — ensure a blank line before it.
+            if out and out[-1].strip():
+                out.append("")
+            out.append(f"> [!{gh_type}]")
+            for bl in block:
+                converted = convert_line(bl)
+                for sub in (converted.split("\n") if converted else [""]):
+                    out.append(f"> {sub}" if sub.strip() else ">")
+            out.append("")
+            continue
+
         # Indented lines = preformatted in PMwiki (any leading space),
-        # unless the line contains PmWiki inline markup (bold, links) — then it's prose continuation
-        if line and line[0] == ' ' and not re.search(r"'''|\[\[|''|@@", line):
+        # unless the line contains PmWiki inline markup (bold, links) — then it's prose continuation.
+        # Also skip lines whose content (after stripping indent) is a PMwiki list item (* or #).
+        if line and line[0] == ' ' and not re.search(r"'''|\[\[|''|@@", line) and not re.match(r'^\s+\*', line):
             code_lines: list[str] = []
             while i < len(lines) and lines[i] and lines[i][0] == ' ':
                 code_lines.append(lines[i].lstrip(' '))
@@ -416,20 +632,20 @@ def pmwiki_to_mdx(text: str) -> str:
                 out.append("")
             continue
 
-        # NOTE: on its own line followed by bullets — collect them into the blockquote
+        # NOTE: on its own line followed by bullets — a Note callout with a list body.
         if re.match(r'^NOTE:\s*$', line.strip(), re.IGNORECASE):
             i += 1
             bullet_lines: list[str] = []
             while i < len(lines) and re.match(r'^[*#]', lines[i].strip()):
                 bullet_lines.append(lines[i])
                 i += 1
-            if bullet_lines:
-                items = [convert_inline(re.sub(r'^[*#]+\s*', '', bl.strip())) for bl in bullet_lines]
-                out.append('> **Observation:** ')
-                for item in items:
-                    out.append(f'> * {item}')
-            else:
-                out.append('> **Observation:** ')
+            if out and out[-1].strip():
+                out.append("")
+            out.append("> [!NOTE]")
+            for bl in bullet_lines:
+                item = convert_inline(re.sub(r'^[*#]+\s*', '', bl.strip()))
+                out.append(f"> * {item}")
+            out.append("")
             continue
 
         out.append(convert_line(line))
@@ -439,34 +655,26 @@ def pmwiki_to_mdx(text: str) -> str:
     return post_process(result)
 
 
-def _code_to_inline(code: str) -> str:
-    """Collapse multi-line code to a single inline code span for use in a GFM table cell."""
-    single = ' '.join(line.strip() for line in code.splitlines() if line.strip())
-    if not single:
-        return ''
-    # Escape pipe characters so they don't break the GFM table
-    single = single.replace('|', r'\|')
-    # Use double backticks if the content itself contains backticks
-    if '`' in single:
-        return f'`` {single} ``'
-    return f'`{single}`'
-
-
 def render_table_with_code(region: list[str]) -> list[str]:
-    """Render a PMwiki table whose last cell holds a multi-line [@...@] code block
-    as a standard GFM table, collapsing the code to a single inline code span."""
+    """Render a PMwiki table whose last cell holds a multi-line [@...@] code block.
+    GFM tables can't hold multi-line code, so each row becomes a bullet list item:
+    a bold label (the text cells joined with ' — ') followed by a nested fenced
+    code block (indented 2 spaces so it belongs to the item). This keeps the code's
+    newlines/indentation and stays editable in Keystatic's MDX editor."""
+    def cells_to_label(cells: list[str]) -> str:
+        label = f"**{convert_inline(cells[0])}**"
+        if len(cells) > 1:
+            label += " — " + " — ".join(convert_inline(c) for c in cells[1:])
+        return label
+
     k = 0
-    # Skip attribute lines (|| border=1 etc.)
+    # Skip attribute lines (|| border=1 etc.) and the header row (first plain ||...|| row).
     while k < len(region) and re.match(r'^\|\|\s*\w+=', region[k].strip()):
         k += 1
-    # Extract header row
-    headers: list[str] = []
     if k < len(region) and region[k].strip().startswith("||") and "[@" not in region[k]:
-        hrow = region[k].strip().strip("|")
-        headers = [convert_inline(c.strip().strip("'").strip()) for c in hrow.split("||") if c.strip()]
-        k += 1
-    # Parse data rows into (text_cells, code_or_None) tuples
-    rows: list[tuple[list[str], str | None]] = []
+        k += 1  # header row — column meaning becomes implicit in the labels
+    # Leading blank line so the list separates from any preceding caption line.
+    out: list[str] = [""]
     while k < len(region):
         row = region[k]
         if not row.strip().startswith("||"):
@@ -485,38 +693,35 @@ def render_table_with_code(region: list[str]) -> list[str]:
                 code_lines.pop(0)
             while code_lines and not code_lines[-1].strip():
                 code_lines.pop()
-            rows.append((cells, "\n".join(code_lines)))
+            if cells:
+                out.append(f"* {cells_to_label(cells)}")
+            else:
+                out.append("* ")
+            if code_lines:
+                # Indent the fence + content 2 spaces so it nests under the bullet.
+                out.append("")
+                out.append(f"  ```{detect_language(code_lines)}")
+                out.extend(f"  {cl}" if cl.strip() else "" for cl in code_lines)
+                out.append("  ```")
+            out.append("")
         else:
+            # plain row without code — render as a bullet list item
             cells = [c.strip() for c in row.strip().strip("|").split("||") if c.strip()]
-            rows.append((cells, None))
+            if cells:
+                out.append(f"* {cells_to_label(cells)}")
+                out.append("")
             k += 1
-    # Build GFM table rows
-    table_rows: list[list[str]] = []
-    for cells, code in rows:
-        row_cells = [convert_inline(c) for c in cells]
-        if code is not None:
-            row_cells.append(_code_to_inline(code))
-        table_rows.append(row_cells)
-    if not table_rows and not headers:
-        return []
-    all_rows = ([headers] if headers else []) + table_rows
-    width = max(len(r) for r in all_rows)
-    all_rows = [r + [''] * (width - len(r)) for r in all_rows]
-    out = [
-        '| ' + ' | '.join(all_rows[0]) + ' |',
-        '| ' + ' | '.join(['---'] * width) + ' |',
-    ]
-    for row in all_rows[1:]:
-        out.append('| ' + ' | '.join(row) + ' |')
     return out
 
 
 def render_code_comparison(headers: list[str], block_lines: list[str]) -> list[str]:
-    """Render a PMwiki side-by-side code-comparison table as sequential labeled
-    sections with fenced code blocks (GFM tables cannot hold multi-line code)."""
+    """Render a PMwiki side-by-side code-comparison table as a bullet list, one
+    item per column: a bold label followed by a nested fenced code block. These
+    are example captions, not document sections, so they stay out of the TOC and
+    render consistently with render_table_with_code."""
     text = "\n".join(block_lines)
     cols = re.split(r'@\]\s*\|\|\s*\[@', text)
-    out: list[str] = []
+    out: list[str] = [""]
     for k, col in enumerate(cols):
         col = re.sub(r'^\s*\|\|\s*(?:%[^%\n]+%\s*)?\[@', '', col)
         col = re.sub(r'@\]\s*\|\|\s*$', '', col)
@@ -527,10 +732,11 @@ def render_code_comparison(headers: list[str], block_lines: list[str]) -> list[s
             continue
         label = headers[k] if k < len(headers) else f"Column {k + 1}"
         lang = detect_language(code.split('\n'))
-        out.append(f"###### {label}")
-        out.append(f"```{lang}")
-        out.append(code)
-        out.append("```")
+        out.append(f"* **{convert_inline(label)}**")
+        out.append("")
+        out.append(f"  ```{lang}")
+        out.extend(f"  {cl}" if cl.strip() else "" for cl in code.split('\n'))
+        out.append("  ```")
         out.append("")
     return out
 
@@ -561,6 +767,14 @@ def render_table(rows: list[str]) -> list[str]:
     return out
 
 
+def gh_alert(gh_type: str, content: str) -> str:
+    """Format a one-line callout as a GitHub alert blockquote (> [!TYPE] / > body).
+    Wrapped in blank lines so the blockquote is its own block — renders as a native
+    alert on github.com and (via remarkGithubAlerts) a Starlight aside on the site."""
+    body = "\n".join(f"> {ln}" if ln.strip() else ">" for ln in content.strip().split("\n"))
+    return f"\n> [!{gh_type}]\n{body}\n"
+
+
 def convert_line(line: str) -> str:
     # Wiki comment signatures: !!!!![[~username]] or !!!![[~username]] → drop
     if re.match(r'^!{4,5}\s*\[\[~', line):
@@ -577,10 +791,10 @@ def convert_line(line: str) -> str:
     if hm:
         content = hm.group(2).strip()
         # A heading whose text is really a NOTE: is an authored misuse of heading
-        # syntax — render it as a note blockquote, not a section heading.
+        # syntax — render it as a Note callout, not a section heading.
         if re.match(r'^NOTE:', content, re.IGNORECASE):
             note = content.split(":", 1)[1].strip()
-            return f"> **Observation:** {convert_inline(note)}"
+            return gh_alert("NOTE", convert_inline(note))
         level = min(len(hm.group(1)) + 1, 6)
         return f"{'#' * level} {convert_inline(content, code_variables=False)}"
 
@@ -593,10 +807,16 @@ def convert_line(line: str) -> str:
     if line.strip().startswith("$(") and re.search(r'%[a-zA-Z]+%', line):
         return f"`{code_color_markup_to_markers(line.strip())}`"
 
-    # Preserve standalone PMWiki anchors as source-friendly markers.
-    m = re.match(r'^\[\[#([\w.-]+)\]\]$', line.strip())
+    # Preserve standalone PMWiki anchors as source-friendly markers. The anchor
+    # name is sometimes malformed: an alias pair ("memdump | mem_dump") or a name
+    # with stray spaces (" event_route", "for each"). Keep the first alias and
+    # turn spaces into underscores so these still yield a stable heading id.
+    m = re.match(r'^\[\[#([^\]]+?)\]\]$', line.strip())
     if m:
-        return f"@@anchor|{m.group(1)}@@"
+        anchor_id = re.sub(r'\s+', '_', m.group(1).split('|')[0].strip())
+        anchor_id = re.sub(r'[^\w.-]', '', anchor_id)
+        if anchor_id:
+            return f"@@anchor|{anchor_id}@@"
     if re.match(r'^>>[^<]*<<$', line.strip()) or line.strip() == ">><<":
         return ""
 
@@ -611,15 +831,15 @@ def convert_line(line: str) -> str:
         note = line.strip().split(":", 1)[1].strip()
         note = re.sub(r"'''(.+?)'''", r"\1", note)
         note = re.sub(r"''(.+?)''", r"\1", note)
-        return f"> **Observation:** {convert_inline(note)}"
+        return gh_alert("NOTE", convert_inline(note))
     # A line opening with a deliberately-bolded "Note" marker ('''Note''' / """Note""")
-    # is a callout — render it as an Observation blockquote.
+    # is a callout — render it as a Note alert.
     _q = r"(?:'''|\"\"\")"  # PmWiki bold ''' or its double-quote typo """
     # Matches '''Note''', '''NOTE:''' (colon inside bold), '''Note''':, """Note""", etc.
     nm = re.match(rf'^{_q}\s*Note\s*:?\s*{_q}\s*[:,]?\s*(.*)$', line.strip(), re.IGNORECASE)
     if nm:
         note = re.sub(r'^that\s+', '', nm.group(1).strip(), flags=re.IGNORECASE)
-        return f"> **Observation:** {convert_inline(note)}"
+        return gh_alert("NOTE", convert_inline(note))
     # Indented bold-dash definition item: "'''''- term: '''''description"
     # (bold-italic wrapping a "- term:" lead-in). Render as a nested list item so
     # the surviving indentation doesn't get fenced as a code block.
@@ -629,7 +849,12 @@ def convert_line(line: str) -> str:
 
     converted = convert_inline(line)
     if converted.startswith("**@@green|Attention!@@**"):
-        return f"> {converted}"
+        # Obsolete/deprecated callout (from ASIDE_PHRASES) → a Warning alert.
+        # Drop the "Attention!" label (the alert has its own header) and the
+        # color tokens (which would render literally on github.com).
+        rest = converted[len("**@@green|Attention!@@**"):].strip()
+        rest = re.sub(r'@@\w+\|(.+?)@@', r'\1', rest).strip()
+        return gh_alert("WARNING", rest or "This is obsolete.")
     return converted
 
 
@@ -643,22 +868,64 @@ def convert_list_item(line: str) -> str:
     line = re.sub(r'^[-+](?=\s)', '', line, count=1)
     line = line.lstrip()
     indent = "  " * (depth - 1)
-    return f"{indent}* {convert_inline(line)}"
+    content = convert_inline(line)
+    # A list item whose content starts with '>' or '<' (e.g. the operator-reference
+    # list "> - greater", "<= - less or equal") would be misread as a blockquote /
+    # HTML tag inside the item — escape the leading operator char so it stays literal.
+    if content[:1] in (">", "<"):
+        content = "\\" + content
+    return f"{indent}* {content}"
 
 
 def convert_inline(text: str, code_variables: bool = True) -> str:
-    # Bold / italic
-    text = re.sub(r"'''(.+?)'''", r"**\1**", text)
+    # PmWiki ''''X'''' — EXACTLY four quotes (bold ''' + a literal apostrophe each
+    # side), authored to quote a syntax delimiter like { } ( ). The bold/italic
+    # passes below mis-parse it into "**'`{**'", so handle it first and render the
+    # delimiter as inline code. The (?<!')/(?!') guards keep it from grabbing 4 of
+    # a 5-quote bold-italic run ('''''X''''') — match exactly four, not five+.
+    text = re.sub(r"(?<!')''''(?!')(.+?)(?<!')''''(?!')", r"`\1`", text)
+    # Source typo: ''word''' — an italic word with a stray third closing quote
+    # (e.g. "''ID'' or ''PID''' (optional)"). Without this, the trailing ''' gets
+    # read as an unclosed bold and mangles the rest of the line. Restricted to a
+    # single \w+ token, not preceded by another quote (so genuine '''bold''' is
+    # untouched) and not followed by a word char or quote (so possessives like
+    # ''m4'''s and 4+ quote runs are left for their own handling).
+    text = re.sub(r"(?<!')''(\w+)'''(?![\w'])", r"*\1*", text)
+    # Bold / italic — strip inner whitespace so e.g. "''' text'''" → "**text**"
+    # (Markdown bold/italic can't start or end with whitespace).
+    def _bold(m):
+        inner = m.group(1)
+        content = inner.strip()
+        if not content:
+            return ''
+        # Move surrounding whitespace outside the markers so word boundaries are kept
+        leading  = ' ' if inner[0]  == ' ' else ''
+        trailing = ' ' if inner[-1] == ' ' else ''
+        return f"{leading}**{content}**{trailing}"
+    text = re.sub(r"'''(.+?)'''", _bold, text)
     # Common typo: """word""" (double quotes) instead of PmWiki bold '''word'''
-    text = re.sub(r'"""(.+?)"""', r'**\1**', text)
+    text = re.sub(r'"""(.+?)"""', _bold, text)
     # Unclosed ''' with mismatched closing " (typo: '''word" instead of '''word''')
     text = re.sub(r"'''(\w[^'\"]*?)\"", r'**\1**', text)
     # Unclosed ''' with no closing at all — grab to end of line
     text = re.sub(r"'''([^']+)$", r"**\1**", text)
-    text = re.sub(r"''(.+?)''", r"*\1*", text)
+    def _italic(m):
+        inner = m.group(1)
+        content = inner.strip()
+        if not content:
+            return ''
+        leading  = ' ' if inner[0]  == ' ' else ''
+        trailing = ' ' if inner[-1] == ' ' else ''
+        return f"{leading}*{content}*{trailing}"
+    text = re.sub(r"''(.+?)''", _italic, text)
 
-    # Drop link-icon anchors and links to comment anchors (#commentN)
-    text = re.sub(r'\[\[#[\w.-]+\|(?:&#x1F517;|¶)\]\]', '', text)
+    # Drop link-icon anchors and links to comment anchors (#commentN).
+    # The chain glyph appears either as the entity (&#x1F517;) or — after
+    # decode_pmwiki_text's html.unescape — as the literal emoji 🔗 (U+1F517).
+    # The anchor segment may carry trailing spaces, stray wikistyle markup, or
+    # even an inner '|' (e.g. "[[#listen %25red%25|...]]", "[[#memlog | mem_log|🔗]]"),
+    # so match anything up to the LAST '|' before the icon.
+    text = re.sub(r'\[\[#[^\]]*\|(?:&#x1F517;|\U0001F517|¶)\]\]', '', text)
     text = re.sub(r'\[\[#comment\d+\|[^\]]*\]\]', '', text)
     text = re.sub(r'\[comment\d+\]\(#comment\d+\)', '', text)  # already-converted form
 
@@ -673,16 +940,53 @@ def convert_inline(text: str, code_variables: bool = True) -> str:
         if page.startswith("#"):
             return f"[{label}]({page})"
         if page.startswith(("http://", "https://")):
+            # Legacy module-doc links → internal. Two targets, one principle:
+            #  - Manual mode: a fork-relative link to the same repo's module
+            #    README (../modules/<mod>/README.md). The pinned <ver>.x is
+            #    dropped so it follows the manual's own version; on github.com it
+            #    resolves in-branch, and adapt_links rewrites it to the website
+            #    /docs/modules/<ver>/<mod>.
+            #  - Website mode (flat docs, no fork copy): the pinned <ver>.x is
+            #    kept and mapped to its website slug → /docs/modules/<slug>/<mod>.
+            mod_m = _MOD_DOC_RE.match(page)
+            if mod_m:
+                verdir, mod, anchor = mod_m.group(1), mod_m.group(2), mod_m.group(3) or ''
+                if _MANUAL_LINKS:
+                    return f"[{label}](../modules/{mod}/README.md{anchor})"
+                return f"[{label}](/docs/modules/{_modver_to_slug(verdir)}/{mod}{anchor})"
             # opensips.org Documentation URLs → internal slugs, but only when the
             # target page actually exists locally (otherwise keep the working external URL).
             doc_m = re.match(r'https?://(?:www\.)?opensips\.org/Documentation/(.+)', page, re.IGNORECASE)
             if doc_m:
                 tail = doc_m.group(1)
+                # Strip PMwiki query params (e.g. ?action=edit) before processing
+                tail = re.sub(r'\?[^#]*', '', tail)
                 path_part, _, anchor = tail.partition('#')
-                stem = path_part.split('/')[-1].lower().replace('-', '').replace('_', '')
+                seg = path_part.rstrip('/').split('/')[-1]
+                # PMwiki auto-generated #tocN anchors don't translate to Markdown heading
+                # IDs; drop them (the link text is descriptive enough)
+                anchor_sfx = '' if re.match(r'toc\d+$', anchor, re.IGNORECASE) else (f"#{anchor}" if anchor else '')
+                # Old version-suffixed manual page (…/Script-CoreVar-3-6) → the new
+                # /docs/manual/<ver>/<page>. Manual mode (fork/github) uses the full
+                # URL; adapt_links strips the origin for the on-site build.
+                mp = _manual_page_ref(seg)
+                if mp:
+                    pg, slug = mp
+                    url = f"/docs/manual/{slug}/{pg}{anchor_sfx}"
+                    return f"[{label}]({SITE_URL + url if _MANUAL_LINKS else url})"
+                # Bare manual page (…/Generating-Configs, …/Script-CoreFunctions):
+                # the flat PmWiki copy is an empty stub, so route to the devel
+                # manual. The old #tocN numbered the old page and does not match
+                # devel's ordering, so drop it — land on the page, not a wrong
+                # section.
+                man_stem = seg.lower()
+                if man_stem in _MANUAL_PAGES:
+                    url = f"/docs/manual/devel/{man_stem}"
+                    return f"[{label}]({SITE_URL + url if _MANUAL_LINKS else url})"
+                stem = seg.lower().replace('-', '').replace('_', '')
                 if stem in _SLUG_MAP:
                     slug = _SLUG_MAP[stem]
-                    return f"[{label}]({slug}{'#' + anchor if anchor else ''})"
+                    return f"[{label}]({(SITE_URL + slug if _MANUAL_LINKS else slug) + anchor_sfx})"
             return f"[{label}]({page})"
         return f"[{label}]({page_to_slug(page)})"
     # Label may contain single ']' (e.g. citation refs like "[1]"), just not "]]".
@@ -762,7 +1066,7 @@ def convert_inline(text: str, code_variables: bool = True) -> str:
     _wikistyle = (
         r'%(?:'
         r'(?:red|green|blue|orange|yellow|black|white|purple|gr[ae]y)'   # color names
-        r'|(?:block|center|right|left|item|list)(?:\s[^%\n]*)?'          # layout
+        r'|(?:block|center|right|left|item|list|rfloat|lfloat|rframe|lframe|frame|thumb)(?:\s[^%\n]*)?'  # layout/float
         r'|[a-zA-Z]+=[^%\n]+'                                            # attr=value
         r'|#[0-9a-fA-F]{3,8}'                                            # hex color
         r')%'
@@ -780,6 +1084,11 @@ def convert_inline(text: str, code_variables: bool = True) -> str:
         return f"![{alt}](/images/docs/tutorials/{basename})"
     text = re.sub(r'(?<![(\[])https?://[^\s\]\)]+\.(?:png|jpe?g|gif)\b', _image, text, flags=re.I)
 
+    # Strip a stray trailing single pipe left over from PMwiki float-cell layout
+    # (e.g. "%rfloat width=400px % http://…png | ''' '''" → "…png |"). Skip lines
+    # that start with a pipe (Markdown table rows) so table borders aren't touched.
+    text = re.sub(r'(?m)^(?![ \t]*\|)(.*[^|\s])[ \t]+\|[ \t]*$', r'\1', text)
+
     # PmWiki page variables {$VarName} → drop (whole line if variable was primary content)
     text = re.sub(r'^[^{]*\{\$\w+\}[^{]*$', '', text)
     text = re.sub(r'\{\$\w+\}', '', text)
@@ -790,7 +1099,10 @@ def convert_inline(text: str, code_variables: bool = True) -> str:
     text = re.sub(r'>>[^<]*<<', '', text)
 
     text = re.sub(r'\[\[#[\w.-]+\]\]', '', text)
-    text = re.sub(r'\[\+(.+?)\+\]', r'\1', text)
+    # PMwiki big-text markup: [+text+] (bigger) and [++text++] (biggest). Match
+    # one-or-more '+' on each side so [++Function++] fully unwraps to "Function"
+    # (not "+Function+").
+    text = re.sub(r'\[\++(.+?)\++\]', r'\1', text)
     text = re.sub(r'\\\\$', '  ', text)
     if code_variables:
         text = code_variable_tokens(text)
@@ -848,11 +1160,21 @@ def detect_language(lines: list[str]) -> str:
 
 
 def load_slug_map(content_dir: Path) -> None:
-    """Scan content_dir for MDX files and map normalized stem → actual slug."""
-    for mdx in content_dir.rglob("*.mdx"):
-        rel = mdx.relative_to(content_dir)
+    """Scan content_dir for doc pages and map normalized stem → actual slug.
+
+    Indexes both .md and .mdx (the /documentation pages are .md), but skips the
+    modules/ and manual/ subtrees — those use their own per-version link schemes
+    and would otherwise pollute the documentation stem namespace."""
+    for path in content_dir.rglob("*"):
+        if path.suffix not in (".md", ".mdx"):
+            continue
+        rel = path.relative_to(content_dir)
+        # Skip the modules/ and manual/ subtrees (any depth) — they use their own
+        # per-version link schemes and would pollute the documentation namespace.
+        if "modules" in rel.parts or "manual" in rel.parts:
+            continue
         slug = "/" + str(rel.with_suffix("")).replace("\\", "/")
-        stem_norm = mdx.stem.lower().replace("-", "").replace("_", "")
+        stem_norm = path.stem.lower().replace("-", "").replace("_", "")
         _SLUG_MAP[stem_norm] = slug
 
 
@@ -869,13 +1191,75 @@ def load_redirects(wiki_dir: Path) -> None:
             _REDIRECTS[f.name.lower().replace("_", "")] = target
 
 
+def _manual_link_key(page: str) -> str:
+    """Normalize a wiki link target to the key used in _MANUAL_LINKS:
+    last path/namespace segment, lowercased, hyphens/underscores removed.
+    e.g. 'Documentation/Install-Download-4-1' -> 'installdownload41'."""
+    base = page.partition("#")[0].strip()
+    seg = re.split(r"[./]", base)[-1]
+    return seg.lower().replace("-", "").replace("_", "")
+
+
 def page_to_slug(page: str) -> str:
+    # Manual mode: in-manual references resolve to sibling .md files (relative
+    # links), so the converted manual is self-contained inside the repo docs/.
+    if _MANUAL_LINKS:
+        key = _manual_link_key(page)
+        if key in _MANUAL_LINKS:
+            anchor = page.partition("#")[2]
+            return _MANUAL_LINKS[key] + (f"#{anchor}" if anchor else "")
     page = _REDIRECTS.get(page.lower().replace("_", ""), page)
+    # Old manual URLs used a version suffix (Documentation.Script-CoreVar-3-6);
+    # the manual now lives at /docs/manual/3-6/script-corevar. Route such refs
+    # there. Manual mode (fork/github) emits the full URL; adapt_links strips the
+    # origin for the on-site build.
+    base, _, anchor = page.partition("#")
+    # The legacy Documentation hub page (Documentation.Index / the namespace root)
+    # was removed; the manual root now serves as the documentation landing. Route
+    # any reference to it — dropping the old #tocN section anchor, which has no
+    # equivalent there — to the devel manual.
+    if base.lower() in ("documentation.index", "documentation",
+                        "documentation.documentation", "documentation.homepage"):
+        result = "/docs/manual/devel"
+        return SITE_URL + result if _MANUAL_LINKS else result
+    mp = _manual_page_ref(re.split(r"[./]", base)[-1])
+    if mp:
+        pg, slug = mp
+        result = f"/docs/manual/{slug}/{pg}" + (f"#{anchor}" if anchor else "")
+        return SITE_URL + result if _MANUAL_LINKS else result
+    # A bare (un-versioned) reference whose page is a manual page — e.g.
+    # Documentation.Script-CoreFunctions. The old flat PmWiki copies of these are
+    # empty stubs; the canonical content lives in the manual, so route to the
+    # devel (latest) manual. The old #tocN anchor numbered the *old* page's
+    # headings and does not correspond to devel's ordering, so it is dropped —
+    # the link lands on the correct page rather than a possibly-wrong section.
+    man_stem = re.split(r"[./]", base)[-1].lower()
+    if man_stem in _MANUAL_PAGES:
+        result = f"/docs/manual/devel/{man_stem}"
+        return SITE_URL + result if _MANUAL_LINKS else result
     # Derive the stem from the page name (strip namespace, normalize)
     stem = page.split(".")[-1].lower().replace("-", "").replace("_", "")
     if stem in _SLUG_MAP:
-        return _SLUG_MAP[stem]
-    return "/" + page.replace(".", "/").lower()
+        result = _SLUG_MAP[stem]
+    else:
+        # Fallback for pages not found locally. The Documentation namespace now
+        # lives flat under /docs/, so map Documentation.X / Documentation/X →
+        # /docs/x (these are usually broken cross-refs either way).
+        parts = re.split(r"[./]", page, 1)
+        if parts[0].lower() == "documentation" and len(parts) > 1:
+            result = "/docs/" + parts[1].lower()
+        else:
+            # Other namespaces (About, Resources, …) only ever existed on the old
+            # PMwiki website — keep them as external opensips.org links (case
+            # preserved), don't fabricate an internal /about/… route.
+            return "https://www.opensips.org/" + page.replace(".", "/")
+    # `result` is a root-relative flat-page route (/docs/…). In the MANUAL — which
+    # also renders on github.com from the fork, where these flat pages don't exist
+    # — make it absolute so the link works there too. adapt_links strips the
+    # origin back off for the on-site build.
+    if _MANUAL_LINKS and result.startswith("/"):
+        return SITE_URL + result
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -892,7 +1276,7 @@ def normalize_heading_levels(text: str) -> str:
     in_fence_scan = False
     levels = []
     for line in lines:
-        if line.startswith('```'):
+        if line.lstrip().startswith('```'):
             in_fence_scan = not in_fence_scan
         if in_fence_scan:
             continue
@@ -908,7 +1292,7 @@ def normalize_heading_levels(text: str) -> str:
     current = 1
     in_fence = False
     for line in lines:
-        if line.startswith('```'):
+        if line.lstrip().startswith('```'):
             in_fence = not in_fence
         if in_fence:
             out.append(line)
@@ -928,11 +1312,34 @@ def normalize_heading_levels(text: str) -> str:
 
 def post_process(text: str) -> str:
     text = re.sub(r'\n{3,}', '\n\n', text)
-    text = infer_missing_heading_anchors(text)
+    # "Table:" captions precede labeled code blocks / lists, not real tables, so
+    # drop the "Table:" prefix and color the descriptive caption itself instead.
+    #   @@orange|Table:@@**caption**     →  @@orange|**caption**@@
+    text = re.sub(
+        r'@@(red|green|blue|orange|yellow)\|\s*Table:\s*@@\s*(\*\*.+?\*\*)',
+        r'@@\1|\2@@',
+        text,
+    )
+    #   Table: @@green|**caption**@@     →  @@green|**caption**@@   (plain prefix)
+    text = re.sub(
+        r'^[ \t]*Table:\s*(@@(?:red|green|blue|orange|yellow)\|\*\*.+?\*\*@@)[ \t]*$',
+        r'\1',
+        text,
+        flags=re.MULTILINE,
+    )
     text = normalize_heading_levels(text)
     text = mdx_safety_pass(text).strip()
+    # Resolve anchors AFTER the MDX-safety pass so the heading-id '{#id}' suffix
+    # (and folded anchors) aren't wrapped in backticks as "unsafe" braces.
+    text = resolve_anchors(text)
+    text = infer_missing_heading_anchors(text)
     # Drop a leading horizontal rule (PmWiki '----' separator under the breadcrumb)
     text = re.sub(r'^-{3,}\s*\n+', '', text)
+    # Drop a trailing empty Comments section (PMwiki user comments are stripped but
+    # the heading survives). Optionally preceded by a horizontal rule.
+    text = re.sub(r'(\n---\n)?\n#{1,6} Comments\s*$', '', text)
+    # Drop trailing horizontal rules left over from PMwiki page-footer separators.
+    text = re.sub(r'\n+---\s*$', '', text)
     return text.strip()
 
 
@@ -952,6 +1359,36 @@ def normalized_heading_key(text: str) -> str:
     return re.sub(r'\s+', ' ', text).strip()
 
 
+def resolve_anchors(text: str) -> str:
+    """Resolve standalone PMWiki anchor markers into the modules-style anchor
+    format (matching docbook_to_md.py):
+
+      - '@@anchor|id@@' immediately before a heading  → '{#id}' suffix on that
+        heading (rendered as the heading id by remark-heading-id).
+      - any other standalone '@@anchor|id@@'          → dropped entirely
+        (no <span> is emitted).
+    """
+    lines = text.split('\n')
+    out: list[str] = []
+    i = 0
+    while i < len(lines):
+        m = re.match(r'^@@anchor\|([\w.-]+)@@$', lines[i].strip())
+        if m:
+            anchor_id = m.group(1)
+            j = i + 1
+            while j < len(lines) and not lines[j].strip():
+                j += 1
+            hm = re.match(r'^(#{2,6})\s+(.+?)\s*$', lines[j]) if j < len(lines) else None
+            if hm and '{#' not in lines[j]:
+                lines[j] = f"{hm.group(1)} {hm.group(2)} {{#{anchor_id}}}"
+            # Drop the marker line either way (folded into the heading, or discarded).
+            i += 1
+            continue
+        out.append(lines[i])
+        i += 1
+    return '\n'.join(out)
+
+
 def infer_missing_heading_anchors(text: str) -> str:
     """Attach old anchor ids when a page links to a matching heading.
 
@@ -965,7 +1402,7 @@ def infer_missing_heading_anchors(text: str) -> str:
     in_fence = False
 
     for line in lines:
-        if re.match(r'^```', line):
+        if re.match(r'^\s*```', line):
             in_fence = not in_fence
             continue
         if in_fence:
@@ -983,7 +1420,7 @@ def infer_missing_heading_anchors(text: str) -> str:
     out: list[str] = []
     in_fence = False
     for line in lines:
-        if re.match(r'^```', line):
+        if re.match(r'^\s*```', line):
             in_fence = not in_fence
             out.append(line)
             continue
@@ -992,12 +1429,12 @@ def infer_missing_heading_anchors(text: str) -> str:
             continue
 
         heading = re.match(r'^(#{2,6})\s+(.+?)\s*$', line)
-        if heading:
+        if heading and '{#' not in line:
             key = normalized_heading_key(heading.group(2))
             anchor_id = link_targets.get(key)
-            previous = out[-1].strip() if out else ""
-            if anchor_id and not re.match(r'^@@anchor\|[\w.-]+@@$', previous):
-                out.append(f"@@anchor|{anchor_id}@@")
+            if anchor_id:
+                out.append(f"{heading.group(1)} {heading.group(2)} {{#{anchor_id}}}")
+                continue
 
         out.append(line)
 
@@ -1013,7 +1450,7 @@ def mdx_safety_pass(text: str) -> str:
     i = 0
     while i < len(lines):
         line = lines[i]
-        if re.match(r'^```', line):
+        if re.match(r'^\s*```', line):
             fenced.append(line)
             in_fence = not in_fence
             i += 1
@@ -1022,7 +1459,7 @@ def mdx_safety_pass(text: str) -> str:
             fenced.append(line)
             i += 1
             continue
-        if line.startswith('    ') and line.strip():
+        if line.startswith('    ') and line.strip() and not re.match(r'^\s*[-*]|\s*\d+\.', line):
             block: list[str] = []
             while i < len(lines) and (re.match(r'^    ', lines[i]) or lines[i].strip() == ""):
                 block.append(lines[i])
@@ -1044,11 +1481,17 @@ def mdx_safety_pass(text: str) -> str:
     out: list[str] = []
     in_fence = False
     for line in fenced:
-        if re.match(r'^```', line):
+        if re.match(r'^\s*```', line):
             in_fence = not in_fence
             out.append(line)
             continue
         if in_fence:
+            out.append(line)
+            continue
+        # Don't wrap heading text in inline code — headings shouldn't render as
+        # code (e.g. transformation names like "### {s.len}"). The output is
+        # Markdown (.md), so braces/angles in a heading are literal and safe.
+        if re.match(r'^#{1,6}\s', line):
             out.append(line)
             continue
         out.append(escape_prose_line(line))
@@ -1103,9 +1546,10 @@ def escape_prose_line(line: str) -> str:
         seg = re.sub(r'<([A-Za-z][A-Za-z0-9_]*)\s+[^>]+>', lambda m: f'`{m.group(0)}`', seg)
         # <-text navigation patterns in link labels — drop (e.g. [<-Back](url))
         seg = re.sub(r'\[<-[^\]]*\]\([^)]*\)', '', seg)
-        # Arrow diagrams like <->, <-, ->  in prose — wrap in backticks
-        seg = re.sub(r'<->', '`<->`', seg)
-        seg = re.sub(r'<-(?!>)', '`<-`', seg)
+        # <-> and <- contain a raw < that triggers JSX parsing in MDX.
+        # Replace with Unicode arrow characters so they render as plain text.
+        seg = seg.replace('<->', '↔')
+        seg = re.sub(r'<-(?!>)', '←', seg)
         # <> and </> are MDX fragment syntax — wrap in backticks
         seg = re.sub(r'</?>', lambda m: f'`{m.group(0)}`', seg)
 
@@ -1123,7 +1567,7 @@ def extract_description(body: str) -> str:
         para = para.strip()
         if not para:
             continue
-        if para.startswith(('#', '```', '|', '<', '-', '*', '!', '>', '[', '`')):
+        if para.startswith(('#', '```', '|', '<', '-', '*', '!', '>', '[', '`', ':')):
             continue
         plain = strip_markup(para)
         plain = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', plain)
@@ -1193,6 +1637,33 @@ def extract_subtitle(body: str):
     return subtitle, author, '\n'.join(rest)
 
 
+def strip_redundant_title_heading(body: str, title: str) -> str:
+    """Drop a leading body heading that merely repeats the page title (optionally
+    with an 'OpenSIPS ' prefix), e.g. title 'Presence' with a body opening
+    '## OpenSIPS Presence'. Such a heading just duplicates the rendered page
+    title sitting right above it. Returns the body unchanged when no such
+    heading is present. Only the very first content heading is considered.
+    """
+    lines = body.split('\n')
+    i = 0
+    while i < len(lines) and not lines[i].strip():
+        i += 1
+    if i >= len(lines):
+        return body
+    m = re.match(r'^#{2,6}\s+(.+)$', lines[i])
+    if not m:
+        return body
+    heading = m.group(1).strip().lower()
+    tl = title.strip().lower()
+    if heading not in (tl, 'opensips ' + tl):
+        return body
+    rest = lines[i + 1:]
+    k = 0
+    while k < len(rest) and not rest[k].strip():
+        k += 1
+    return '\n'.join(rest[k:])
+
+
 def yaml_quote(text: str) -> str:
     return text.replace('\\', '\\\\').replace('"', '\\"').replace('\n', ' ')
 
@@ -1248,10 +1719,15 @@ def convert_file(src: Path, dst: Path):
 
     title = extract_title(decoded, src.stem)
     subtitle, author, body = extract_subtitle(body)
-    # Re-normalize: removing the subtitle heading can leave the body's shallowest
-    # heading at h3, which would render as "0.1". Re-shift so it starts at h2.
+    # Re-normalize: removing the subtitle heading — or a redundant leading heading
+    # that just repeats the title — can leave the body's shallowest heading at h3,
+    # which would render as "0.1". Re-shift so it starts at h2.
     if subtitle is not None:
         body = normalize_heading_levels(body)
+    else:
+        stripped = strip_redundant_title_heading(body, title)
+        if stripped != body:
+            body = normalize_heading_levels(stripped)
     description = extract_description(body)
 
     fm = ["---", f'title: "{yaml_quote(title)}"']
@@ -1263,6 +1739,8 @@ def convert_file(src: Path, dst: Path):
         # as a clickable subtitle so the module-doc reference isn't lost.
         link_label, link_url = extract_title_link(decoded)
         if link_label and link_url:
+            # A legacy module-doc URL here → internal website route, like body links.
+            link_url = _module_doc_web(link_url) or link_url
             fm.append(f'subtitle: "{yaml_quote(link_label)}"')
             fm.append(f'subtitleHref: "{yaml_quote(link_url)}"')
     if author:
@@ -1274,6 +1752,80 @@ def convert_file(src: Path, dst: Path):
     print(f"  {src.name} → {dst}")
 
 
+def manual_filename(wiki_name: str, ver: str) -> str:
+    """'Documentation.Install-Download-4-1' → 'Install-Download.md'. The version
+    suffix is dropped because each opensips branch carries only its own manual."""
+    n = wiki_name
+    if n.startswith("Documentation."):
+        n = n[len("Documentation."):]
+    if n.endswith("-" + ver):
+        n = n[: -(len(ver) + 1)]
+    return n + ".md"
+
+
+def manual_subpages(wiki_dir: Path, ver: str) -> list[str]:
+    """Ordered list of existing wiki page names linked from the manual index.
+    Unqualified links default to the 'Documentation' group (PmWiki semantics)."""
+    meta = parse_pmwiki_file(wiki_dir / f"Documentation.Manual-{ver}")
+    text = decode_pmwiki_text(meta.get("text", ""))
+    pages: list[str] = []
+    for raw in re.findall(r"\[\[\s*([A-Za-z0-9._/ -]+?)(?:\s*\|[^\]]+)?\]\]", text):
+        name = raw.strip().replace("/", ".").rstrip(".")
+        if "." not in name:
+            name = "Documentation." + name
+        if name.startswith("Documentation.Manuals"):
+            continue  # breadcrumb back-link to the all-versions index
+        if name != f"Documentation.Manual-{ver}" and name not in pages \
+                and (wiki_dir / name).exists():
+            pages.append(name)
+    return pages
+
+
+def convert_manual(ver: str, wiki_dir: Path, out_dir: Path, devel: bool = False):
+    """Convert one version manual into a flat docs/ directory: the index becomes
+    README.md and every linked page a sibling <Name>.md, with in-manual links
+    rewritten to relative .md paths (resolved via _MANUAL_LINKS in page_to_slug).
+
+    devel=True (the master branch) appends " / devel" to the index title, e.g.
+    "Manual 4.1" → "Manual 4.1 / devel"."""
+    index_name = f"Documentation.Manual-{ver}"
+    if not (wiki_dir / index_name).exists():
+        raise SystemExit(f"Manual index not found: {index_name}")
+    subpages = manual_subpages(wiki_dir, ver)
+
+    # Redirects let cross-references to moved pages still resolve to in-manual files.
+    load_redirects(wiki_dir)
+    _MANUAL_LINKS.clear()
+
+    def register(wiki_name: str, fname: str) -> None:
+        # Key on the versioned stem and a version-less alias, so cross-references
+        # resolve whether or not they carry the -X-Y suffix (both forms occur).
+        _MANUAL_LINKS[_manual_link_key(wiki_name)] = fname
+        _MANUAL_LINKS[fname[:-3].lower().replace("-", "").replace("_", "")] = fname
+
+    register(index_name, "README.md")
+    for name in subpages:
+        register(name, manual_filename(name, ver))
+
+    # Manual page set (de-versioned, e.g. 'script-corevar') so cross-version
+    # manual references (Script-CoreVar-3-6 from a 4-1 page) resolve to
+    # /docs/manual/<ver>/<page> instead of a broken flat link.
+    _MANUAL_PAGES.clear()
+    for name in subpages:
+        _MANUAL_PAGES.add(manual_filename(name, ver)[:-3].lower())
+
+    print(f"Converting manual {ver}: 1 index + {len(subpages)} subpages → {out_dir}/")
+    readme = out_dir / "README.md"
+    convert_file(wiki_dir / index_name, readme)
+    if devel:
+        # Master is the development branch — mark the index title accordingly.
+        txt = readme.read_text(encoding="utf-8")
+        txt = re.sub(r'^(title:\s*"[^"\n]*?)(")', r'\1 / devel\2', txt, count=1, flags=re.M)
+        readme.write_text(txt, encoding="utf-8")
+    for name in subpages:
+        convert_file(wiki_dir / name, out_dir / manual_filename(name, ver))
+
+
 def main():
     import argparse
     parser = argparse.ArgumentParser()
@@ -1281,7 +1833,16 @@ def main():
     parser.add_argument("dst_dir", nargs="?", default=None, type=Path)
     parser.add_argument("--wiki", metavar="WIKI_DIR", type=Path, help="Full wiki directory for resolving redirects")
     parser.add_argument("--content-dir", metavar="CONTENT_DIR", type=Path, help="Astro content/docs directory for resolving actual page slugs")
+    parser.add_argument("--manual", metavar="VERSION", help="Convert one version manual (e.g. 4-1) from --wiki into a flat docs/ dir with relative .md links")
+    parser.add_argument("--out", metavar="OUT_DIR", type=Path, help="Output directory for --manual mode (default ../output/manual/VERSION)")
+    parser.add_argument("--devel", action="store_true", help="Mark this manual as the development branch (appends ' / devel' to the index title)")
     args = parser.parse_args()
+
+    if args.manual:
+        wiki = (args.wiki or Path("../wiki")).resolve()
+        out = (args.out or args.dst_dir or Path(f"../output/manual/{args.manual}")).resolve()
+        convert_manual(args.manual, wiki, out, devel=args.devel)
+        return
 
     src_dir = args.src_dir
     dst_dir = args.dst_dir or Path("../output/documentation")
@@ -1290,6 +1851,7 @@ def main():
         load_redirects(args.wiki)
     if args.content_dir:
         load_slug_map(args.content_dir)
+        load_manual_pages(args.content_dir)
 
     files = [
         f for f in src_dir.iterdir()
