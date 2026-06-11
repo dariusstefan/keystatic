@@ -952,6 +952,9 @@ def green_code_span_to_markup(text: str) -> str:
                 out.append(_html_escape(seg))
         return "<code>" + "".join(out) + "</code>"
 
+    # The syntax-template prose referred to the (now removed) green coloring; the
+    # optional fields are rendered in italics instead.
+    text = re.sub(r"written in green\b", "written in italics", text)
     return _GREEN_CODE_SPAN_RE.sub(repl, text)
 
 
