@@ -22,7 +22,9 @@ OPENSIPS_DIR = REPO_ROOT / "opensips"
 CONVERTER = REPO_ROOT / "converters" / "docbook_to_md.py"
 MODULES_DIR = OPENSIPS_DIR / "modules"
 
-BRANCHES = ["master", "4.0", "3.6", "3.5", "3.4", "3.3"]
+BRANCHES = ["master", "4.0", "3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0",
+            "2.4", "2.3", "2.2", "2.1", "1.11", "1.10", "1.9", "1.8", "1.7",
+            "1.6", "1.5", "1.4"]
 REMOTE = "darius"
 
 

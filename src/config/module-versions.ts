@@ -12,6 +12,21 @@ export const VERSIONS: Version[] = [
   { branch: '3.5',    slug: '3-5',   label: '3.5' },
   { branch: '3.4',    slug: '3-4',   label: '3.4' },
   { branch: '3.3',    slug: '3-3',   label: '3.3' },
+  { branch: '3.2',    slug: '3-2',   label: '3.2' },
+  { branch: '3.1',    slug: '3-1',   label: '3.1' },
+  { branch: '3.0',    slug: '3-0',   label: '3.0' },
+  { branch: '2.4',    slug: '2-4',   label: '2.4' },
+  { branch: '2.3',    slug: '2-3',   label: '2.3' },
+  { branch: '2.2',    slug: '2-2',   label: '2.2' },
+  { branch: '2.1',    slug: '2-1',   label: '2.1' },
+  { branch: '1.11',   slug: '1-11',  label: '1.11' },
+  { branch: '1.10',   slug: '1-10',  label: '1.10' },
+  { branch: '1.9',    slug: '1-9',   label: '1.9' },
+  { branch: '1.8',    slug: '1-8',   label: '1.8' },
+  { branch: '1.7',    slug: '1-7',   label: '1.7' },
+  { branch: '1.6',    slug: '1-6',   label: '1.6' },
+  { branch: '1.5',    slug: '1-5',   label: '1.5' },
+  { branch: '1.4',    slug: '1-4',   label: '1.4' },
 ];
 
 export const LATEST_VERSION = VERSIONS.find((v) => v.isLatest)!;

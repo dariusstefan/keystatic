@@ -63,6 +63,21 @@ VERSIONS = [
     {"ref": "origin/3.5", "slug": "3-5"},
     {"ref": "origin/3.4", "slug": "3-4"},
     {"ref": "origin/3.3", "slug": "3-3"},
+    {"ref": "origin/3.2", "slug": "3-2"},
+    {"ref": "origin/3.1", "slug": "3-1"},
+    {"ref": "origin/3.0", "slug": "3-0"},
+    {"ref": "origin/2.4", "slug": "2-4"},
+    {"ref": "origin/2.3", "slug": "2-3"},
+    {"ref": "origin/2.2", "slug": "2-2"},
+    {"ref": "origin/2.1", "slug": "2-1"},
+    {"ref": "origin/1.11", "slug": "1-11"},
+    {"ref": "origin/1.10", "slug": "1-10"},
+    {"ref": "origin/1.9", "slug": "1-9"},
+    {"ref": "origin/1.8", "slug": "1-8"},
+    {"ref": "origin/1.7", "slug": "1-7"},
+    {"ref": "origin/1.6", "slug": "1-6"},
+    {"ref": "origin/1.5", "slug": "1-5"},
+    {"ref": "origin/1.4", "slug": "1-4"},
 ]
 LATEST = next(v for v in VERSIONS if v.get("is_latest"))
 
