@@ -925,6 +925,17 @@ def heading_annotation_to_alert(text: str) -> str:
     return _HEADING_ANNOTATION_RE.sub(repl, text)
 
 
+def _as_sentence(text: str) -> str:
+    """Capitalize the first letter and ensure terminal punctuation."""
+    text = text.strip()
+    if not text:
+        return text
+    text = text[0].upper() + text[1:]
+    if text[-1] not in ".!?:":
+        text += "."
+    return text
+
+
 def label_bullet_block_to_alerts(text: str) -> str:
     def repl(m: re.Match) -> str:
         gh_type = m.group(1)
@@ -942,7 +953,9 @@ def label_bullet_block_to_alerts(text: str) -> str:
                 items.append(bm.group(1).strip())
             elif items:
                 items[-1] += " " + s  # wrapped continuation of the previous bullet
-        return "\n\n".join(f"> [!{gh_type}]\n> {it}" for it in items)
+        # One alert, each former bullet as its own sentence line.
+        lines = "\n".join(f"> {_as_sentence(it)}" for it in items)
+        return f"> [!{gh_type}]\n{lines}"
 
     return _LABEL_BULLET_BLOCK_RE.sub(repl, text)
 

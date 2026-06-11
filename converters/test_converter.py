@@ -798,7 +798,7 @@ class TestInlineLabelAlert:
             "### listen @@red|(Replaced in OpenSIPS 3.1)@@ {#listen}\nBody text here.")
         assert "> Replaced in OpenSIPS 3.1\n\nBody text here." in out
 
-    def test_empty_body_label_bullet_block_becomes_per_bullet_alerts(self):
+    def test_empty_body_label_bullet_block_becomes_single_alert(self):
         from convert import label_bullet_block_to_alerts
         src = (
             "@@red|WARNING@@: \n```text\n"
@@ -807,10 +807,11 @@ class TestInlineLabelAlert:
             "accepted even if foo.bar doesn't exist)\n```\n"
         )
         out = label_bullet_block_to_alerts(src)
-        assert out.count("> [!WARNING]") == 2
-        assert "> don't set it unless you know (e.g. nat traversal)" in out
-        # wrapped continuation is joined into one body line
-        assert "foo.bar will be accepted even if" in out
+        # one alert, each bullet as a capitalized, period-terminated line
+        assert out.count("> [!WARNING]") == 1
+        assert "> Don't set it unless you know (e.g. nat traversal)." in out
+        # wrapped continuation joined into one line
+        assert "> You can set anything here, no check is made (e.g. foo.bar will be accepted even if foo.bar doesn't exist)." in out
         assert "```" not in out
 
 
