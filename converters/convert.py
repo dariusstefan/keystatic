@@ -859,24 +859,28 @@ _LABEL_BULLET_BLOCK_RE = re.compile(
 )
 
 
-# A whole-line red span (optionally bold-wrapped) with no explicit label is an
-# advisory the converter left as colored prose. Promote it to an IMPORTANT alert.
-# If a bullet list immediately follows, fold it into the alert body so it isn't
-# orphaned outside the blockquote.
-_RED_PARAGRAPH_RE = re.compile(r"^\*{0,2}@@red\|(.+?)@@\*{0,2}$")
-
-
-def red_paragraph_to_alert(text: str) -> str:
+# A whole-line color span (optionally bold-wrapped) with no explicit label is an
+# advisory the converter left as colored prose. Promote it to an alert (red →
+# IMPORTANT, green → NOTE). If a bullet list immediately follows, fold it into the
+# alert body so it isn't orphaned outside the blockquote.
+def _color_paragraph_to_alert(text: str, color: str, gh_type: str) -> str:
+    line_re = re.compile(r"^\*{0,2}@@" + color + r"\|(.+?)@@\*{0,2}$")
     lines = text.split("\n")
     out: list[str] = []
     i = 0
     while i < len(lines):
-        m = _RED_PARAGRAPH_RE.match(lines[i].strip())
+        m = line_re.match(lines[i].strip())
         if not m:
             out.append(lines[i])
             i += 1
             continue
         body = m.group(1).strip()
+        # A span whose body is itself fully bold (@@color|**text**@@) is a styled
+        # caption, not an advisory paragraph — leave it for the caption handling.
+        if body.startswith("**"):
+            out.append(lines[i])
+            i += 1
+            continue
         j = i + 1
         items: list[str] = []
         while j < len(lines) and re.match(r"^\s*[*-]\s+", lines[j]):
@@ -884,7 +888,7 @@ def red_paragraph_to_alert(text: str) -> str:
             j += 1
         if out and out[-1].strip():
             out.append("")
-        out.append("> [!IMPORTANT]")
+        out.append(f"> [!{gh_type}]")
         out.append(f"> {body}")
         if items:
             out.append(">")
@@ -892,6 +896,33 @@ def red_paragraph_to_alert(text: str) -> str:
         out.append("")
         i = j
     return "\n".join(out)
+
+
+def red_paragraph_to_alert(text: str) -> str:
+    return _color_paragraph_to_alert(text, "red", "IMPORTANT")
+
+
+def green_paragraph_to_alert(text: str) -> str:
+    return _color_paragraph_to_alert(text, "green", "NOTE")
+
+
+# A heading carrying a red status annotation — "### listen @@red|(Replaced in
+# OpenSIPS 3.1)@@ {#listen}" — can't hold an alert, so lift the annotation into a
+# WARNING alert directly beneath the (now clean) heading.
+_HEADING_ANNOTATION_RE = re.compile(
+    r"^(#{2,6} .*?)[ \t]*@@red\|\((.+?)\)@@(?P<anchor>[ \t]*\{#[^}]+\})?[ \t]*$",
+    re.MULTILINE,
+)
+
+
+def heading_annotation_to_alert(text: str) -> str:
+    def repl(m: re.Match) -> str:
+        anchor = m.group("anchor") or ""
+        # trailing newline → a blank line after the alert so the following
+        # paragraph isn't pulled in as a lazy blockquote continuation.
+        return f"{m.group(1)}{anchor}\n\n> [!WARNING]\n> {m.group(2).strip()}\n"
+
+    return _HEADING_ANNOTATION_RE.sub(repl, text)
 
 
 def label_bullet_block_to_alerts(text: str) -> str:
@@ -1474,6 +1505,8 @@ def post_process(text: str) -> str:
     text = label_bullet_block_to_alerts(text)
     text = inline_label_to_alert(text)
     text = red_paragraph_to_alert(text)
+    text = green_paragraph_to_alert(text)
+    text = heading_annotation_to_alert(text)
     text = normalize_heading_levels(text)
     text = mdx_safety_pass(text).strip()
     # Resolve anchors AFTER the MDX-safety pass so the heading-id '{#id}' suffix

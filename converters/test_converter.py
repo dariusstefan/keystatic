@@ -768,6 +768,36 @@ class TestInlineLabelAlert:
         src = "### listen @@red|(Replaced in OpenSIPS 3.1)@@ {#listen}"
         assert red_paragraph_to_alert(src) == src
 
+    def test_green_paragraph_becomes_note_with_list(self):
+        from convert import green_paragraph_to_alert
+        out = green_paragraph_to_alert(
+            "**@@green|Preserved data (still available in resume route)@@**\n"
+            "* **all `$avp` variables**\n* output vars")
+        assert out.count("> [!NOTE]") == 1
+        assert "> Preserved data (still available in resume route)" in out
+        assert "> * **all `$avp` variables**" in out and "> * output vars" in out
+        assert "@@green" not in out
+
+    def test_heading_annotation_lifted_to_warning(self):
+        from convert import heading_annotation_to_alert
+        out = heading_annotation_to_alert(
+            "### log_stderror @@red|(Deprecated in OpenSIPS 3.4)@@ {#log_stderror}")
+        assert out == (
+            "### log_stderror {#log_stderror}\n\n"
+            "> [!WARNING]\n> Deprecated in OpenSIPS 3.4\n")
+
+    def test_heading_annotation_without_anchor(self):
+        from convert import heading_annotation_to_alert
+        out = heading_annotation_to_alert("## listen @@red|(Replaced in OpenSIPS 3.1)@@")
+        assert out == "## listen\n\n> [!WARNING]\n> Replaced in OpenSIPS 3.1\n"
+
+    def test_heading_annotation_no_lazy_continuation(self):
+        # the paragraph after the heading must NOT be pulled into the alert
+        from convert import heading_annotation_to_alert
+        out = heading_annotation_to_alert(
+            "### listen @@red|(Replaced in OpenSIPS 3.1)@@ {#listen}\nBody text here.")
+        assert "> Replaced in OpenSIPS 3.1\n\nBody text here." in out
+
     def test_empty_body_label_bullet_block_becomes_per_bullet_alerts(self):
         from convert import label_bullet_block_to_alerts
         src = (
