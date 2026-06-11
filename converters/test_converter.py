@@ -702,5 +702,38 @@ class TestModuleStatusBadge:
         assert out.strip().endswith("beta, beta")
 
 
+class TestInlineLabelAlert:
+    """Inline WARNING/NOTE/IMPORTANT pseudo-callouts → GitHub alerts."""
+
+    def _conv(self, text):
+        from convert import inline_label_to_alert
+        return inline_label_to_alert(text)
+
+    def test_color_wrapped_warning_bang(self):
+        out = self._conv("@@red|**WARNING!**@@ Enabling this is dangerous.")
+        assert out == "> [!WARNING]\n> Enabling this is dangerous."
+
+    def test_color_wrapped_important_with_colon(self):
+        out = self._conv("@@red|IMPORTANT@@: To learn what variables can be used.")
+        assert out == "> [!IMPORTANT]\n> To learn what variables can be used."
+
+    def test_plain_label_with_colon(self):
+        out = self._conv("IMPORTANT: as this is triggered ONLY for SIP request.")
+        assert out == "> [!IMPORTANT]\n> as this is triggered ONLY for SIP request."
+
+    def test_prose_note_without_colon_untouched(self):
+        src = "NOTE that the following prose should not become an alert."
+        assert self._conv(src) == src
+
+    def test_table_cell_label_untouched(self):
+        src = "| cell | media for this flow. IMPORTANT - must cycle. | x |"
+        assert self._conv(src) == src
+
+    def test_important_note_compound_untouched(self):
+        # "IMPORTANT NOTE:" is prose, not a bare "IMPORTANT:" callout
+        src = "IMPORTANT NOTE: break can be used only to mark the end."
+        assert self._conv(src) == src
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

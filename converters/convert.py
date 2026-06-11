@@ -815,6 +815,32 @@ def gh_alert(gh_type: str, content: str) -> str:
     return f"\n> [!{gh_type}]\n{body}\n"
 
 
+# Inline pseudo-callouts: a standalone paragraph that BEGINS with a
+# WARNING/NOTE/IMPORTANT/CAUTION label (often written as red/bold inline text)
+# was left inline by the converter. Promote it to a GitHub alert so it renders as
+# an aside (via remarkGithubAlerts). Two forms, both line-start anchored so labels
+# inside table cells or mid-sentence are never touched:
+#   1. color-wrapped — @@red|**WARNING!**@@ body   (colon optional)
+#   2. plain — IMPORTANT: body                      (colon REQUIRED, so prose like
+#      "NOTE that ..." is not misread as a callout)
+_ALERT_LABELS = r"(WARNING|NOTE|IMPORTANT|CAUTION)"
+_ALERT_WRAPPED_RE = re.compile(
+    r"^@@red\|\*{0,2}" + _ALERT_LABELS + r"!?\*{0,2}@@\s*:?\s+(\S.*)$",
+    re.MULTILINE,
+)
+_ALERT_PLAIN_RE = re.compile(
+    r"^" + _ALERT_LABELS + r"!?\s*:\s+(\S.*)$",
+    re.MULTILINE,
+)
+
+
+def inline_label_to_alert(text: str) -> str:
+    repl = lambda m: f"> [!{m.group(1)}]\n> {m.group(2).strip()}"
+    text = _ALERT_WRAPPED_RE.sub(repl, text)
+    text = _ALERT_PLAIN_RE.sub(repl, text)
+    return text
+
+
 def convert_line(line: str) -> str:
     # Wiki comment signatures: !!!!![[~username]] or !!!![[~username]] → drop
     if re.match(r'^!{4,5}\s*\[\[~', line):
@@ -1370,6 +1396,7 @@ def post_process(text: str) -> str:
         text,
         flags=re.MULTILINE,
     )
+    text = inline_label_to_alert(text)
     text = normalize_heading_levels(text)
     text = mdx_safety_pass(text).strip()
     # Resolve anchors AFTER the MDX-safety pass so the heading-id '{#id}' suffix
