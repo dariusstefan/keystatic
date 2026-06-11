@@ -9,7 +9,6 @@ import keystatic from '@keystatic/astro';
 import node from '@astrojs/node';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import remarkTextMarkers from './src/utils/remarkTextMarkers.mjs';
 import remarkGithubAlerts from './src/utils/remarkGithubAlerts.mjs';
 import remarkInclude from './src/utils/remarkInclude.mjs';
 import { manualSidebar } from './src/config/manual-sidebar.mjs';
@@ -23,7 +22,7 @@ export default defineConfig({
   prefetch: false,
   adapter: node({ mode: 'standalone' }),
   markdown: {
-    remarkPlugins: [remarkInclude, remarkGithubAlerts, remarkTextMarkers, remarkHeadingId],
+    remarkPlugins: [remarkInclude, remarkGithubAlerts, remarkHeadingId],
   },
   security: {
     checkOrigin: false,
@@ -116,7 +115,7 @@ export default defineConfig({
     }),
     // Must come AFTER starlight() so astro-expressive-code (registered by Starlight) wraps MDX code blocks correctly.
     mdx({
-      remarkPlugins: [remarkInclude, remarkGithubAlerts, remarkTextMarkers, remarkHeadingId],
+      remarkPlugins: [remarkInclude, remarkGithubAlerts, remarkHeadingId],
     }),
   ],
   vite: {
