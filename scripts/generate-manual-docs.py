@@ -38,6 +38,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+OPENSIPS_DIR = REPO_ROOT / "opensips"
 LOCAL_DOCS = REPO_ROOT / "opensips" / "docs"
 CONTENT_DIR = REPO_ROOT / "src" / "content" / "docs" / "docs" / "manual"
 
@@ -136,6 +137,36 @@ def _fetch_doc_remote(branch: str, name: str) -> str | None:
         return None
 
 
+# raw.githubusercontent caches ~5 min, so right after a fork push it serves
+# STALE docs for older versions. When the branch is present in the local
+# opensips/ checkout (e.g. just after populate-fork-manual), read from there
+# instead — always fresh, no CDN lag. Falls back to the remote otherwise.
+def _git_show(branch: str, path: str) -> str | None:
+    try:
+        r = subprocess.run(
+            ["git", "-C", str(OPENSIPS_DIR), "show", f"{branch}:{path}"],
+            capture_output=True, text=True,
+        )
+        return r.stdout if r.returncode == 0 else None
+    except Exception:
+        return None
+
+
+def _list_docs_local(branch: str) -> list[str]:
+    try:
+        r = subprocess.run(
+            ["git", "-C", str(OPENSIPS_DIR), "ls-tree", "--name-only", f"{branch}:docs"],
+            capture_output=True, text=True,
+        )
+        if r.returncode != 0:
+            return []
+    except Exception:
+        return []
+    return sorted(
+        n for n in r.stdout.splitlines() if n.endswith(".md")
+    )
+
+
 def generate_devel_local(verbose: bool) -> tuple[int, int]:
     slug = LATEST["slug"]
     out_dir = CONTENT_DIR / slug
@@ -154,14 +185,19 @@ def generate_devel_local(verbose: bool) -> tuple[int, int]:
 
 
 def generate_version(slug: str, branch: str, verbose: bool) -> tuple[int, int]:
-    names = _list_docs_remote(branch)
+    use_local = bool(_list_docs_local(branch))
+    names = _list_docs_local(branch) if use_local else _list_docs_remote(branch)
     if not names:
         return 0, 0
+    if use_local and verbose:
+        print(f"  (source: local opensips git {branch}:docs/)")
     out_dir = CONTENT_DIR / slug
     out_dir.mkdir(parents=True, exist_ok=True)
     ok = failed = 0
 
     def process(name: str) -> tuple[str, str | None]:
+        if use_local:
+            return name, _git_show(branch, f"docs/{name}")
         return name, _fetch_doc_remote(branch, name)
 
     with ThreadPoolExecutor(max_workers=20) as pool:
