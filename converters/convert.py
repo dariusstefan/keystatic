@@ -963,9 +963,11 @@ def convert_inline(text: str, code_variables: bool = True) -> str:
                 tail = re.sub(r'\?[^#]*', '', tail)
                 path_part, _, anchor = tail.partition('#')
                 seg = path_part.rstrip('/').split('/')[-1]
-                # PMwiki auto-generated #tocN anchors don't translate to Markdown heading
-                # IDs; drop them (the link text is descriptive enough)
-                anchor_sfx = '' if re.match(r'toc\d+$', anchor, re.IGNORECASE) else (f"#{anchor}" if anchor else '')
+                # Preserve any anchor (including PMwiki auto-generated #tocN). For
+                # links that resolve to a real on-site page below, resolve-toc-anchors
+                # rewrites #tocN to the target heading's id at build (out-of-range
+                # anchors are dropped there). Keeping it matches the page-name handler.
+                anchor_sfx = f"#{anchor}" if anchor else ''
                 # Old version-suffixed manual page (…/Script-CoreVar-3-6) → the new
                 # /docs/manual/<ver>/<page>. Manual mode (fork/github) uses the full
                 # URL; adapt_links strips the origin for the on-site build.
