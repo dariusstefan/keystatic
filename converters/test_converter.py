@@ -734,14 +734,26 @@ class TestInlineLabelAlert:
         src = "IMPORTANT NOTE: break can be used only to mark the end."
         assert self._conv(src) == src
 
-    def test_empty_body_label_does_not_swallow_next_line(self):
-        # A label with no inline body, followed by a code block, must NOT pull the
-        # fence onto the alert line (regression: \s ate the newline + code fence).
-        src = "@@red|WARNING@@: \n```text\n- do not set it\n```"
-        out = self._conv(src)
-        # unchanged: not promoted, code block left intact on its own lines
-        assert "> ```text" not in out
-        assert "```text\n- do not set it\n```" in out
+    def test_empty_body_label_plain_code_block_unchanged(self):
+        # An empty-body label above a REAL (non-bullet) code block stays a code block.
+        from convert import label_bullet_block_to_alerts
+        src = "@@red|NOTE@@: \n```c\nint x = 1;\nreturn x;\n```\n"
+        assert label_bullet_block_to_alerts(src) == src
+
+    def test_empty_body_label_bullet_block_becomes_per_bullet_alerts(self):
+        from convert import label_bullet_block_to_alerts
+        src = (
+            "@@red|WARNING@@: \n```text\n"
+            "- don't set it unless you know (e.g. nat traversal)\n"
+            "- you can set anything here, no check is made (e.g. foo.bar will be\n"
+            "accepted even if foo.bar doesn't exist)\n```\n"
+        )
+        out = label_bullet_block_to_alerts(src)
+        assert out.count("> [!WARNING]") == 2
+        assert "> don't set it unless you know (e.g. nat traversal)" in out
+        # wrapped continuation is joined into one body line
+        assert "foo.bar will be accepted even if" in out
+        assert "```" not in out
 
 
 if __name__ == "__main__":

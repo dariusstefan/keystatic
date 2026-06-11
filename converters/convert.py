@@ -844,6 +844,40 @@ def inline_label_to_alert(text: str) -> str:
     return text
 
 
+# An empty-body label (no inline text) directly above a fenced block whose lines
+# are "- " bullets — older versions render the warnings as a code block instead of
+# callouts (newer versions already use proper admonitions). Promote each bullet to
+# its own GitHub alert. Guarded on the first body line being a bullet so genuine
+# code blocks under a label are left untouched.
+_LABEL_BULLET_BLOCK_RE = re.compile(
+    r"^@@red\|\*{0,2}(WARNING|NOTE|IMPORTANT|CAUTION)!?\*{0,2}@@[ \t]*:?[ \t]*\n"
+    r"```[^\n]*\n(?P<body>.*?)\n```",
+    re.MULTILINE | re.DOTALL,
+)
+
+
+def label_bullet_block_to_alerts(text: str) -> str:
+    def repl(m: re.Match) -> str:
+        gh_type = m.group(1)
+        body_lines = m.group("body").split("\n")
+        first = next((ln for ln in body_lines if ln.strip()), "")
+        if not re.match(r"^-\s+\S", first.strip()):
+            return m.group(0)  # not a bullet list — leave the code block alone
+        items: list[str] = []
+        for ln in body_lines:
+            s = ln.strip()
+            if not s:
+                continue
+            bm = re.match(r"^-\s+(.*)$", s)
+            if bm:
+                items.append(bm.group(1).strip())
+            elif items:
+                items[-1] += " " + s  # wrapped continuation of the previous bullet
+        return "\n\n".join(f"> [!{gh_type}]\n> {it}" for it in items)
+
+    return _LABEL_BULLET_BLOCK_RE.sub(repl, text)
+
+
 def convert_line(line: str) -> str:
     # Wiki comment signatures: !!!!![[~username]] or !!!![[~username]] → drop
     if re.match(r'^!{4,5}\s*\[\[~', line):
@@ -1399,6 +1433,7 @@ def post_process(text: str) -> str:
         text,
         flags=re.MULTILINE,
     )
+    text = label_bullet_block_to_alerts(text)
     text = inline_label_to_alert(text)
     text = normalize_heading_levels(text)
     text = mdx_safety_pass(text).strip()
