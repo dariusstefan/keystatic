@@ -734,6 +734,15 @@ class TestInlineLabelAlert:
         src = "IMPORTANT NOTE: break can be used only to mark the end."
         assert self._conv(src) == src
 
+    def test_empty_body_label_does_not_swallow_next_line(self):
+        # A label with no inline body, followed by a code block, must NOT pull the
+        # fence onto the alert line (regression: \s ate the newline + code fence).
+        src = "@@red|WARNING@@: \n```text\n- do not set it\n```"
+        out = self._conv(src)
+        # unchanged: not promoted, code block left intact on its own lines
+        assert "> ```text" not in out
+        assert "```text\n- do not set it\n```" in out
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

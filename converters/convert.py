@@ -824,12 +824,15 @@ def gh_alert(gh_type: str, content: str) -> str:
 #   2. plain — IMPORTANT: body                      (colon REQUIRED, so prose like
 #      "NOTE that ..." is not misread as a callout)
 _ALERT_LABELS = r"(WARNING|NOTE|IMPORTANT|CAUTION)"
+# NB: the separator uses [ \t] (horizontal whitespace) NOT \s — \s matches
+# newlines, which would let an empty-body label ("WARNING: " followed by a code
+# block on the next line) swallow that block as the body and break the page.
 _ALERT_WRAPPED_RE = re.compile(
-    r"^@@red\|\*{0,2}" + _ALERT_LABELS + r"!?\*{0,2}@@\s*:?\s+(\S.*)$",
+    r"^@@red\|\*{0,2}" + _ALERT_LABELS + r"!?\*{0,2}@@[ \t]*:?[ \t]+(\S.*)$",
     re.MULTILINE,
 )
 _ALERT_PLAIN_RE = re.compile(
-    r"^" + _ALERT_LABELS + r"!?\s*:\s+(\S.*)$",
+    r"^" + _ALERT_LABELS + r"!?[ \t]*:[ \t]+(\S.*)$",
     re.MULTILINE,
 )
 
