@@ -925,6 +925,36 @@ def heading_annotation_to_alert(text: str) -> str:
     return _HEADING_ANNOTATION_RE.sub(repl, text)
 
 
+# Remaining green spans all live inside inline code. A code span that is wholly
+# one green marker is just a colored example → plain code. A code span with green
+# parts among plain text is the pseudo-variable syntax template, where green marked
+# the optional/placeholder parts → render those as italic (<em>) inside <code>, so
+# the optionality cue survives without color (works on github.com too).
+_GREEN_CODE_SPAN_RE = re.compile(r"`([^`\n]*@@green\|[^`\n]*)`")
+
+
+def _html_escape(s: str) -> str:
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def green_code_span_to_markup(text: str) -> str:
+    def repl(m: re.Match) -> str:
+        content = m.group(1)
+        full = re.fullmatch(r"@@green\|(.+?)@@", content)
+        if full:
+            return f"`{full.group(1)}`"
+        parts = re.split(r"@@green\|(.+?)@@", content)
+        out = []
+        for idx, seg in enumerate(parts):
+            if idx % 2 == 1:
+                out.append(f"<em>{_html_escape(seg)}</em>")
+            elif seg:
+                out.append(_html_escape(seg))
+        return "<code>" + "".join(out) + "</code>"
+
+    return _GREEN_CODE_SPAN_RE.sub(repl, text)
+
+
 def _as_sentence(text: str) -> str:
     """Capitalize the first letter and ensure terminal punctuation."""
     text = text.strip()
@@ -1526,6 +1556,7 @@ def post_process(text: str) -> str:
     # (and folded anchors) aren't wrapped in backticks as "unsafe" braces.
     text = resolve_anchors(text)
     text = infer_missing_heading_anchors(text)
+    text = green_code_span_to_markup(text)
     # Drop a leading horizontal rule (PmWiki '----' separator under the breadcrumb)
     text = re.sub(r'^-{3,}\s*\n+', '', text)
     # Drop a trailing empty Comments section (PMwiki user comments are stripped but

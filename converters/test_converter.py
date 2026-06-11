@@ -89,6 +89,24 @@ class TestBraces:
         assert "`{re.subst}`" in result
 
 
+class TestGreenCodeSpan:
+    def test_full_green_code_span_becomes_plain_code(self):
+        from convert import green_code_span_to_markup
+        assert green_code_span_to_markup("use `@@green|$ru@@` now") == "use `$ru` now"
+
+    def test_mixed_green_template_becomes_code_with_em(self):
+        from convert import green_code_span_to_markup
+        out = green_code_span_to_markup(
+            "`$(@@green|<context>@@name@@green|(subname)[index]{transformation}@@)`")
+        assert out == (
+            "<code>$(<em>&lt;context&gt;</em>name"
+            "<em>(subname)[index]{transformation}</em>)</code>")
+
+    def test_plain_code_untouched(self):
+        from convert import green_code_span_to_markup
+        assert green_code_span_to_markup("plain `$ru` code") == "plain `$ru` code"
+
+
 class TestColorSpans:
     def test_red_span(self):
         result = convert_inline("%red%some warning%%")
