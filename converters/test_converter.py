@@ -717,6 +717,11 @@ class TestInlineLabelAlert:
         out = self._conv("@@red|IMPORTANT@@: To learn what variables can be used.")
         assert out == "> [!IMPORTANT]\n> To learn what variables can be used."
 
+    def test_blue_note_label_converts(self):
+        # any color wrapper, not just red — the label word picks the alert type
+        out = self._conv("@@blue|NOTE@@: Aside this global approach, you can define an IP.")
+        assert out == "> [!NOTE]\n> Aside this global approach, you can define an IP."
+
     def test_plain_label_with_colon(self):
         out = self._conv("IMPORTANT: as this is triggered ONLY for SIP request.")
         assert out == "> [!IMPORTANT]\n> as this is triggered ONLY for SIP request."
