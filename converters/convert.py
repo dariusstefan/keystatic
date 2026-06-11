@@ -859,6 +859,41 @@ _LABEL_BULLET_BLOCK_RE = re.compile(
 )
 
 
+# A whole-line red span (optionally bold-wrapped) with no explicit label is an
+# advisory the converter left as colored prose. Promote it to an IMPORTANT alert.
+# If a bullet list immediately follows, fold it into the alert body so it isn't
+# orphaned outside the blockquote.
+_RED_PARAGRAPH_RE = re.compile(r"^\*{0,2}@@red\|(.+?)@@\*{0,2}$")
+
+
+def red_paragraph_to_alert(text: str) -> str:
+    lines = text.split("\n")
+    out: list[str] = []
+    i = 0
+    while i < len(lines):
+        m = _RED_PARAGRAPH_RE.match(lines[i].strip())
+        if not m:
+            out.append(lines[i])
+            i += 1
+            continue
+        body = m.group(1).strip()
+        j = i + 1
+        items: list[str] = []
+        while j < len(lines) and re.match(r"^\s*[*-]\s+", lines[j]):
+            items.append(lines[j].strip())
+            j += 1
+        if out and out[-1].strip():
+            out.append("")
+        out.append("> [!IMPORTANT]")
+        out.append(f"> {body}")
+        if items:
+            out.append(">")
+            out.extend(f"> {it}" for it in items)
+        out.append("")
+        i = j
+    return "\n".join(out)
+
+
 def label_bullet_block_to_alerts(text: str) -> str:
     def repl(m: re.Match) -> str:
         gh_type = m.group(1)
@@ -1438,6 +1473,7 @@ def post_process(text: str) -> str:
     )
     text = label_bullet_block_to_alerts(text)
     text = inline_label_to_alert(text)
+    text = red_paragraph_to_alert(text)
     text = normalize_heading_levels(text)
     text = mdx_safety_pass(text).strip()
     # Resolve anchors AFTER the MDX-safety pass so the heading-id '{#id}' suffix

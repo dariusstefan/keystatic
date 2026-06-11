@@ -745,6 +745,29 @@ class TestInlineLabelAlert:
         src = "@@red|NOTE@@: \n```c\nint x = 1;\nreturn x;\n```\n"
         assert label_bullet_block_to_alerts(src) == src
 
+    def test_red_paragraph_becomes_important_alert(self):
+        from convert import red_paragraph_to_alert
+        out = red_paragraph_to_alert(
+            "a\n\n@@red|It is R/W variable (you can assign values to it)@@\n\nb")
+        assert "> [!IMPORTANT]" in out
+        assert "> It is R/W variable (you can assign values to it)" in out
+        assert "@@red" not in out
+
+    def test_red_intro_folds_following_list_into_alert(self):
+        from convert import red_paragraph_to_alert
+        out = red_paragraph_to_alert(
+            "**@@red|Ignored data (not available anymore)@@**\n* all vars\n* something")
+        assert out.count("> [!IMPORTANT]") == 1
+        assert "> Ignored data (not available anymore)" in out
+        assert "> * all vars" in out and "> * something" in out  # list folded in
+        # blank quoted separator between intro and list
+        assert "\n>\n> * all vars" in out
+
+    def test_red_inline_in_heading_untouched(self):
+        from convert import red_paragraph_to_alert
+        src = "### listen @@red|(Replaced in OpenSIPS 3.1)@@ {#listen}"
+        assert red_paragraph_to_alert(src) == src
+
     def test_empty_body_label_bullet_block_becomes_per_bullet_alerts(self):
         from convert import label_bullet_block_to_alerts
         src = (
