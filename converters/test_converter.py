@@ -675,6 +675,26 @@ class TestModuleStatusBadge:
         out = self._item("* [**TM**](/docs/modules/devel/tm) - Transaction module , @@green|stable@@")
         assert out.endswith(" — 🟢 **stable**")
 
+    def test_no_comma_separator(self):
+        # status attached with only a space, no comma
+        out = self._item("* [**SQLOPS**](../modules/sqlops/README.md) - SQL DB operations module @@green|stable@@")
+        assert out.endswith(" — 🟢 **stable**")
+        assert "@@green" not in out
+
+    def test_trailing_dash_after_status(self):
+        out = self._item("* [**STUN**](../modules/stun/README.md) - Built-in STUN server , @@green|stable@@ - ")
+        assert out.endswith(" — 🟢 **stable**")
+        assert out.count("-") == 0 or "stable** -" not in out
+
+    def test_compound_alpha_new(self):
+        out = self._item("* [**CONFIG**](../modules/config/README.md) - DB backed runtime configuration, alpha / @@red|NEW@@")
+        assert out.endswith(" — 🔴 **alpha** / 🔵 **NEW**")
+        assert "@@red" not in out
+
+    def test_compound_alpha_new_no_comma(self):
+        out = self._item("* [**OPENTELEMETRY**](../modules/opentelemetry/README.md) - tracing the routes they produce alpha / @@red|NEW@@")
+        assert out.endswith(" — 🔴 **alpha** / 🔵 **NEW**")
+
     def test_non_module_bullet_beta_untouched(self):
         # "beta" in a non-module bullet must not become a badge
         out = self._item("* the next release is beta, beta")

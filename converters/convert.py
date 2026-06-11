@@ -193,25 +193,43 @@ SUPPORTED_COLORS = {"red", "green", "blue", "orange", "yellow"}
 
 # Module-listing maturity badges. On the Modules manual page each module bullet
 # ends with a maturity status; instead of colored text we render a colored-dot
-# emoji + bold label (simpler, plugin-free Markdown). Anchored to the trailing
-# status and gated on a module-doc link so prose is never touched.
+# emoji + bold label (simpler, plugin-free Markdown). The status sits at the end
+# of the bullet and may be: a green/red color marker or a bare word (stable,
+# beta, alpha, NEW), joined by " / " for compounds (e.g. "alpha / NEW"), with an
+# inconsistent leading separator (", " or just a space) and an occasional
+# trailing " - ". Gated on a module-doc link so prose is never touched.
 _MODULE_LINK_RE = re.compile(r"\((?:\.\./|/docs/)modules/")
-_MODULE_STATUS_BADGES = (
-    (re.compile(r"\s*,\s*@@green\|stable@@\s*$"), " — 🟢 **stable**"),
-    (re.compile(r"\s*,\s*@@red\|NEW@@\s*$"), " — 🔵 **NEW**"),
-    (re.compile(r"\s*,\s*beta\s*$"), " — 🟡 **beta**"),
+_STATUS_BADGE = {
+    "stable": "🟢 **stable**",
+    "beta": "🟡 **beta**",
+    "alpha": "🔴 **alpha**",
+    "new": "🔵 **NEW**",
+}
+_STATUS_TOKEN = r"(?:@@green\|stable@@|@@red\|NEW@@|stable|beta|alpha|NEW)"
+_STATUS_TAIL_RE = re.compile(
+    r"\s*,?\s*(" + _STATUS_TOKEN + r"(?:\s*/\s*" + _STATUS_TOKEN + r")*)\s*-?\s*$"
 )
+
+
+def _status_token_to_badge(token: str) -> str:
+    token = token.strip()
+    if token.startswith("@@green|"):
+        return _STATUS_BADGE["stable"]
+    if token.startswith("@@red|"):
+        return _STATUS_BADGE["new"]
+    return _STATUS_BADGE[token.lower()]
 
 
 def apply_module_status_badge(content: str) -> str:
     """Rewrite a module bullet's trailing maturity status to an emoji badge."""
     if not _MODULE_LINK_RE.search(content):
         return content
-    for pattern, replacement in _MODULE_STATUS_BADGES:
-        new = pattern.sub(replacement, content)
-        if new != content:
-            return new
-    return content
+    m = _STATUS_TAIL_RE.search(content)
+    if not m:
+        return content
+    tokens = re.split(r"\s*/\s*", m.group(1))
+    badges = " / ".join(_status_token_to_badge(t) for t in tokens)
+    return content[: m.start()] + " — " + badges
 
 
 def html_inline_to_md(text: str) -> str:
