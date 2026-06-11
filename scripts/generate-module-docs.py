@@ -24,18 +24,54 @@ import argparse
 import json
 import re
 import shutil
+import subprocess
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from functools import lru_cache
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+OPENSIPS_DIR = REPO_ROOT / "opensips"
 MODULES_DIR = REPO_ROOT / "opensips" / "modules"
 CONTENT_DIR = REPO_ROOT / "src" / "content" / "docs" / "docs" / "modules"
 
 FORK = "dariusstefan/opensips"
 GITHUB_RAW = f"https://raw.githubusercontent.com/{FORK}"
 GITHUB_API = f"https://api.github.com/repos/{FORK}"
+
+
+# raw.githubusercontent caches ~5 min, so just-pushed branches read stale/missing.
+# Prefer the local opensips/ checkout (always fresh) when the branch is present
+# there; fall back to the remote otherwise. Mirrors generate-manual-docs.py.
+@lru_cache(maxsize=None)
+def _branch_local(branch: str) -> bool:
+    r = subprocess.run(
+        ["git", "-C", str(OPENSIPS_DIR), "rev-parse", "--verify", "--quiet", f"{branch}^{{commit}}"],
+        capture_output=True, text=True,
+    )
+    return r.returncode == 0
+
+
+def _git_show(branch: str, path: str) -> str | None:
+    r = subprocess.run(
+        ["git", "-C", str(OPENSIPS_DIR), "show", f"{branch}:{path}"],
+        capture_output=True, text=True,
+    )
+    return r.stdout if r.returncode == 0 else None
+
+
+def _git_list_modules(branch: str) -> list[str]:
+    """Module dirs that hold a README.md, via one recursive ls-tree."""
+    r = subprocess.run(
+        ["git", "-C", str(OPENSIPS_DIR), "ls-tree", "-r", "--name-only", f"{branch}:modules"],
+        capture_output=True, text=True,
+    )
+    if r.returncode != 0:
+        return []
+    mods = [m.group(1) for m in
+            (re.match(r"^([^/]+)/README\.md$", ln) for ln in r.stdout.splitlines()) if m]
+    return sorted(mods)
 
 VERSIONS = [
     {"branch": "master", "slug": "devel",  "label": "master (dev)", "is_latest": True},
@@ -69,6 +105,8 @@ LATEST = next(v for v in VERSIONS if v.get("is_latest"))
 # ---------------------------------------------------------------------------
 
 def _list_modules_remote(branch: str) -> list[str]:
+    if _branch_local(branch):
+        return _git_list_modules(branch)
     url = f"{GITHUB_API}/git/trees/{branch}?recursive=0"
     try:
         with urllib.request.urlopen(url, timeout=30) as r:
@@ -85,6 +123,8 @@ def _list_modules_remote(branch: str) -> list[str]:
 
 
 def _fetch_readme(branch: str, module: str) -> str | None:
+    if _branch_local(branch):
+        return _git_show(branch, f"modules/{module}/README.md")
     url = f"{GITHUB_RAW}/{branch}/modules/{module}/README.md"
     try:
         with urllib.request.urlopen(url, timeout=30) as r:
@@ -116,6 +156,8 @@ _CFG_INCLUDE_RE = re.compile(r'\]\(\./samples/([^)"]+) "include"\)')
 
 
 def _fetch_raw(branch: str, relpath: str) -> str | None:
+    if _branch_local(branch):
+        return _git_show(branch, relpath)
     url = f"{GITHUB_RAW}/{branch}/{relpath}"
     try:
         with urllib.request.urlopen(url, timeout=30) as r:
