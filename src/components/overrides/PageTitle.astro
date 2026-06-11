@@ -190,56 +190,6 @@ if (isModulePage) {
 </script>
 
 
-<script>
-  // Some sidebar entries (Advanced Tutorials) are a single link whose sub-pages
-  // are sibling slugs (e.g. /docs/tutorials-*). Starlight only highlights/expands
-  // them on the entry's exact URL, so on a sub-page nothing lights up and the
-  // parent group stays collapsed. This handler marks the right entry current and
-  // opens its ancestor group(s). Path-derived so it stays correct across
-  // client-side navigations.
-  //
-  // (Version Migration is NOT handled here — it's a real submenu with explicit
-  // child slugs, so Starlight already highlights the active page. Adding it here
-  // would double-highlight the Overview link on every migration-* sub-page.)
-  function syncSidebarSections() {
-    const sidebar = document.querySelector('#starlight__sidebar');
-    if (!sidebar) return;
-    const path = window.location.pathname;
-    const findLink = (re) =>
-      [...sidebar.querySelectorAll('a')].find((a) => re.test(a.getAttribute('href') || ''));
-
-    const sections = [
-      {
-        active: /^\/docs\/tutorials(\/|-|$)/.test(path),
-        link: findLink(/^\/docs\/tutorials\/?$/),
-      },
-    ];
-
-    // Clear only the highlights we previously forced (leave Starlight's own).
-    sidebar.querySelectorAll('a[data-section-current]').forEach((a) => {
-      a.removeAttribute('aria-current');
-      a.removeAttribute('data-section-current');
-    });
-
-    for (const s of sections) {
-      if (!s.active || !s.link) continue;
-      s.onActive?.(s.link);
-      s.link.setAttribute('aria-current', 'page');
-      s.link.setAttribute('data-section-current', '');
-      // Expand the containing group(s), e.g. the "Documentation" <details>.
-      let el = s.link.closest('details');
-      while (el) {
-        el.open = true;
-        el = el.parentElement && el.parentElement.closest('details');
-      }
-      break;
-    }
-  }
-  syncSidebarSections();
-  document.addEventListener('astro:after-swap', syncSidebarSections);
-</script>
-
-
 <style>
   .version-row {
     display: flex;
