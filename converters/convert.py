@@ -191,6 +191,28 @@ ASIDE_PHRASES = re.compile(r'TO BECOME OBSOLETE|DEPRECATED|OBSOLETE')
 
 SUPPORTED_COLORS = {"red", "green", "blue", "orange", "yellow"}
 
+# Module-listing maturity badges. On the Modules manual page each module bullet
+# ends with a maturity status; instead of colored text we render a colored-dot
+# emoji + bold label (simpler, plugin-free Markdown). Anchored to the trailing
+# status and gated on a module-doc link so prose is never touched.
+_MODULE_LINK_RE = re.compile(r"\((?:\.\./|/docs/)modules/")
+_MODULE_STATUS_BADGES = (
+    (re.compile(r"\s*,\s*@@green\|stable@@\s*$"), " — 🟢 **stable**"),
+    (re.compile(r"\s*,\s*@@red\|NEW@@\s*$"), " — 🔵 **NEW**"),
+    (re.compile(r"\s*,\s*beta\s*$"), " — 🟡 **beta**"),
+)
+
+
+def apply_module_status_badge(content: str) -> str:
+    """Rewrite a module bullet's trailing maturity status to an emoji badge."""
+    if not _MODULE_LINK_RE.search(content):
+        return content
+    for pattern, replacement in _MODULE_STATUS_BADGES:
+        new = pattern.sub(replacement, content)
+        if new != content:
+            return new
+    return content
+
 
 def html_inline_to_md(text: str) -> str:
     """Convert inline HTML back to Markdown so we don't leak raw tags."""
@@ -869,6 +891,7 @@ def convert_list_item(line: str) -> str:
     line = line.lstrip()
     indent = "  " * (depth - 1)
     content = convert_inline(line)
+    content = apply_module_status_badge(content)
     # A list item whose content starts with '>' or '<' (e.g. the operator-reference
     # list "> - greater", "<= - less or equal") would be misread as a blockquote /
     # HTML tag inside the item — escape the leading operator char so it stays literal.

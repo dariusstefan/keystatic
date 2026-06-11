@@ -649,5 +649,38 @@ class TestListItems:
         assert "-5 dB threshold" in result
 
 
+class TestModuleStatusBadge:
+    """Module-listing maturity status → emoji badge (replaces colored text)."""
+
+    def _item(self, line):
+        from convert import convert_list_item
+        return convert_list_item(line)
+
+    def test_stable_green_marker_to_badge(self):
+        out = self._item(
+            "* [**DIALOG**](../modules/dialog/README.md) - Dialog support module , @@green|stable@@")
+        assert out.endswith(" — 🟢 **stable**")
+        assert "@@green" not in out
+
+    def test_new_red_marker_to_badge(self):
+        out = self._item("* [**X**](../modules/x/README.md) - Desc, @@red|NEW@@")
+        assert out.endswith(" — 🔵 **NEW**")
+        assert "@@red" not in out
+
+    def test_beta_plain_word_to_badge(self):
+        out = self._item("* [**HTTP2D**](../modules/http2d/README.md) - HTTP/2 Server, beta")
+        assert out.endswith(" — 🟡 **beta**")
+
+    def test_website_link_form_also_matches(self):
+        out = self._item("* [**TM**](/docs/modules/devel/tm) - Transaction module , @@green|stable@@")
+        assert out.endswith(" — 🟢 **stable**")
+
+    def test_non_module_bullet_beta_untouched(self):
+        # "beta" in a non-module bullet must not become a badge
+        out = self._item("* the next release is beta, beta")
+        assert "🟡" not in out
+        assert out.strip().endswith("beta, beta")
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
