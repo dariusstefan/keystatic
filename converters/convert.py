@@ -220,11 +220,23 @@ _STATUS_MARKER_BADGES = {
     "@@red|unmaintained@@": "⚫ **unmaintained**",
     "@@red|merged into core@@": "**merged into core**",
 }
+# In old-version Modules tables the maturity often sits as a PLAIN word in the last
+# cell (`| … | beta |`), uncolored. Badge it too, scoped to a module-table row's
+# trailing cell so a description that merely contains the word is never touched.
+_PLAIN_STATUS = {"stable", "beta", "alpha", "new", "unmaintained"}
+_TABLE_STATUS_RE = re.compile(
+    r"(?m)^(\|.*?(?:\.\./|/docs/)modules/.*\|[ \t]*)"
+    r"(stable|beta|alpha|NEW|unmaintained)"
+    r"([ \t]*\|[ \t]*)$"
+)
 
 
 def status_markers_to_badges(text: str) -> str:
     for marker, badge in _STATUS_MARKER_BADGES.items():
         text = text.replace(marker, badge)
+    text = _TABLE_STATUS_RE.sub(
+        lambda m: m.group(1) + _STATUS_BADGE[m.group(2).lower()] + m.group(3), text
+    )
     return text
 _STATUS_TOKEN = r"(?:@@green\|stable@@|@@red\|NEW@@|stable|beta|alpha|NEW)"
 _STATUS_TAIL_RE = re.compile(

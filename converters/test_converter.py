@@ -788,6 +788,14 @@ class TestInlineLabelAlert:
         assert "**merged into core**" in sb("| a | @@red|merged into core@@ |")
         assert "@@" not in sb("| a | @@green|stable@@ | @@red|NEW@@ |")
 
+    def test_plain_table_status_cell_badged(self):
+        from convert import status_markers_to_badges as sb
+        assert sb("| [**B**](/docs/modules/1-4/b) | x | beta |").endswith("🟡 **beta** |")
+        assert sb("| [**C**](/docs/modules/1-4/c) | x | alpha |").endswith("🔴 **alpha** |")
+        # description merely containing the word, and non-module tables, untouched
+        assert "🟡" not in sb("| [**X**](/docs/modules/1-4/x) | beta helper | stable |").rsplit("|", 2)[0]
+        assert sb("| Setting | Default | stable |") == "| Setting | Default | stable |"
+
     def test_mid_heading_annotation_lifted(self):
         from convert import heading_annotation_to_alert
         out = heading_annotation_to_alert(
