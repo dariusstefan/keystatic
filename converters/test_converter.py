@@ -796,6 +796,14 @@ class TestInlineLabelAlert:
         assert "🟡" not in sb("| [**X**](/docs/modules/1-4/x) | beta helper | stable |").rsplit("|", 2)[0]
         assert sb("| Setting | Default | stable |") == "| Setting | Default | stable |"
 
+    def test_compound_table_status_badged(self):
+        from convert import status_markers_to_badges as sb
+        out = sb("| [**X**](/docs/modules/1-10/x) | y | beta / @@red|NEW@@ |")
+        assert out.endswith("🟡 **beta** / 🔵 **NEW** |")
+        assert "@@" not in out
+        # bold-first-cell table whose last cell is NOT a status stays untouched
+        assert sb("| **H** | desc | free text |") == "| **H** | desc | free text |"
+
     def test_mid_heading_annotation_lifted(self):
         from convert import heading_annotation_to_alert
         out = heading_annotation_to_alert(

@@ -225,19 +225,24 @@ _STATUS_MARKER_BADGES = {
 # trailing cell so a description that merely contains the word is never touched.
 _PLAIN_STATUS = {"stable", "beta", "alpha", "new", "unmaintained"}
 # A module-table row: first cell is a bold module name (linked `[**NAME**](…)` or
-# plain `**NAME**` when that version has no page for it), last cell is the status.
-_TABLE_STATUS_RE = re.compile(
-    r"(?m)^(\|[ \t]*\[?\*\*.*\|[ \t]*)"
-    r"(stable|beta|alpha|NEW|unmaintained)"
-    r"([ \t]*\|[ \t]*)$"
-)
+# plain `**NAME**` when that version has no page for it); the last cell is the
+# status — possibly a "x / y" compound (e.g. "beta / NEW"), possibly with one part
+# already badged from the color-marker pass above.
+_TABLE_STATUS_RE = re.compile(r"(?m)^(\|[ \t]*\[?\*\*.*\|[ \t]*)([^|]*?)([ \t]*\|[ \t]*)$")
+
+
+def _badge_table_cell(cell: str) -> str:
+    parts = [p.strip() for p in cell.split("/")]
+    return " / ".join(
+        _STATUS_BADGE[p.lower()] if p.lower() in _PLAIN_STATUS else p for p in parts
+    )
 
 
 def status_markers_to_badges(text: str) -> str:
     for marker, badge in _STATUS_MARKER_BADGES.items():
         text = text.replace(marker, badge)
     text = _TABLE_STATUS_RE.sub(
-        lambda m: m.group(1) + _STATUS_BADGE[m.group(2).lower()] + m.group(3), text
+        lambda m: m.group(1) + _badge_table_cell(m.group(2)) + m.group(3), text
     )
     return text
 _STATUS_TOKEN = r"(?:@@green\|stable@@|@@red\|NEW@@|stable|beta|alpha|NEW)"
