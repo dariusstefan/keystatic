@@ -94,13 +94,14 @@ class TestGreenCodeSpan:
         from convert import green_code_span_to_markup
         assert green_code_span_to_markup("use `@@green|$ru@@` now") == "use `$ru` now"
 
-    def test_mixed_green_template_becomes_code_with_em(self):
+    def test_mixed_green_template_becomes_stitched_italic_code(self):
+        # optional (green) parts → italic code (*`x`*), fixed parts → code (`x`),
+        # stitched — Markdown-native, no raw HTML.
         from convert import green_code_span_to_markup
         out = green_code_span_to_markup(
             "`$(@@green|<context>@@name@@green|(subname)[index]{transformation}@@)`")
-        assert out == (
-            "<code>$(<em>&lt;context&gt;</em>name"
-            "<em>(subname)[index]{transformation}</em>)</code>")
+        assert out == "`$(`*`<context>`*`name`*`(subname)[index]{transformation}`*`)`"
+        assert "<code>" not in out and "<em>" not in out
 
     def test_plain_code_untouched(self):
         from convert import green_code_span_to_markup

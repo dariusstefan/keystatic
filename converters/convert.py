@@ -974,15 +974,12 @@ def heading_annotation_to_alert(text: str) -> str:
 
 
 # Remaining green spans all live inside inline code. A code span that is wholly
-# one green marker is just a colored example → plain code. A code span with green
+# one green marker is just a colored example → plain `code`. A code span with green
 # parts among plain text is the pseudo-variable syntax template, where green marked
-# the optional/placeholder parts → render those as italic (<em>) inside <code>, so
-# the optionality cue survives without color (works on github.com too).
+# the optional/placeholder parts → render those as italic code, so the optionality
+# cue survives without color. Use stitched Markdown spans (code + italic marks)
+# rather than raw HTML so the result stays editor/Markdown-native.
 _GREEN_CODE_SPAN_RE = re.compile(r"`([^`\n]*@@green\|[^`\n]*)`")
-
-
-def _html_escape(s: str) -> str:
-    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def green_code_span_to_markup(text: str) -> str:
@@ -991,14 +988,15 @@ def green_code_span_to_markup(text: str) -> str:
         full = re.fullmatch(r"@@green\|(.+?)@@", content)
         if full:
             return f"`{full.group(1)}`"
+        # split into [plain, green, plain, green, …]; green parts → italic code
+        # span (*`x`*), plain parts → code span (`x`), concatenated.
         parts = re.split(r"@@green\|(.+?)@@", content)
         out = []
         for idx, seg in enumerate(parts):
-            if idx % 2 == 1:
-                out.append(f"<em>{_html_escape(seg)}</em>")
-            elif seg:
-                out.append(_html_escape(seg))
-        return "<code>" + "".join(out) + "</code>"
+            if not seg:
+                continue
+            out.append(f"*`{seg}`*" if idx % 2 == 1 else f"`{seg}`")
+        return "".join(out)
 
     # The syntax-template prose referred to the (now removed) green coloring; the
     # optional fields are rendered in italics instead.
