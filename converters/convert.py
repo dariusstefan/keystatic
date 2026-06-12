@@ -224,8 +224,10 @@ _STATUS_MARKER_BADGES = {
 # cell (`| … | beta |`), uncolored. Badge it too, scoped to a module-table row's
 # trailing cell so a description that merely contains the word is never touched.
 _PLAIN_STATUS = {"stable", "beta", "alpha", "new", "unmaintained"}
+# A module-table row: first cell is a bold module name (linked `[**NAME**](…)` or
+# plain `**NAME**` when that version has no page for it), last cell is the status.
 _TABLE_STATUS_RE = re.compile(
-    r"(?m)^(\|.*?(?:\.\./|/docs/)modules/.*\|[ \t]*)"
+    r"(?m)^(\|[ \t]*\[?\*\*.*\|[ \t]*)"
     r"(stable|beta|alpha|NEW|unmaintained)"
     r"([ \t]*\|[ \t]*)$"
 )
