@@ -771,6 +771,31 @@ class TestInlineLabelAlert:
         assert "> It is R/W variable (you can assign values to it)" in out
         assert "@@red" not in out
 
+    def test_red_paragraph_with_trailing_prose(self):
+        # leading red span + uncolored continuation → one IMPORTANT alert, both kept
+        from convert import red_paragraph_to_alert
+        out = red_paragraph_to_alert(
+            "@@red|Keywords were removed in v2.4.@@ See the [migration](http://x) page.\n\nnext")
+        assert "> [!IMPORTANT]" in out
+        assert "> Keywords were removed in v2.4. See the [migration](http://x) page." in out
+        assert "@@red" not in out
+
+    def test_table_cell_status_markers_to_badges(self):
+        from convert import status_markers_to_badges as sb
+        assert sb("| [**ACC**](/docs/modules/1-4/acc) | x | @@green|stable@@ |").endswith("🟢 **stable** |")
+        assert "⚫ **unmaintained**" in sb("| a | @@red|unmaintained@@ |")
+        assert "🔴 **alpha**" in sb("| a | @@red|alpha@@ |")
+        assert "**merged into core**" in sb("| a | @@red|merged into core@@ |")
+        assert "@@" not in sb("| a | @@green|stable@@ | @@red|NEW@@ |")
+
+    def test_mid_heading_annotation_lifted(self):
+        from convert import heading_annotation_to_alert
+        out = heading_annotation_to_alert(
+            "### Address family @@red|(Obsoleted with OpenSIPS 3.2)@@ - $af {#af}")
+        assert out == (
+            "### Address family - $af {#af}\n\n"
+            "> [!WARNING]\n> Obsoleted with OpenSIPS 3.2\n")
+
     def test_red_intro_folds_following_list_into_alert(self):
         from convert import red_paragraph_to_alert
         out = red_paragraph_to_alert(

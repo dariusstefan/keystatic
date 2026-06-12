@@ -204,7 +204,28 @@ _STATUS_BADGE = {
     "beta": "🟡 **beta**",
     "alpha": "🔴 **alpha**",
     "new": "🔵 **NEW**",
+    "unmaintained": "⚫ **unmaintained**",
 }
+
+# Older versions render the Modules page as a TABLE, so the status sits in a cell
+# (`| … | @@green|stable@@ |`) rather than at the end of a bullet — the bullet-only
+# apply_module_status_badge misses it. These color-status markers are status-only
+# tokens, so map them to badges wherever they appear. "merged into core" is a note,
+# not a maturity level → plain bold.
+_STATUS_MARKER_BADGES = {
+    "@@green|stable@@": "🟢 **stable**",
+    "@@red|NEW@@": "🔵 **NEW**",
+    "@@red|alpha@@": "🔴 **alpha**",
+    "@@red|beta@@": "🟡 **beta**",
+    "@@red|unmaintained@@": "⚫ **unmaintained**",
+    "@@red|merged into core@@": "**merged into core**",
+}
+
+
+def status_markers_to_badges(text: str) -> str:
+    for marker, badge in _STATUS_MARKER_BADGES.items():
+        text = text.replace(marker, badge)
+    return text
 _STATUS_TOKEN = r"(?:@@green\|stable@@|@@red\|NEW@@|stable|beta|alpha|NEW)"
 _STATUS_TAIL_RE = re.compile(
     r"\s*,?\s*(" + _STATUS_TOKEN + r"(?:\s*/\s*" + _STATUS_TOKEN + r")*)\s*-?\s*$"
@@ -864,7 +885,9 @@ _LABEL_BULLET_BLOCK_RE = re.compile(
 # IMPORTANT, green → NOTE). If a bullet list immediately follows, fold it into the
 # alert body so it isn't orphaned outside the blockquote.
 def _color_paragraph_to_alert(text: str, color: str, gh_type: str) -> str:
-    line_re = re.compile(r"^\*{0,2}@@" + color + r"\|(.+?)@@\*{0,2}$")
+    # A paragraph that BEGINS with the color span; any trailing (uncolored) prose
+    # on the same line is part of the advisory and goes into the alert body too.
+    line_re = re.compile(r"^\*{0,2}@@" + color + r"\|(.+?)@@\*{0,2}(?P<rest>.*)$")
     lines = text.split("\n")
     out: list[str] = []
     i = 0
@@ -874,13 +897,16 @@ def _color_paragraph_to_alert(text: str, color: str, gh_type: str) -> str:
             out.append(lines[i])
             i += 1
             continue
-        body = m.group(1).strip()
         # A span whose body is itself fully bold (@@color|**text**@@) is a styled
         # caption, not an advisory paragraph — leave it for the caption handling.
-        if body.startswith("**"):
+        if m.group(1).strip().startswith("**"):
             out.append(lines[i])
             i += 1
             continue
+        body = re.sub(
+            r"@@(?:red|green|blue|orange|yellow)\|(.+?)@@", r"\1",
+            (m.group(1) + m.group("rest")),
+        ).strip()
         j = i + 1
         items: list[str] = []
         while j < len(lines) and re.match(r"^\s*[*-]\s+", lines[j]):
@@ -909,18 +935,21 @@ def green_paragraph_to_alert(text: str) -> str:
 # A heading carrying a red status annotation — "### listen @@red|(Replaced in
 # OpenSIPS 3.1)@@ {#listen}" — can't hold an alert, so lift the annotation into a
 # WARNING alert directly beneath the (now clean) heading.
+# The annotation may sit mid-heading, with content after it before the {#id}
+# anchor, e.g. "### Address family @@red|(Obsoleted …)@@ - $af {#af}".
 _HEADING_ANNOTATION_RE = re.compile(
-    r"^(#{2,6} .*?)[ \t]*@@red\|\((.+?)\)@@(?P<anchor>[ \t]*\{#[^}]+\})?[ \t]*$",
+    r"^(#{2,6} .*?)[ \t]*@@red\|\((.+?)\)@@(?P<rest>.*?)(?P<anchor>[ \t]*\{#[^}]+\})?[ \t]*$",
     re.MULTILINE,
 )
 
 
 def heading_annotation_to_alert(text: str) -> str:
     def repl(m: re.Match) -> str:
+        rest = m.group("rest").rstrip()
         anchor = m.group("anchor") or ""
         # trailing newline → a blank line after the alert so the following
         # paragraph isn't pulled in as a lazy blockquote continuation.
-        return f"{m.group(1)}{anchor}\n\n> [!WARNING]\n> {m.group(2).strip()}\n"
+        return f"{m.group(1)}{rest}{anchor}\n\n> [!WARNING]\n> {m.group(2).strip()}\n"
 
     return _HEADING_ANNOTATION_RE.sub(repl, text)
 
@@ -1548,6 +1577,7 @@ def post_process(text: str) -> str:
         text,
         flags=re.MULTILINE,
     )
+    text = status_markers_to_badges(text)
     text = label_bullet_block_to_alerts(text)
     text = inline_label_to_alert(text)
     text = red_paragraph_to_alert(text)
