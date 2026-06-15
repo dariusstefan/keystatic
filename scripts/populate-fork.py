@@ -12,6 +12,7 @@ Usage:
 """
 
 import argparse
+import json
 import shutil
 import subprocess
 import sys
@@ -21,6 +22,27 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 OPENSIPS_DIR = REPO_ROOT / "opensips"
 CONVERTER = REPO_ROOT / "converters" / "docbook_to_md.py"
 MODULES_DIR = OPENSIPS_DIR / "modules"
+
+# Aggregate anchor map (legacy id → generated id), keyed by "<slug>/<module>".
+# Built here from the converter's per-module sidecars and written to the site
+# repo; the sidecars themselves are NEVER pushed to the fork.
+ANCHOR_MAP: dict[str, dict] = {}
+ANCHOR_MAP_FILE = REPO_ROOT / "src" / "data" / "module-anchors.json"
+
+
+def _slug(branch: str) -> str:
+    return "devel" if branch == "master" else branch.replace(".", "-")
+
+
+def collect_anchors(branch: str) -> None:
+    slug = _slug(branch)
+    for sc in MODULES_DIR.glob("*/README.anchors.json"):
+        try:
+            data = json.loads(sc.read_text("utf-8"))
+        except Exception:
+            continue
+        if data:
+            ANCHOR_MAP[f"{slug}/{sc.parent.name}"] = data
 
 BRANCHES = ["master", "4.0", "3.6", "3.5", "3.4", "3.3", "3.2", "3.1", "3.0",
             "2.4", "2.3", "2.2", "2.1", "1.11", "1.10", "1.9", "1.8", "1.7",
@@ -61,6 +83,8 @@ def clear_readmes():
     for f in MODULES_DIR.glob("*/README.md"):
         f.unlink()
         removed += 1
+    for f in MODULES_DIR.glob("*/README.anchors.json"):
+        f.unlink()
     for f in MODULES_DIR.glob("*/samples.md"):
         f.unlink()
     for d in MODULES_DIR.glob("*/samples"):
@@ -106,6 +130,13 @@ def commit_and_push(branch: str, dry_run: bool):
         return
 
     rel_paths = [f"modules/{r.parent.name}/README.md" for r in readmes]
+    # Anchor sidecars are aggregated locally (collect_anchors) and NOT pushed.
+    # Untrack any that earlier runs committed so the fork stays clean, then drop
+    # the local copies so they're never staged.
+    subprocess.run("git ls-files -z 'modules/*/README.anchors.json' | xargs -0 -r git rm -q --cached",
+                   cwd=OPENSIPS_DIR, shell=True, capture_output=True)
+    for sc in MODULES_DIR.glob("*/README.anchors.json"):
+        sc.unlink()
     # Also stage generated config-sample overviews and their .cfg folders.
     rel_paths += [f"modules/{s.parent.name}/samples.md"
                   for s in sorted(MODULES_DIR.glob("*/samples.md"))]
@@ -155,7 +186,25 @@ def process_branch(branch: str, dry_run: bool):
     clear_readmes()
     checkout_branch(branch)
     generate_readmes()
+    collect_anchors(branch)  # read sidecars before commit_and_push drops them
     commit_and_push(branch, dry_run)
+
+
+def write_anchor_map() -> None:
+    """Merge this run's anchors into the committed site-repo map (so a single
+    --branch run keeps the other versions)."""
+    if not ANCHOR_MAP:
+        return
+    existing = {}
+    if ANCHOR_MAP_FILE.exists():
+        try:
+            existing = json.loads(ANCHOR_MAP_FILE.read_text("utf-8"))
+        except Exception:
+            existing = {}
+    existing.update(ANCHOR_MAP)
+    ANCHOR_MAP_FILE.parent.mkdir(parents=True, exist_ok=True)
+    ANCHOR_MAP_FILE.write_text(json.dumps(existing, indent=0, sort_keys=True), "utf-8")
+    print(f"  → anchor map: {len(ANCHOR_MAP)} pages this run, {len(existing)} total")
 
 
 def main():
@@ -183,6 +232,9 @@ def main():
     finally:
         print(f"\nRestoring branch {original_branch}...")
         subprocess.run(["git", "checkout", original_branch], cwd=OPENSIPS_DIR, capture_output=True)
+
+    if not args.dry_run:
+        write_anchor_map()
 
     print("\nDone.")
 

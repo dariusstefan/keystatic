@@ -182,6 +182,7 @@ def _list_docs_local(branch: str) -> list[str]:
     )
 
 
+
 def generate_devel_local(verbose: bool) -> tuple[int, int]:
     slug = LATEST["slug"]
     out_dir = CONTENT_DIR / slug

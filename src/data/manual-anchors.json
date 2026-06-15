@@ -1,0 +1,509 @@
+{
+"1-10/install-download": {
+"git": "git-download",
+"osipmi": "packages",
+"osippub": "release-files-from-web-site",
+"osipsf": "tarballs-from-sourceforge"
+},
+"1-10/script-coreparameters": {
+"keywords": "core_keywords",
+"parameters": "core_parameters",
+"values": "core_values"
+},
+"1-10/script-corevar": {
+"varavps": "avp_variables",
+"varesc": "escape_sequences",
+"varpv": "pseudo_variables",
+"varscript": "script_variables"
+},
+"1-11/install-download": {
+"git": "git-download",
+"osippub": "release-files-from-web-site",
+"osipsf": "tarballs-from-sourceforge"
+},
+"1-11/script-coreparameters": {
+"keywords": "core_keywords",
+"parameters": "core_parameters",
+"values": "core_values"
+},
+"1-11/script-corevar": {
+"varavps": "avp_variables",
+"varesc": "escape_sequences",
+"varpv": "pseudo_variables",
+"varscript": "script_variables"
+},
+"1-4/install-download": {
+"git": "git-download",
+"osipmi": "packages",
+"osippub": "release-files-from-web-site",
+"osipsf": "tarballs-from-sourceforge",
+"svn": "svn-download"
+},
+"1-4/script-coreparameters": {
+"keywords": "core_keywords",
+"parameters": "core_parameters",
+"values": "core_values"
+},
+"1-4/script-corevar": {
+"varavps": "avp_variables",
+"varesc": "escape_sequences",
+"varpv": "pseudo_variables",
+"varscript": "script_variables"
+},
+"1-5/install-download": {
+"git": "git-download",
+"osipmi": "packages",
+"osippub": "release-files-from-web-site",
+"osipsf": "tarballs-from-sourceforge",
+"svn": "svn-download"
+},
+"1-5/script-coreparameters": {
+"keywords": "core_keywords",
+"parameters": "core_parameters",
+"values": "core_values"
+},
+"1-5/script-corevar": {
+"varavps": "avp_variables",
+"varesc": "escape_sequences",
+"varpv": "pseudo_variables",
+"varscript": "script_variables"
+},
+"1-6/install-download": {
+"git": "git-download",
+"osipmi": "packages",
+"osippub": "release-files-from-web-site",
+"osipsf": "tarballs-from-sourceforge",
+"svn": "svn-download"
+},
+"1-6/script-coreparameters": {
+"keywords": "core_keywords",
+"parameters": "core_parameters",
+"values": "core_values"
+},
+"1-6/script-corevar": {
+"varavps": "avp_variables",
+"varesc": "escape_sequences",
+"varpv": "pseudo_variables",
+"varscript": "script_variables"
+},
+"1-7/install-download": {
+"git": "git-download",
+"osipmi": "packages",
+"osippub": "release-files-from-web-site",
+"osipsf": "tarballs-from-sourceforge",
+"svn": "svn-download"
+},
+"1-7/script-coreparameters": {
+"keywords": "core_keywords",
+"parameters": "core_parameters",
+"values": "core_values"
+},
+"1-7/script-corevar": {
+"varavps": "avp_variables",
+"varesc": "escape_sequences",
+"varpv": "pseudo_variables",
+"varscript": "script_variables"
+},
+"1-8/install-download": {
+"git": "git-download",
+"osipmi": "packages",
+"osippub": "release-files-from-web-site",
+"osipsf": "tarballs-from-sourceforge",
+"svn": "svn-download"
+},
+"1-8/script-coreparameters": {
+"keywords": "core_keywords",
+"parameters": "core_parameters",
+"values": "core_values"
+},
+"1-8/script-corevar": {
+"varavps": "avp_variables",
+"varesc": "escape_sequences",
+"varpv": "pseudo_variables",
+"varscript": "script_variables"
+},
+"1-9/install-download": {
+"git": "git-download",
+"osipmi": "packages",
+"osippub": "release-files-from-web-site",
+"osipsf": "tarballs-from-sourceforge",
+"svn": "svn-download"
+},
+"1-9/script-coreparameters": {
+"keywords": "core_keywords",
+"parameters": "core_parameters",
+"values": "core_values"
+},
+"1-9/script-corevar": {
+"varavps": "avp_variables",
+"varesc": "escape_sequences",
+"varpv": "pseudo_variables",
+"varscript": "script_variables"
+},
+"2-1/install-download": {
+"git": "git-download",
+"osippub": "release-files-from-web-site",
+"osipsf": "tarballs-from-sourceforge"
+},
+"2-1/script-coreparameters": {
+"keywords": "core_keywords",
+"parameters": "core_parameters",
+"values": "core_values"
+},
+"2-1/script-corevar": {
+"varavps": "avp_variables",
+"varesc": "escape_sequences",
+"varpv": "pseudo_variables",
+"varscript": "script_variables"
+},
+"2-2/install-download": {
+"git": "git-download",
+"osippub": "release-files-from-web-site",
+"osipsf": "tarballs-from-sourceforge"
+},
+"2-2/script-coreparameters": {
+"gid": "group_gid",
+"keywords": "core_keywords",
+"memdump": "memdump_mem_dump",
+"memlog": "memlog_mem_log",
+"msglen": "msg_len",
+"parameters": "core_parameters",
+"values": "core_values"
+},
+"2-2/script-corevar": {
+"log_level": "opensips_log_level",
+"varavps": "avp_variables",
+"varesc": "escape_sequences",
+"varpv": "pseudo_variables",
+"varscript": "script_variables"
+},
+"2-3/install-download": {
+"git": "git-download",
+"osippub": "release-files-from-web-site",
+"osipsf": "tarballs-from-sourceforge"
+},
+"2-3/script-coreparameters": {
+"gid": "group_gid",
+"keywords": "core_keywords",
+"memdump": "memdump_mem_dump",
+"memlog": "memlog_mem_log",
+"msglen": "msg_len",
+"parameters": "core_parameters",
+"values": "core_values"
+},
+"2-3/script-corevar": {
+"log_level": "opensips_log_level",
+"varavps": "avp_variables",
+"varesc": "escape_sequences",
+"varpv": "pseudo_variables",
+"varscript": "script_variables"
+},
+"2-4/install-download": {
+"git": "git-download",
+"osipmi": "packages-download---preferred-method",
+"osippub": "release-files-from-web-site",
+"osipsf": "tarballs-from-sourceforge"
+},
+"2-4/script-coreparameters": {
+"memdump": "memdump_mem_dump",
+"memlog": "memlog_mem_log"
+},
+"2-4/script-corevar": {
+"log_level": "opensips_log_level",
+"varavps": "avp_variables",
+"varesc": "escape_sequences",
+"varpv": "pseudo_variables",
+"varscript": "script_variables"
+},
+"3-0/install-download": {
+"git": "git-download",
+"packages": "packages-download---preferred-method"
+},
+"3-0/script-coreparameters": {
+"memdump": "memdump_mem_dump",
+"memlog": "memlog_mem_log"
+},
+"3-0/script-corevar": {
+"log_level": "opensips_log_level",
+"varavps": "avp_variables",
+"varesc": "escape_sequences",
+"varpv": "pseudo_variables",
+"varscript": "script_variables"
+},
+"3-1/install-download": {
+"git": "git-download",
+"packages": "packages-download---preferred-method"
+},
+"3-1/script-coreparameters": {
+"memdump": "memdump_mem_dump",
+"memlog": "memlog_mem_log"
+},
+"3-1/script-corevar": {
+"proto": "protocol_of_received_message",
+"varavps": "avp_variables",
+"varesc": "escape_sequences",
+"varpv": "scripting_variables",
+"varscript": "script_variables",
+"xlog_level": "log_level_for_xlog"
+},
+"3-1/script-statements": {
+"for_each": "for-each"
+},
+"3-2/install-download": {
+"git": "git-download",
+"packages": "packages-download---preferred-method"
+},
+"3-2/script-async": {
+"async": "serial-asynchronous-operations",
+"launch": "parallel-asynchronous-operations"
+},
+"3-2/script-coreparameters": {
+"memdump": "memdump_mem_dump",
+"memlog": "memlog_mem_log"
+},
+"3-2/script-corevar": {
+"cfg_line": "current_script_line_and_file",
+"proto": "protocol_of_received_message",
+"varavps": "avp_variables",
+"varesc": "escape_sequences",
+"varpv": "scripting_variables",
+"varscript": "script_variables",
+"xlog_level": "log_level_for_xlog"
+},
+"3-2/script-statements": {
+"for_each": "for-each"
+},
+"3-3/install-download": {
+"git": "git-download",
+"packages": "packages-download---preferred-method"
+},
+"3-3/interface-statusreport": {
+"core_identifiers": "core-identifiers",
+"mi": "mi-functions",
+"module_identifiers": "modules-identifiers",
+"scripting": "scripting-functions",
+"scripting_identifiers": "scripting-identifiers"
+},
+"3-3/script-async": {
+"async": "serial-asynchronous-operations-async",
+"launch": "parallel-asynchronous-operations-launch"
+},
+"3-3/script-coreparameters": {
+"memdump": "memdump_mem_dump",
+"memlog": "memlog_mem_log"
+},
+"3-3/script-corevar": {
+"varavps": "avp_variables",
+"varesc": "escape_sequences",
+"varpv": "scripting_variables",
+"varscript": "script_variables"
+},
+"3-3/script-statements": {
+"for_each": "for-each"
+},
+"3-4/install-download": {
+"git": "git-download",
+"packages": "packages-download---preferred-method"
+},
+"3-4/interface-statusreport": {
+"core_identifiers": "core-identifiers",
+"mi": "mi-functions",
+"module_identifiers": "modules-identifiers",
+"scripting": "scripting-functions",
+"scripting_identifiers": "scripting-identifiers"
+},
+"3-4/script-async": {
+"async": "serial-asynchronous-operations-async",
+"async_functions": "list-of-async-functions",
+"async_limitations": "limitations",
+"async_routes": "allowed-routes",
+"launch": "parallel-asynchronous-operations-launch"
+},
+"3-4/script-coreparameters": {
+"memdump": "memdump_mem_dump",
+"memlog": "memlog_mem_log"
+},
+"3-4/script-corevar": {
+"varavps": "avp_variables",
+"varesc": "escape_sequences",
+"varpv": "scripting_variables",
+"varscript": "script_variables"
+},
+"3-4/script-statements": {
+"for_each": "for-each"
+},
+"3-5/install-download": {
+"git": "git-download",
+"packages": "packages-download---preferred-method"
+},
+"3-5/interface-statusreport": {
+"core_identifiers": "core-identifiers",
+"mi": "mi-functions",
+"module_identifiers": "modules-identifiers",
+"scripting": "scripting-functions",
+"scripting_identifiers": "scripting-identifiers"
+},
+"3-5/script-async": {
+"async": "serial-asynchronous-operations-async",
+"async_functions": "list-of-async-functions",
+"async_limitations": "limitations",
+"async_routes": "allowed-routes",
+"launch": "parallel-asynchronous-operations-launch"
+},
+"3-5/script-coreparameters": {
+"memdump": "memdump_mem_dump",
+"memlog": "memlog_mem_log"
+},
+"3-5/script-corevar": {
+"varavps": "avp_variables",
+"varesc": "escape_sequences",
+"varpv": "scripting_variables",
+"varscript": "script_variables"
+},
+"3-5/script-statements": {
+"for_each": "for-each"
+},
+"3-6/install-download": {
+"git": "git-download",
+"packages": "packages-download---preferred-method"
+},
+"3-6/interface-statusreport": {
+"core_identifiers": "core-identifiers",
+"mi": "mi-functions",
+"module_identifiers": "modules-identifiers",
+"scripting": "scripting-functions",
+"scripting_identifiers": "scripting-identifiers"
+},
+"3-6/script-async": {
+"async": "serial-asynchronous-operations-async",
+"async_functions": "list-of-async-functions",
+"async_limitations": "limitations",
+"async_routes": "allowed-routes",
+"launch": "parallel-asynchronous-operations-launch"
+},
+"3-6/script-coreparameters": {
+"memdump": "memdump_mem_dump",
+"memlog": "memlog_mem_log"
+},
+"3-6/script-corevar": {
+"varavps": "avp_variables",
+"varesc": "escape_sequences",
+"varpv": "scripting_variables",
+"varscript": "script_variables"
+},
+"3-6/script-statements": {
+"for_each": "for-each"
+},
+"4-0/install-download": {
+"git": "git-download",
+"packages": "packages-download---preferred-method"
+},
+"4-0/interface-coreevents": {
+"E_PROFILING_SCRIPT": "script_profiling_event"
+},
+"4-0/interface-coremi": {
+"add_rule": "blacklists_add_rule",
+"check": "blacklists_check",
+"check_all": "blacklists_check_all",
+"del_rule": "blacklists_del_rule",
+"fetch": "cache_fetch",
+"get": "status_report_get",
+"identifiers": "status_report_identifiers",
+"list": "blacklists_list",
+"pkg_dump": "mem_pkg_dump",
+"raise": "evi_raise",
+"remove": "cache_remove",
+"reports": "status_report_reports",
+"reset": "statistics_reset",
+"reset_all": "statistics_reset_all",
+"shm_check": "mem_shm_check",
+"shm_dump": "mem_shm_dump",
+"status": "status_report_status",
+"store": "cache_store",
+"subscribe": "evi_subscribe",
+"subscribers": "evi_subscribers"
+},
+"4-0/interface-statusreport": {
+"core_identifiers": "core-identifiers",
+"mi": "mi-functions",
+"module_identifiers": "modules-identifiers",
+"scripting": "scripting-functions",
+"scripting_identifiers": "scripting-identifiers"
+},
+"4-0/script-async": {
+"async": "serial-asynchronous-operations-async",
+"async_functions": "list-of-async-functions",
+"async_limitations": "limitations",
+"async_routes": "allowed-routes",
+"launch": "parallel-asynchronous-operations-launch"
+},
+"4-0/script-coreparameters": {
+"memdump": "memdump_mem_dump",
+"memlog": "memlog_mem_log"
+},
+"4-0/script-corevar": {
+"varavps": "avp_variables",
+"varesc": "escape_sequences",
+"varpv": "scripting_variables",
+"varscript": "script_variables"
+},
+"4-0/script-statements": {
+"for_each": "for-each"
+},
+"devel/install-download": {
+"git": "git-download",
+"packages": "packages-download---preferred-method"
+},
+"devel/interface-coreevents": {
+"E_PROFILING_SCRIPT": "script_profiling_event"
+},
+"devel/interface-coremi": {
+"add_rule": "blacklists_add_rule",
+"check": "blacklists_check",
+"check_all": "blacklists_check_all",
+"del_rule": "blacklists_del_rule",
+"fetch": "cache_fetch",
+"get": "status_report_get",
+"identifiers": "status_report_identifiers",
+"list": "blacklists_list",
+"pkg_dump": "mem_pkg_dump",
+"raise": "evi_raise",
+"remove": "cache_remove",
+"reports": "status_report_reports",
+"reset": "statistics_reset",
+"reset_all": "statistics_reset_all",
+"shm_check": "mem_shm_check",
+"shm_dump": "mem_shm_dump",
+"status": "status_report_status",
+"store": "cache_store",
+"subscribe": "evi_subscribe",
+"subscribers": "evi_subscribers"
+},
+"devel/interface-statusreport": {
+"core_identifiers": "core-identifiers",
+"mi": "mi-functions",
+"module_identifiers": "modules-identifiers",
+"scripting": "scripting-functions",
+"scripting_identifiers": "scripting-identifiers"
+},
+"devel/script-async": {
+"async": "serial-asynchronous-operations-async",
+"async_functions": "list-of-async-functions",
+"async_limitations": "limitations",
+"async_routes": "allowed-routes",
+"launch": "parallel-asynchronous-operations-launch"
+},
+"devel/script-coreparameters": {
+"memdump": "memdump_mem_dump",
+"memlog": "memlog_mem_log"
+},
+"devel/script-corevar": {
+"varavps": "avp_variables",
+"varesc": "escape_sequences",
+"varpv": "scripting_variables",
+"varscript": "script_variables"
+},
+"devel/script-statements": {
+"for_each": "for-each"
+}
+}

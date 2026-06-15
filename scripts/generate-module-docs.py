@@ -137,7 +137,6 @@ def _fetch_readme(branch: str, module: str) -> str | None:
         print(f"  [WARN] {url}: {exc}")
         return None
 
-
 # ---------------------------------------------------------------------------
 # Config-sample propagation
 #

@@ -17,6 +17,7 @@ Usage:
 """
 
 import argparse
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -26,6 +27,41 @@ OPENSIPS_DIR = REPO_ROOT / "opensips"
 CONVERTER = REPO_ROOT / "converters" / "convert.py"
 WIKI_DIR = REPO_ROOT / "wiki"
 DOCS_DIR = OPENSIPS_DIR / "docs"
+
+# Aggregate anchor map (legacy id → generated id), keyed by "<slug>/<page>".
+# Built from the converter's per-page sidecars; the sidecars are NEVER pushed.
+ANCHOR_MAP: dict[str, dict] = {}
+ANCHOR_MAP_FILE = REPO_ROOT / "src" / "data" / "manual-anchors.json"
+
+
+def _slug(branch: str) -> str:
+    return "devel" if branch == "master" else branch.replace(".", "-")
+
+
+def collect_anchors(branch: str) -> None:
+    slug = _slug(branch)
+    for sc in DOCS_DIR.glob("*.anchors.json"):
+        try:
+            data = json.loads(sc.read_text("utf-8"))
+        except Exception:
+            continue
+        if data:
+            ANCHOR_MAP[f"{slug}/{sc.name[:-len('.anchors.json')].lower()}"] = data
+
+
+def write_anchor_map() -> None:
+    if not ANCHOR_MAP:
+        return
+    existing = {}
+    if ANCHOR_MAP_FILE.exists():
+        try:
+            existing = json.loads(ANCHOR_MAP_FILE.read_text("utf-8"))
+        except Exception:
+            existing = {}
+    existing.update(ANCHOR_MAP)
+    ANCHOR_MAP_FILE.parent.mkdir(parents=True, exist_ok=True)
+    ANCHOR_MAP_FILE.write_text(json.dumps(existing, indent=0, sort_keys=True), "utf-8")
+    print(f"  → anchor map: {len(ANCHOR_MAP)} pages this run, {len(existing)} total")
 
 # Branch -> manual version in the wiki dump. 'master' tracks the latest (devel)
 # manual; release branches map to their matching version.
@@ -90,6 +126,8 @@ def clear_docs():
     for f in DOCS_DIR.glob("*.md"):
         f.unlink()
         removed += 1
+    for f in DOCS_DIR.glob("*.anchors.json"):
+        f.unlink()
     if removed:
         print(f"  Cleared {removed} existing docs/*.md files")
 
@@ -128,6 +166,12 @@ def commit_and_push(branch: str, dry_run: bool):
         print("  [WARN] No docs/*.md files to commit")
         return
     rel_paths = [f"docs/{d.name}" for d in docs]
+    # Anchor sidecars are aggregated locally (collect_anchors) and NOT pushed.
+    # Untrack any that earlier runs committed, then drop the local copies.
+    subprocess.run("git ls-files -z 'docs/*.anchors.json' | xargs -0 -r git rm -q --cached",
+                   cwd=OPENSIPS_DIR, shell=True, capture_output=True)
+    for sc in DOCS_DIR.glob("*.anchors.json"):
+        sc.unlink()
 
     if dry_run:
         print(f"  [DRY RUN] Would git add {len(rel_paths)} files, commit, and push to {REMOTE}/{branch}")
@@ -164,6 +208,7 @@ def process_branch(branch: str, dry_run: bool):
     checkout_branch(branch)
     DOCS_DIR.mkdir(parents=True, exist_ok=True)
     generate_docs(version, devel=(branch == "master"))
+    collect_anchors(branch)  # read sidecars before commit_and_push drops them
     commit_and_push(branch, dry_run)
 
 
@@ -195,6 +240,9 @@ def main():
     finally:
         print(f"\nRestoring branch {original_branch}...")
         subprocess.run(["git", "checkout", original_branch], cwd=OPENSIPS_DIR, capture_output=True)
+
+    if not args.dry_run:
+        write_anchor_map()
 
     print("\nDone.")
 
