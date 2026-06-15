@@ -14,6 +14,8 @@ import remarkInclude from './src/utils/remarkInclude.mjs';
 import { manualSidebar } from './src/config/manual-sidebar.mjs';
 import { tutorialsSidebar } from './src/config/tutorials-sidebar.mjs';
 import remarkHeadingId from 'remark-heading-id';
+import remarkModuleAnchors from './src/utils/remarkModuleAnchors.mjs';
+import remarkManualAnchors from './src/utils/remarkManualAnchors.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -22,7 +24,7 @@ export default defineConfig({
   prefetch: false,
   adapter: node({ mode: 'standalone' }),
   markdown: {
-    remarkPlugins: [remarkInclude, remarkGithubAlerts, remarkHeadingId],
+    remarkPlugins: [remarkInclude, remarkGithubAlerts, remarkHeadingId, remarkModuleAnchors, remarkManualAnchors],
   },
   security: {
     checkOrigin: false,
@@ -115,7 +117,7 @@ export default defineConfig({
     }),
     // Must come AFTER starlight() so astro-expressive-code (registered by Starlight) wraps MDX code blocks correctly.
     mdx({
-      remarkPlugins: [remarkInclude, remarkGithubAlerts, remarkHeadingId],
+      remarkPlugins: [remarkInclude, remarkGithubAlerts, remarkHeadingId, remarkModuleAnchors, remarkManualAnchors],
     }),
   ],
   vite: {

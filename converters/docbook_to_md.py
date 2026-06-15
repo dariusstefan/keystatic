@@ -357,6 +357,140 @@ def _linkend_label(linkend: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Canonical section titles
+#
+# Upstream DocBook titles drift across modules and branches (case, typos,
+# synonyms). We fold the recurring structural headings to a single canonical
+# spelling so the same logical section reads identically everywhere — which in
+# turn lets anchors be derived from the title by rule. Keys are matched on the
+# whitespace-collapsed, lower-cased title.
+# ---------------------------------------------------------------------------
+
+def _title_key(s: str) -> str:
+    return re.sub(r"\s+", " ", s).strip().lower()
+
+
+# Guide level (H2). Folded regardless of context.
+_GUIDE_CANON = {
+    "admin guide": "Admin Guide",
+    "developer guide": "Developer Guide",
+    "developer's guide": "Developer Guide",
+    "frequently asked questions": "Frequently Asked Questions",
+}
+
+# Section level (H3+). These spellings are unambiguous — they only ever name the
+# corresponding Admin-Guide section — so they're folded regardless of guide.
+_SECTION_CANON = {
+    "exported parameters": "Exported Parameters",
+    "opensips exported parameters": "Exported Parameters",
+    "exported functions": "Exported Functions",
+    "exported asynchronous functions": "Exported Asynchronous Functions",
+    "exported asyncronous functions": "Exported Asynchronous Functions",
+    "exported async functions": "Exported Asynchronous Functions",
+    "exported mi functions": "Exported MI Functions",
+    "mi commands": "Exported MI Functions",
+    "exported events": "Exported Events",
+    "exported pseudo-variables": "Exported Pseudo-Variables",
+    "exported pseudo variables": "Exported Pseudo-Variables",
+    "exported statistics": "Exported Statistics",
+    "exported status/report identifiers": "Exported Status/Report Identifiers",
+    "known issues": "Known Issues",
+    "known limitations": "Known Limitations",
+}
+
+
+def _canonical_guide_title(title: str) -> str:
+    return _GUIDE_CANON.get(_title_key(title), title)
+
+
+def _canonical_section_title(title: str, guide: str | None) -> str:
+    # "Functions"/"Parameters" are bare synonyms only under the Admin Guide;
+    # under the Developer Guide they name the C/script API and must stay distinct.
+    if guide == "Admin Guide":
+        bare = {"functions": "Exported Functions", "parameters": "Exported Parameters"}
+        canon = bare.get(_title_key(title))
+        if canon:
+            return canon
+    return _SECTION_CANON.get(_title_key(title), title)
+
+
+# ---------------------------------------------------------------------------
+# Heading-anchor rule — Python mirror of src/utils/remarkModuleAnchors.mjs.
+#
+# The module README.md carries no {#id}; the remark plugin derives the heading
+# id at build time. The converter reproduces that derivation here ONLY to map
+# each heading's legacy DocBook id → the id the plugin will generate, so it can
+# rewrite same-page cross-reference links (which still carry the legacy id).
+# The two implementations must stay in lock-step — see test_module_anchor_rule.
+# ---------------------------------------------------------------------------
+
+_SECTION_PREFIX = {
+    "exported parameters": "param",
+    "exported functions": "func",
+    "exported asynchronous functions": "afunc",
+    "exported mi functions": "mi",
+    "exported events": "event",
+    "exported pseudo-variables": "pv",
+    "exported statistics": "stat",
+    "exported status/report identifiers": "sr",
+}
+
+
+def _anchor_sanitize(text: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9]+", "_", text).strip("_")
+
+
+def _anchor_slug(text: str) -> str:
+    return _anchor_sanitize(text).lower()
+
+
+def _anchor_item_name(text: str, prefix: str) -> str:
+    s = text.strip()
+    if prefix in ("func", "afunc", "param"):
+        s = s.split("(")[0]
+    elif prefix == "mi":
+        if ":" in s:
+            s = s[s.rfind(":") + 1:]
+        s = s.split("(")[0]
+    elif prefix == "pv":
+        s = re.sub(r"^\$\(?", "", s)
+        s = re.split(r"[([]", s)[0]
+    s = _anchor_sanitize(s)
+    return s.lower() if prefix == "event" else s
+
+
+# Developer-Guide function sections: their items get a dev_ prefix.
+_DEV_FUNCTION_SECTIONS = {"available functions", "api functions", "functions"}
+
+
+def _is_developer_guide(guide: str | None) -> bool:
+    return bool(guide) and re.fullmatch(r"developer('s)? guide", guide.strip(), re.IGNORECASE) is not None
+
+
+def _anchor_compute_id(depth: int, text: str, section_title: str | None,
+                       guide_title: str | None) -> str | None:
+    """The bare (pre-dedup) id the plugin would assign to this heading."""
+    if not text:
+        return None
+    if depth >= 4 and section_title:
+        prefix = _SECTION_PREFIX.get(section_title.lower())
+        if prefix:
+            name = _anchor_item_name(text, prefix)
+            return f"{prefix}_{name}" if name else None
+        if _is_developer_guide(guide_title) and section_title.lower() in _DEV_FUNCTION_SECTIONS:
+            name = _anchor_item_name(text, "func")
+            return f"dev_{name}" if name else None
+    return _anchor_slug(text) or None
+
+
+# The plugin extracts plain heading text (links/emphasis/backticks dropped); the
+# converter's title may still hold inline Markdown, so strip it the same way.
+def _anchor_heading_text(title_md: str) -> str:
+    t = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", title_md)
+    return t.replace("`", "").replace("*", "").strip()
+
+
+# ---------------------------------------------------------------------------
 # Block Markdown emitter
 # ---------------------------------------------------------------------------
 
@@ -366,6 +500,15 @@ class _Emitter:
         # .cfg samples encountered, in document order: {"file", "title"}.
         self.samples: list[dict] = []
         self._samples_included = False
+        # Canonical title of the most recent H2 guide (Admin/Developer/FAQ),
+        # used to disambiguate guide-scoped section titles.
+        self._guide: str | None = None
+        # Canonical title of the most recent H3 section (parent of leaf items).
+        self._section_title: str | None = None
+        # Replays the plugin's per-page id assignment so the converter can map
+        # each heading's legacy DocBook id → the id the plugin will generate.
+        self._used_ids: set[str] = set()
+        self.anchor_map: dict[str, str] = {}
 
     # -- public API ----------------------------------------------------------
 
@@ -433,6 +576,9 @@ class _Emitter:
             level = min(depth + 1, 6)
             txt = _inline(elem).strip()
             if txt:
+                # Keep the plugin's per-page id sequence in sync (a bridgehead is
+                # a heading too) so de-duplicated ids still line up.
+                self._assign_id(level, _anchor_heading_text(txt))
                 self._add(f'\n{"#" * level} {txt}\n')
         else:
             # Generic fallthrough: visit children
@@ -441,16 +587,48 @@ class _Emitter:
 
     # -- block handlers ------------------------------------------------------
 
+    def _assign_id(self, depth: int, heading_text: str) -> str | None:
+        """Mirror the plugin: bare rule id + within-page de-duplication."""
+        base = _anchor_compute_id(depth, heading_text, self._section_title, self._guide)
+        if not base:
+            return None
+        anchor = base
+        if anchor in self._used_ids:
+            n = 2
+            while f"{base}_{n}" in self._used_ids:
+                n += 1
+            anchor = f"{base}_{n}"
+        self._used_ids.add(anchor)
+        return anchor
+
     def _section(self, elem, depth: int) -> None:
-        section_id = elem.get("id", "")
+        legacy_id = elem.get("id", "")
         title_txt = self._get_title(elem)
         if title_txt:
             level = min(depth + 1, 6)
-            id_suffix = f" {{#{section_id}}}" if section_id else ""
+            # Canonicalize the recurring structural headings so the same logical
+            # section is spelled identically across modules and branches. The H2
+            # guide is tracked so guide-scoped synonyms resolve correctly.
+            if level == 2:
+                title_txt = _canonical_guide_title(title_txt)
+                self._guide = title_txt
+                self._section_title = None
+            else:
+                title_txt = _canonical_section_title(title_txt, self._guide)
+            # No explicit {#id}: heading anchors are generated at build time by
+            # the remarkModuleAnchors plugin from the (now-canonical) title and
+            # its section context, so the README.md stays anchor-free. We still
+            # compute the id the plugin will assign, to remap legacy same-page
+            # cross-reference links (which the converter rewrites post-emit).
+            anchor = self._assign_id(level, _anchor_heading_text(title_txt))
+            if level == 3:
+                self._section_title = title_txt
+            if legacy_id and anchor:
+                self.anchor_map[legacy_id] = anchor
             # Normalize whitespace on the assembled line so the heading is always
             # single-line and single-spaced, regardless of nested-element quirks in
             # the DocBook <title> (e.g. a <function> child re-introducing spaces).
-            heading = re.sub(r"\s+", " ", f'{"#" * level} {title_txt}{id_suffix}').strip()
+            heading = re.sub(r"\s+", " ", f'{"#" * level} {title_txt}').strip()
             self._add(f'\n{heading}\n')
         for child in elem:
             if (child.tag or "").lower() != "title":
@@ -775,6 +953,15 @@ def convert_module(module_dir: Path, global_entities: dict) -> str | None:
     emitter = _Emitter()
     body = emitter.emit(root)
 
+    # Same-page cross-reference links still carry the legacy DocBook id; remap
+    # them to the id the remarkModuleAnchors plugin will generate. Inline
+    # <anchor> spans keep their legacy id, so links to those stay untouched.
+    if emitter.anchor_map:
+        def _remap(m):
+            target = m.group(1)
+            return f'](#{emitter.anchor_map[target]})' if target in emitter.anchor_map else m.group(0)
+        body = re.sub(r'\]\(#([^)\s]+)\)', _remap, body)
+
     safe_title = module_title.replace('"', '\\"')
     safe_desc = description.replace('"', '\\"')
 
@@ -790,7 +977,10 @@ def convert_module(module_dir: Path, global_entities: dict) -> str | None:
     )
 
     content = fm + "\n" + body + "\n<!-- CONTRIBUTORS -->\n" + license_section
-    return content, emitter.samples
+    # Only the headings whose generated id differs from the legacy DocBook id
+    # need recording — cross-page links to those would otherwise dangle.
+    changed = {k: v for k, v in emitter.anchor_map.items() if k != v}
+    return content, emitter.samples, changed
 
 
 def _write_samples(module_dir: Path, samples: list[dict]) -> None:
@@ -849,10 +1039,18 @@ def main() -> None:
                 print("SKIPPED (no main XML)")
                 skipped += 1
                 continue
-            content, samples = result
+            content, samples, anchors = result
 
             out = module_dir / "README.md"
             out.write_text(content, encoding="utf-8")
+            # Sidecar map (legacy DocBook id → generated id) for the build-time
+            # pass that rewrites cross-page links pointing at this module.
+            anchors_out = module_dir / "README.anchors.json"
+            if anchors:
+                import json
+                anchors_out.write_text(json.dumps(anchors, indent=0, sort_keys=True), encoding="utf-8")
+            elif anchors_out.exists():
+                anchors_out.unlink()
             if samples:
                 _write_samples(module_dir, samples)
             print(f"OK → {out.relative_to(REPO_ROOT)}"

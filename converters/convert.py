@@ -1985,6 +1985,74 @@ def extract_title_link(decoded_text: str):
     return None, None
 
 
+# Manual pages where the upstream PmWiki source reused one anchor id on two
+# different headings, producing a duplicate (and thus invalid) {#id}. We rewrite
+# the wrongly-shared id on the *first* heading to a distinct one. Keyed by the
+# de-versioned page stem; each entry is (heading text, bad id, corrected id).
+# The rewrite only matches the buggy form, so versions already fixed upstream
+# (e.g. Script-CoreVar's "Escape Sequences" became {#varesc} in 3.3+) are left
+# untouched, keeping the result idempotent across all branches.
+_MANUAL_ANCHOR_FIXES: dict[str, list[tuple[str, str, str]]] = {
+    "script-corevar": [("Escape Sequences", "varavps", "varesc")],
+    "interface-statusreport": [
+        ("Events", "code_identifiers", "events"),
+        ("Core identifiers", "code_identifiers", "core_identifiers"),
+    ],
+}
+
+
+def _fix_manual_anchors(stem: str, body: str) -> str:
+    for heading, bad, good in _MANUAL_ANCHOR_FIXES.get(stem, ()):
+        body = re.sub(
+            rf'(?m)^(#{{2,6}}[ \t]+{re.escape(heading)})[ \t]*\{{#{re.escape(bad)}\}}[ \t]*$',
+            rf'\1 {{#{good}}}',
+            body,
+        )
+    return body
+
+
+_MANUAL_HEADING_RE = re.compile(r'^(#{2,6})\s+(.*?)(?:\s*\{#([^}]+)\})?\s*$')
+
+
+def _generate_manual_anchors(page: str, body: str) -> tuple[str, dict]:
+    """Drop explicit heading {#id} (remarkManualAnchors regenerates them at
+    build) and remap same-page links from each legacy id to the generated one.
+    Returns (body, {legacy_id: new_id}) for the changed ids."""
+    from manual_anchors import ManualAnchorer
+
+    an = ManualAnchorer(page)
+    lines = body.split('\n')
+    out: list[str] = []
+    amap: dict[str, str] = {}
+    in_fence = False
+    for i, line in enumerate(lines):
+        if re.match(r'^\s*```', line):
+            in_fence = not in_fence
+            out.append(line)
+            continue
+        if in_fence:
+            out.append(line)
+            continue
+        m = _MANUAL_HEADING_RE.match(line)
+        if not m:
+            out.append(line)
+            continue
+        hashes, text, legacy = m.group(1), m.group(2).rstrip(), m.group(3)
+        clean = re.sub(r'\[([^\]]*)\]\([^)]*\)', r'\1', text).replace('`', '').replace('*', '').strip()
+        new = an.assign(clean, '\n'.join(lines[i + 1:i + 8]))
+        if legacy and new and legacy != new:
+            amap[legacy] = new
+        out.append(f'{hashes} {text}' if text else line)
+    new_body = '\n'.join(out)
+    if amap:
+        new_body = re.sub(
+            r'\]\(#([^)\s]+)\)',
+            lambda mm: f'](#{amap[mm.group(1)]})' if mm.group(1) in amap else mm.group(0),
+            new_body,
+        )
+    return new_body, amap
+
+
 def convert_file(src: Path, dst: Path):
     meta = parse_pmwiki_file(src)
     raw_text = meta.get("text", "")
@@ -2021,8 +2089,17 @@ def convert_file(src: Path, dst: Path):
         fm.append(f'author: "{yaml_quote(author)}"')
     fm.append(f'description: "{yaml_quote(description)}"')
     fm.append("---")
+    body = _fix_manual_anchors(dst.stem.lower(), body)
+    body, anchor_map = _generate_manual_anchors(dst.stem.lower(), body)
     dst.parent.mkdir(parents=True, exist_ok=True)
     dst.write_text("\n".join(fm) + "\n\n" + body + "\n", encoding="utf-8")
+    # Sidecar map (legacy id → generated id) for the cross-page link resolver.
+    anchors_out = dst.parent / f"{dst.stem}.anchors.json"
+    if anchor_map:
+        import json
+        anchors_out.write_text(json.dumps(anchor_map, indent=0, sort_keys=True), encoding="utf-8")
+    elif anchors_out.exists():
+        anchors_out.unlink()
     print(f"  {src.name} → {dst}")
 
 

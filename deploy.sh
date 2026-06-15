@@ -13,7 +13,13 @@ set -a; source .env.local; set +a
 # Resolve legacy PmWiki #tocN anchors → real heading anchors (idempotent).
 python3 scripts/resolve-toc-anchors.py
 
-NODE_OPTIONS=--max-old-space-size=6144 ./node_modules/.bin/astro build
+# Remap cross-page links to module anchors whose id changed (idempotent).
+python3 scripts/resolve-module-links.py
+
+# Avoid stale prerender chunks from a previous failed/partial build.
+rm -rf dist
+
+NODE_OPTIONS=--max-old-space-size=8192 ./node_modules/.bin/astro build
 
 ./node_modules/.bin/pagefind --site dist/client
 

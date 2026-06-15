@@ -35,6 +35,22 @@ BRANCH = "master"
 GITHUB_RAW = f"https://raw.githubusercontent.com/{REPO}"
 GITHUB_API = f"https://api.github.com/repos/{REPO}"
 
+# Prefer a sibling checkout (../opensips-docs) when present: it's always fresh,
+# avoiding the ~5 min raw.githubusercontent CDN lag after a push (mirrors the
+# local-first behaviour of the module/manual generators).
+LOCAL_DOCS = REPO_ROOT.parent / "opensips-docs" / "docs"
+
+
+def _list_docs_local() -> list[str] | None:
+    if not LOCAL_DOCS.is_dir():
+        return None
+    return sorted(p.name for p in LOCAL_DOCS.glob("*.md"))
+
+
+def _fetch_doc_local(name: str) -> str | None:
+    p = LOCAL_DOCS / name
+    return p.read_text("utf-8", errors="replace") if p.is_file() else None
+
 
 def _list_docs_remote() -> list[str]:
     """Top-level docs/*.md page names on the repo's default branch."""
@@ -73,7 +89,8 @@ def main() -> None:
     args = ap.parse_args()
     verbose = not args.quiet
 
-    names = _list_docs_remote()
+    use_local = _list_docs_local()
+    names = use_local if use_local else _list_docs_remote()
     if not names:
         print("[ERROR] No flat docs found — aborting (leaving existing files in place).")
         raise SystemExit(1)
@@ -89,11 +106,13 @@ def main() -> None:
     if removed:
         print(f"Cleared {removed} existing flat docs/*.md files")
 
-    print(f"\n[flat docs] — from {REPO}/{BRANCH} on GitHub")
+    src = f"local {LOCAL_DOCS}" if use_local else f"{REPO}/{BRANCH} on GitHub"
+    print(f"\n[flat docs] — from {src}")
     ok = failed = 0
 
     def process(name: str) -> tuple[str, str | None]:
-        return name, _fetch_doc_remote(name)
+        text = _fetch_doc_local(name) if use_local else _fetch_doc_remote(name)
+        return name, text
 
     with ThreadPoolExecutor(max_workers=20) as pool:
         futures = {pool.submit(process, n): n for n in names}

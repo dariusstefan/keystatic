@@ -875,5 +875,70 @@ class TestInlineLabelAlert:
         assert "```" not in out
 
 
+class TestModuleAnchorRule:
+    """The converter's anchor rule must match src/utils/remarkModuleAnchors.mjs
+    exactly (it remaps legacy same-page links to the ids the plugin generates)."""
+
+    def test_section_and_prose_slugs(self):
+        from docbook_to_md import _anchor_compute_id as c
+        assert c(2, "Admin Guide", None, None) == "admin_guide"
+        assert c(3, "Exported Parameters", None, "Admin Guide") == "exported_parameters"
+        assert c(3, "How it works", None, "Admin Guide") == "how_it_works"
+        assert c(4, "OpenSIPS Modules", "Dependencies", "Admin Guide") == "opensips_modules"
+
+    def test_typed_item_prefixes(self):
+        from docbook_to_md import _anchor_compute_id as c
+        g = "Admin Guide"
+        assert c(4, "db_url (string)", "Exported Parameters", g) == "param_db_url"
+        assert c(4, "avp_print()", "Exported Functions", g) == "func_avp_print"
+        assert c(4, "db_text:dump", "Exported MI Functions", g) == "mi_dump"
+        assert c(4, "dialog:list", "Exported MI Functions", g) == "mi_list"
+        assert c(4, "$(acc_leg(tag)[i])", "Exported Pseudo-Variables", g) == "pv_acc_leg"
+        assert c(4, "E_DM_REQUEST", "Exported Events", g) == "event_e_dm_request"  # lower-cased
+        # case preserved for non-event symbol names
+        assert c(4, "rate_cacher:addClient", "Exported MI Functions", g) == "mi_addClient"
+
+    def test_developer_guide_functions(self):
+        from docbook_to_md import _anchor_compute_id as c
+        dev = "Developer Guide"
+        assert c(4, "bind_pua(api)", "Available Functions", dev) == "dev_bind_pua"
+        assert c(4, "send_publish", "API Functions", dev) == "dev_send_publish"
+        # the section heading itself stays a plain slug
+        assert c(3, "Available Functions", None, dev) == "available_functions"
+        # outside the Developer Guide, the same section is just a slug item
+        assert c(4, "bind_pua(api)", "Available Functions", "Admin Guide") == "bind_pua_api"
+
+
+class TestManualAnchorRule:
+    """The converter's manual rule must match src/utils/remarkManualAnchors.mjs."""
+
+    def test_item_rules(self):
+        from manual_anchors import ManualAnchorer
+        assert ManualAnchorer("script-coreparameters").assign("abort_on_assert") == "abort_on_assert"
+        assert ManualAnchorer("script-corefunctions").assign("avp_print()") == "avp_print"
+        assert ManualAnchorer("script-tran").assign("{s.substr,offset,length}") == "s.substr"
+        assert ManualAnchorer("script-tran").assign("{sdp.stream-delete}") == "sdp.stream-delete"
+        assert ManualAnchorer("script-corevar").assign("Auth realm - $ar") == "ar"
+        assert ManualAnchorer("interface-corestatistics").assign("load-all") == "load-all"
+        assert ManualAnchorer("script-routes").assign("branch_route") == "branch_route"
+
+    def test_coremi_both_parts(self):
+        from manual_anchors import ManualAnchorer
+        an = ManualAnchorer("interface-coremi")
+        assert an.assign("blacklists:list") == "blacklists_list"
+        assert an.assign("tcp:list") == "tcp_list"
+        assert an.assign("log_level [level] [pid]") == "log_level"
+
+    def test_coreevents_from_body(self):
+        from manual_anchors import ManualAnchorer
+        an = ManualAnchorer("interface-coreevents")
+        assert an.assign("Threshold limit exceeded", "\n**Event**: E_CORE_THRESHOLD\n") == "E_CORE_THRESHOLD"
+
+    def test_non_rule_page_github_slug(self):
+        from manual_anchors import ManualAnchorer
+        an = ManualAnchorer("install-download")
+        assert an.assign("GIT download") == "git-download"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
