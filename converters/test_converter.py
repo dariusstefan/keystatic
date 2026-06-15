@@ -937,7 +937,18 @@ class TestManualAnchorRule:
     def test_non_rule_page_github_slug(self):
         from manual_anchors import ManualAnchorer
         an = ManualAnchorer("install-download")
-        assert an.assign("GIT download") == "git-download"
+        assert an.assign("Out of range heading text here") == "out-of-range-heading-text-here"
+
+    def test_overrides(self):
+        from manual_anchors import ManualAnchorer
+        assert ManualAnchorer("script-coreparameters").assign("memdump | mem_dump") == "memdump"
+        assert ManualAnchorer("script-coreparameters").assign("memlog | mem_log") == "memlog"
+        assert ManualAnchorer("install-download").assign("GIT download") == "git"
+        assert ManualAnchorer("install-download").assign("Packages download - preferred method") == "packages"
+        an = ManualAnchorer("script-async")
+        assert an.assign("Serial asynchronous operations, async()") == "async"
+        assert an.assign("Parallel asynchronous operations, launch()") == "launch"
+        assert an.assign("Limitations") == "async_limitations"
 
 
 if __name__ == "__main__":

@@ -44,6 +44,26 @@ All commands are run from the root of the project, from a terminal:
 | `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
 | `npm run astro -- --help` | Get help using the Astro CLI                     |
 
+## CMS
+
+This project exposes two CMS admin UIs:
+
+- Keystatic is available through the existing Astro integration at `/keystatic/`.
+- Decap CMS is served as static Astro assets from `public/admin/`, so it is available at `/admin/`.
+
+The Decap configuration lives in `public/admin/config.yml` and targets the Starlight docs under `src/content/docs/docs`.
+
+For local Decap editing, run the Decap proxy from the repo root, then start Astro:
+
+```sh
+npx decap-server
+npm run dev
+```
+
+Then open `http://localhost:4321/admin/`.
+
+Production Decap GitHub login requires an OAuth provider. If the site is not using Netlify Identity/Git Gateway, configure a GitHub OAuth proxy and set `backend.base_url` in `public/admin/config.yml`.
+
 ## 👀 Want to learn more?
 
 Check out [Starlight’s docs](https://starlight.astro.build/), read [the Astro documentation](https://docs.astro.build), or jump into the [Astro Discord server](https://astro.build/chat).

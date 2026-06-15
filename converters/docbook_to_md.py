@@ -15,9 +15,19 @@ import sys
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
+import link_resolver
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MODULES_DIR = REPO_ROOT / "opensips" / "modules"
 ENTITIES_FILE = REPO_ROOT / "opensips" / "doc" / "entities.xml"
+_LINK_INDEX: dict | None = None
+
+
+def _link_index() -> dict:
+    global _LINK_INDEX
+    if _LINK_INDEX is None:
+        _LINK_INDEX = link_resolver.load_index(REPO_ROOT)
+    return _LINK_INDEX
 
 # Standard XML character entities — handled by the parser; never substituted
 # by our pre-processor so they aren't lost before ET.fromstring() runs.
@@ -509,6 +519,8 @@ class _Emitter:
         # each heading's legacy DocBook id → the id the plugin will generate.
         self._used_ids: set[str] = set()
         self.anchor_map: dict[str, str] = {}
+        # Generated ids in document order — element N is the target of #tocN.
+        self.heading_seq: list[str] = []
 
     # -- public API ----------------------------------------------------------
 
@@ -599,6 +611,7 @@ class _Emitter:
                 n += 1
             anchor = f"{base}_{n}"
         self._used_ids.add(anchor)
+        self.heading_seq.append(anchor)
         return anchor
 
     def _section(self, elem, depth: int) -> None:
@@ -953,14 +966,19 @@ def convert_module(module_dir: Path, global_entities: dict) -> str | None:
     emitter = _Emitter()
     body = emitter.emit(root)
 
-    # Same-page cross-reference links still carry the legacy DocBook id; remap
-    # them to the id the remarkModuleAnchors plugin will generate. Inline
-    # <anchor> spans keep their legacy id, so links to those stay untouched.
-    if emitter.anchor_map:
+    # Per-page reference→id map: legacy PmWiki #tocN (sequential heading number)
+    # AND legacy DocBook ids both resolve to the id remarkModuleAnchors generates.
+    resolve_map = {f"toc{i + 1}": hid for i, hid in enumerate(emitter.heading_seq)}
+    resolve_map.update(emitter.anchor_map)
+
+    # Resolve same-page cross-reference links inline; cross-page links (a module
+    # linking into the manual, route-form) are resolved from the static index.
+    if resolve_map:
         def _remap(m):
             target = m.group(1)
-            return f'](#{emitter.anchor_map[target]})' if target in emitter.anchor_map else m.group(0)
+            return f'](#{resolve_map[target]})' if target in resolve_map else m.group(0)
         body = re.sub(r'\]\(#([^)\s]+)\)', _remap, body)
+    body = link_resolver.resolve_fork(body, _link_index(), "", lambda _: None)
 
     safe_title = module_title.replace('"', '\\"')
     safe_desc = description.replace('"', '\\"')
@@ -977,8 +995,8 @@ def convert_module(module_dir: Path, global_entities: dict) -> str | None:
     )
 
     content = fm + "\n" + body + "\n<!-- CONTRIBUTORS -->\n" + license_section
-    # Only the headings whose generated id differs from the legacy DocBook id
-    # need recording — cross-page links to those would otherwise dangle.
+    # Cross-page index: only legacy ids that changed (cross-page #tocN to a module
+    # is effectively nonexistent, so #tocN is resolved same-page inline, not here).
     changed = {k: v for k, v in emitter.anchor_map.items() if k != v}
     return content, emitter.samples, changed
 

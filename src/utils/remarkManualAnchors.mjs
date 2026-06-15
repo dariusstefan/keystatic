@@ -69,6 +69,26 @@ const PAGE_RULES = {
   },
 };
 
+// Hand-curated per-page heading-text → forced id overrides, for headings whose
+// auto-generated id is undesirable (kept in lock-step with manual_anchors.py).
+const OVERRIDES = {
+  'script-coreparameters': {
+    'memdump | mem_dump': 'memdump',
+    'memlog | mem_log': 'memlog',
+  },
+  'install-download': {
+    'Packages download - preferred method': 'packages',
+    'GIT download': 'git',
+  },
+  'script-async': {
+    'Serial asynchronous operations, async()': 'async',
+    'Parallel asynchronous operations, launch()': 'launch',
+    'List of async functions': 'async_functions',
+    'Limitations': 'async_limitations',
+    'Allowed Routes': 'async_routes',
+  },
+};
+
 // Visible heading text from RAW source via position offsets — never walk child
 // nodes: Starlight's remark-directive turns "blacklists:list" into text
 // "blacklists" + a directive, which would corrupt the id.
@@ -95,7 +115,8 @@ export default function remarkManualAnchors() {
     const m = path.match(/\/docs\/manual\/[^/]+\/([^/]+)\.md$/);
     if (!m) return;
     const rule = PAGE_RULES[m[1]];
-    if (!rule) return; // prose / unhandled page → Astro's default slug
+    const overrides = OVERRIDES[m[1]];
+    if (!rule && !overrides) return; // prose / unhandled page → Astro's default slug
 
     const source = typeof file?.value === 'string' ? file.value : String(file?.value ?? '');
     const used = new Set();
@@ -109,7 +130,10 @@ export default function remarkManualAnchors() {
       }
       const text = headingText(node, source);
       if (!text) return;
-      let id = rule(text, { source, node });
+      // A forced override wins; otherwise the page rule (if any). On an
+      // override-only page, non-overridden headings fall through to Astro slugs.
+      let id = overrides && overrides[text];
+      if (!id) id = rule ? rule(text, { source, node }) : null;
       if (!id) return;
       if (used.has(id)) {
         let n = 2;

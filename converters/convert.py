@@ -16,6 +16,21 @@ import sys
 from pathlib import Path
 from urllib.parse import unquote
 
+import link_resolver
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_LINK_INDEX: dict | None = None
+# Version slug of the manual currently being converted (set by convert_manual).
+_CUR_SLUG: str | None = None
+
+
+def _link_index() -> dict:
+    """Static anchor index (built once, committed); loaded lazily, cached."""
+    global _LINK_INDEX
+    if _LINK_INDEX is None:
+        _LINK_INDEX = link_resolver.load_index(_REPO_ROOT)
+    return _LINK_INDEX
+
 # Module-level redirect map: populated by load_redirects(wiki_dir).
 # Maps PMwiki page names (e.g. "Resources.DocsTsStart") to their targets
 # (e.g. "Documentation.TroubleShooting-DoesNotStart").
@@ -2023,7 +2038,8 @@ def _generate_manual_anchors(page: str, body: str) -> tuple[str, dict]:
     an = ManualAnchorer(page)
     lines = body.split('\n')
     out: list[str] = []
-    amap: dict[str, str] = {}
+    amap: dict[str, str] = {}       # legacy id → new id (changed only)
+    heading_seq: list[str] = []     # generated ids in order; element N is #tocN
     in_fence = False
     for i, line in enumerate(lines):
         if re.match(r'^\s*```', line):
@@ -2040,17 +2056,25 @@ def _generate_manual_anchors(page: str, body: str) -> tuple[str, dict]:
         hashes, text, legacy = m.group(1), m.group(2).rstrip(), m.group(3)
         clean = re.sub(r'\[([^\]]*)\]\([^)]*\)', r'\1', text).replace('`', '').replace('*', '').strip()
         new = an.assign(clean, '\n'.join(lines[i + 1:i + 8]))
+        if new:
+            heading_seq.append(new)
         if legacy and new and legacy != new:
             amap[legacy] = new
         out.append(f'{hashes} {text}' if text else line)
     new_body = '\n'.join(out)
-    if amap:
+
+    # Per-page reference→id map: #tocN (Nth heading's id) + changed legacy ids.
+    # Used for same-page resolution here, and recorded in the committed index so
+    # cross-page #tocN / #id links elsewhere can be resolved by lookup too.
+    index = {f'toc{i + 1}': hid for i, hid in enumerate(heading_seq)}
+    index.update(amap)
+    if index:
         new_body = re.sub(
             r'\]\(#([^)\s]+)\)',
-            lambda mm: f'](#{amap[mm.group(1)]})' if mm.group(1) in amap else mm.group(0),
+            lambda mm: f'](#{index[mm.group(1)]})' if mm.group(1) in index else mm.group(0),
             new_body,
         )
-    return new_body, amap
+    return new_body, index
 
 
 def convert_file(src: Path, dst: Path):
@@ -2091,6 +2115,10 @@ def convert_file(src: Path, dst: Path):
     fm.append("---")
     body = _fix_manual_anchors(dst.stem.lower(), body)
     body, anchor_map = _generate_manual_anchors(dst.stem.lower(), body)
+    # Cross-page links (manual→manual / manual→module) still carry the old #id;
+    # rewrite them from the static anchor index (same lookup as same-page).
+    if _CUR_SLUG:
+        body = link_resolver.resolve_fork(body, _link_index(), _CUR_SLUG, _manual_page_ref)
     dst.parent.mkdir(parents=True, exist_ok=True)
     dst.write_text("\n".join(fm) + "\n\n" + body + "\n", encoding="utf-8")
     # Sidecar map (legacy id → generated id) for the cross-page link resolver.
@@ -2139,6 +2167,8 @@ def convert_manual(ver: str, wiki_dir: Path, out_dir: Path, devel: bool = False)
 
     devel=True (the master branch) appends " / devel" to the index title, e.g.
     "Manual 4.1" → "Manual 4.1 / devel"."""
+    global _CUR_SLUG
+    _CUR_SLUG = "devel" if devel else ver
     index_name = f"Documentation.Manual-{ver}"
     if not (wiki_dir / index_name).exists():
         raise SystemExit(f"Manual index not found: {index_name}")

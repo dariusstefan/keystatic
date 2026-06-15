@@ -10,14 +10,15 @@ set -a; source .env.local; set +a
 #   npm run generate:flat && npm run generate:manual:all \
 #     && npm run generate:modules:all && npm run generate:contributors
 #
-# Resolve legacy PmWiki #tocN anchors → real heading anchors (idempotent).
-python3 scripts/resolve-toc-anchors.py
+# Anchor links (#tocN and changed #ids, same- and cross-page) are now resolved
+# statically by the converters against src/data/{module,manual}-anchors.json, so
+# no build-time link-resolution pass is needed.
 
-# Remap cross-page links to module anchors whose id changed (idempotent).
-python3 scripts/resolve-module-links.py
-
-# Avoid stale prerender chunks from a previous failed/partial build.
-rm -rf dist
+# Avoid stale prerender chunks from a previous failed/partial build, and clear
+# Astro's content-layer store (node_modules/.astro) so that converter/plugin
+# changes that don't alter the source .md still take effect (otherwise the
+# cached render is reused and e.g. anchor-rule changes silently no-op).
+rm -rf dist .astro node_modules/.astro node_modules/.vite
 
 NODE_OPTIONS=--max-old-space-size=8192 ./node_modules/.bin/astro build
 

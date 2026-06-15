@@ -57,6 +57,26 @@ PAGE_RULES = {
 
 RULE_PAGES = frozenset(PAGE_RULES)
 
+# Hand-curated per-page heading-text → forced id overrides, for headings whose
+# auto-generated id is undesirable (kept in lock-step with remarkManualAnchors).
+OVERRIDES = {
+    "script-coreparameters": {
+        "memdump | mem_dump": "memdump",
+        "memlog | mem_log": "memlog",
+    },
+    "install-download": {
+        "Packages download - preferred method": "packages",
+        "GIT download": "git",
+    },
+    "script-async": {
+        "Serial asynchronous operations, async()": "async",
+        "Parallel asynchronous operations, launch()": "launch",
+        "List of async functions": "async_functions",
+        "Limitations": "async_limitations",
+        "Allowed Routes": "async_routes",
+    },
+}
+
 
 class ManualAnchorer:
     """Replays the build-time id assignment for one page so legacy ids can be
@@ -65,12 +85,14 @@ class ManualAnchorer:
     def __init__(self, page: str):
         self.page = page
         self.rule = PAGE_RULES.get(page)
+        self.overrides = OVERRIDES.get(page, {})
         self._used: set[str] = set()          # rule-page dedup ('_N')
         self._occ: dict[str, int] = {}         # github dedup ('-N')
 
     def assign(self, heading_text: str, body_after: str = "") -> str | None:
+        forced = self.overrides.get(heading_text)
         if self.rule:
-            base = self.rule(heading_text, body_after)
+            base = forced if forced is not None else self.rule(heading_text, body_after)
             if not base:
                 return None
             anchor = base
@@ -81,8 +103,8 @@ class ManualAnchorer:
                 anchor = f"{base}_{n}"
             self._used.add(anchor)
             return anchor
-        # github-slugger path (non-rule pages)
-        base = _gh_base(heading_text)
+        # github-slugger path (non-rule pages); a forced override wins.
+        base = forced if forced is not None else _gh_base(heading_text)
         if not base:
             return None
         anchor = base

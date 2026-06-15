@@ -1,0 +1,111 @@
+backend:
+  name: github
+  repo: dariusstefan/opensips-docs
+  branch: master
+  # Production GitHub auth via the opensips-oauth proxy (opensips-oauth.service
+  # on :4322, exposed by nginx at /auth and /callback on the same domain).
+  base_url: https://web.opensips.org
+  auth_endpoint: auth
+  # Open authoring: any GitHub user can contribute. Users without write access
+  # to the repo get their own fork; saves become pull requests against master.
+  open_authoring: true
+
+# Required for open authoring — contributions go through PRs, not direct commits.
+publish_mode: editorial_workflow
+
+# local_backend is ignored on the deployed domain (only active on localhost).
+# It cannot be combined with editorial_workflow when using the local proxy, so
+# for local dev either run the GitHub backend or drop publish_mode.
+local_backend: true
+
+site_url: https://web.opensips.org
+display_url: https://web.opensips.org
+logo_url: /opensips-logo.png
+
+media_folder: public/uploads
+public_folder: /uploads
+
+slug:
+  encoding: ascii
+  clean_accents: true
+  sanitize_replacement: "-"
+
+# Hide the live preview pane (the Rich Text/Markdown toggle covers editing, and
+# the preview doesn't run the site's remark plugins so it's misleading anyway).
+editor:
+  preview: false
+
+collections:
+  - name: docs
+    label: Documentation
+    label_singular: Doc
+    folder: docs
+    create: true
+    extension: md
+    format: frontmatter
+    # Flat folder: docs/<slug>.md (matches Keystatic's `docs/*`). No nested/meta
+    # — the repo has no subfolders, so a nested collection shows "No Entries".
+    summary: "{{title}}"
+    # "View Live" / preview link target, relative to site_url. Docs are served
+    # at /docs/<slug>; without this Decap links every entry to the site root.
+    preview_path: "docs/{{slug}}"
+    fields:
+      - label: Title
+        name: title
+        widget: string
+      - label: Description
+        name: description
+        widget: text
+        required: false
+      - label: Subtitle
+        name: subtitle
+        widget: string
+        required: false
+      - label: Subtitle URL
+        name: subtitleHref
+        widget: string
+        required: false
+      - label: Author
+        name: author
+        widget: string
+        required: false
+      - label: Head
+        name: head
+        widget: list
+        required: false
+        collapsed: true
+        fields:
+          - label: Tag
+            name: tag
+            widget: string
+          - label: Content
+            name: content
+            widget: text
+            required: false
+          - label: Attributes
+            name: attrs
+            widget: object
+            required: false
+            collapsed: true
+            fields:
+              - label: HTTP Equiv
+                name: http-equiv
+                widget: string
+                required: false
+              - label: Content
+                name: content
+                widget: string
+                required: false
+      - label: Sidebar
+        name: sidebar
+        widget: object
+        required: false
+        collapsed: true
+        fields:
+          - label: Hidden
+            name: hidden
+            widget: boolean
+            required: false
+      - label: Body
+        name: body
+        widget: markdown
