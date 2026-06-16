@@ -87,6 +87,10 @@ const OVERRIDES = {
     'Limitations': 'async_limitations',
     'Allowed Routes': 'async_routes',
   },
+  'interface-coreevents': {
+    // Body has no "**Event**:" line (just references E_PROFILING_PROC).
+    'Script profiling event': 'E_PROFILING_SCRIPT',
+  },
 };
 
 // Visible heading text from RAW source via position offsets — never walk child

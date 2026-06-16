@@ -11833,7 +11833,7 @@
 "toc6": "E_CORE_SR_STATUS_CHANGED",
 "toc7": "E_CORE_LOG",
 "toc8": "E_PROFILING_PROC",
-"toc9": "script_profiling_event"
+"toc9": "E_PROFILING_SCRIPT"
 },
 "4-0/interface-coremi": {
 "add_rule": "blacklists_add_rule",
@@ -12628,7 +12628,7 @@
 "toc6": "E_CORE_SR_STATUS_CHANGED",
 "toc7": "E_CORE_LOG",
 "toc8": "E_PROFILING_PROC",
-"toc9": "script_profiling_event"
+"toc9": "E_PROFILING_SCRIPT"
 },
 "devel/interface-coremi": {
 "add_rule": "blacklists_add_rule",

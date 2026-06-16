@@ -949,6 +949,10 @@ class TestManualAnchorRule:
         assert an.assign("Serial asynchronous operations, async()") == "async"
         assert an.assign("Parallel asynchronous operations, launch()") == "launch"
         assert an.assign("Limitations") == "async_limitations"
+        # Override wins over the (event) rule when the body has no **Event**: line.
+        assert ManualAnchorer("interface-coreevents").assign("Script profiling event") == "E_PROFILING_SCRIPT"
+        # The rule still applies to events that do have the field.
+        assert ManualAnchorer("interface-coreevents").assign("X", "**Event**: E_X") == "E_X"
 
 
 if __name__ == "__main__":

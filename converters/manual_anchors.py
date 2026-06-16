@@ -75,6 +75,11 @@ OVERRIDES = {
         "Limitations": "async_limitations",
         "Allowed Routes": "async_routes",
     },
+    "interface-coreevents": {
+        # This event's body has no "**Event**:" line (it just references
+        # E_PROFILING_PROC), so the rule can't pick up the name.
+        "Script profiling event": "E_PROFILING_SCRIPT",
+    },
 }
 
 
